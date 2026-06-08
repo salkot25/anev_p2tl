@@ -1,0 +1,400 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================
+   ENTERPRISE DESIGN SYSTEM Boilerplate
+   ============================================ */
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 tracking-tight antialiased;
+    font-family: 'Inter', sans-serif;
+  }
+
+  *:focus-visible {
+    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 100px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+@layer utilities {
+  .enterprise-shadow {
+    box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  }
+}
+
+/* Animations */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideInFromRight {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes toast-slide-in {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@layer utilities {
+  .animate-fade-in-up { animation: fadeInUp 0.5s ease-out forwards; }
+  .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+  .animate-slide-in-right { animation: slideInFromRight 0.4s ease-out forwards; }
+  .animate-toast { animation: toast-slide-in 0.3s cubic-bezier(0.21,1.02,0.73,1) forwards; }
+  .delay-75 { animation-delay: 75ms; }
+  .delay-150 { animation-delay: 150ms; }
+  .delay-225 { animation-delay: 225ms; }
+  .delay-300 { animation-delay: 300ms; }
+}
+
+/* Theme Toggle Animations */
+@keyframes sun-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes moon-gently-sway {
+  0%, 100% { transform: rotate(0deg) scale(1); filter: drop-shadow(0 0 2px rgba(167, 139, 250, 0.2)); }
+  50% { transform: rotate(-8deg) scale(1.05); filter: drop-shadow(0 0 6px rgba(167, 139, 250, 0.5)); }
+}
+
+.animate-sun-spin {
+  animation: sun-spin 8s infinite linear;
+}
+.animate-moon-sway {
+  animation: moon-gently-sway 4s infinite ease-in-out;
+}
+
+.font-mono-code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 8px);
+}
+
+.pb-chat-mobile {
+  padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+.pb-tabs-mobile {
+  padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)) !important;
+}
+
+/* ============================================
+   PWA SPECIFIC STYLES
+   ============================================ */
+
+@media (display-mode: standalone) {
+  html, body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  main, .selectable {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+}
+
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pl-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.pr-safe {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* ==========================================================================
+   GLOBAL THEME OVERRIDES (Centralized & Failsafe theme)
+   ========================================================================== */
+
+/* 1. LIGHT MODE FAILSAFE */
+html:not(.dark) body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+html:not(.dark) .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html:not(.dark) .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .bg-white {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) [class*="bg-white/80"] {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+}
+
+html:not(.dark) .text-slate-900,
+html:not(.dark) .text-slate-800,
+html:not(.dark) .text-slate-700 {
+  color: #0f172a !important;
+}
+
+html:not(.dark) .text-slate-500,
+html:not(.dark) .text-slate-400 {
+  color: #64748b !important;
+}
+
+html:not(.dark) .border-slate-100 {
+  border-color: #f1f5f9 !important;
+}
+
+html:not(.dark) .border-slate-200 {
+  border-color: rgba(226, 232, 240, 0.45) !important;
+}
+
+html:not(.dark) .divide-slate-50 > :not([hidden]) ~ :not([hidden]),
+html:not(.dark) .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html:not(.dark) .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #f1f5f9 !important;
+}
+
+/* 2. DARK MODE OVERRIDES */
+html.dark body {
+  background-color: #020617;
+  color: #f8fafc;
+}
+
+html.dark .bg-white {
+  background-color: #0f172a !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #020617 !important;
+}
+
+html.dark [class*="bg-slate-50/50"] {
+  background-color: rgba(2, 6, 23, 0.4) !important;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+html.dark [class*="bg-slate-100/80"] {
+  background-color: rgba(30, 41, 59, 0.8) !important;
+}
+
+html.dark [class*="bg-slate-900/80"] {
+  background-color: rgba(15, 23, 42, 0.85) !important;
+}
+
+html.dark [class*="bg-slate-50/10"] {
+  background-color: rgba(15, 23, 42, 0.3) !important;
+}
+
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark [class*="border-slate-200/60"],
+html.dark [class*="border-slate-200/50"],
+html.dark [class*="border-slate-200/80"],
+html.dark .border-slate-300,
+html.dark .divide-slate-50 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e293b !important;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+
+html.dark .text-slate-600,
+html.dark .text-slate-500,
+html.dark .text-slate-400 {
+  color: #94a3b8 !important;
+}
+
+html.dark [class*="hover:bg-slate-50"]:hover,
+html.dark [class*="hover:bg-slate-100"]:hover,
+html.dark button.hover\:bg-slate-50:hover,
+html.dark button.hover\:bg-slate-100:hover,
+html.dark tr.hover\:bg-slate-50:hover,
+html.dark tr.hover\:bg-slate-100:hover {
+  background-color: #1e293b !important;
+}
+
+html.dark input, 
+html.dark select, 
+html.dark textarea {
+  background-color: #020617 !important;
+  color: #f8fafc !important;
+  border-color: #1e293b !important;
+}
+
+html.dark input::placeholder {
+  color: #475569 !important;
+}
+
+html.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #93c5fd !important;
+}
+
+html.dark .bg-violet-50 {
+  background-color: rgba(139, 92, 246, 0.15) !important;
+  color: #c084fc !important;
+}
+
+html.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fcd34d !important;
+}
+
+html.dark .bg-rose-50 {
+  background-color: rgba(244, 63, 94, 0.15) !important;
+  color: #fca5a5 !important;
+}
+
+html.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #6ee7b7 !important;
+}
+
+html.dark .text-blue-800 {
+  color: #93c5fd !important;
+}
+
+html.dark .text-violet-800 {
+  color: #c084fc !important;
+}
+
+html.dark .text-emerald-700,
+html.dark .text-emerald-600 {
+  color: #34d399 !important;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ==========================================================================
+   GLOBAL SOFT SHADOWS SYSTEM
+   ========================================================================== */
+
+/* Light Mode Premium Soft Shadows */
+html:not(.dark) .shadow-sm {
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.02) !important;
+}
+
+html:not(.dark) .shadow,
+html:not(.dark) .enterprise-shadow {
+  box-shadow: 0 8px 24px -4px rgba(15, 23, 42, 0.03), 0 2px 8px -2px rgba(15, 23, 42, 0.02) !important;
+}
+
+html:not(.dark) .shadow-md {
+  box-shadow: 0 12px 30px -4px rgba(15, 23, 42, 0.04), 0 4px 12px -2px rgba(15, 23, 42, 0.02) !important;
+}
+
+html:not(.dark) .shadow-lg {
+  box-shadow: 0 18px 36px -6px rgba(15, 23, 42, 0.04), 0 6px 16px -3px rgba(15, 23, 42, 0.02) !important;
+}
+
+html:not(.dark) .shadow-xl {
+  box-shadow: 0 24px 48px -8px rgba(15, 23, 42, 0.05), 0 8px 24px -4px rgba(15, 23, 42, 0.03) !important;
+}
+
+html:not(.dark) .shadow-2xl {
+  box-shadow: 0 32px 64px -12px rgba(15, 23, 42, 0.06), 0 16px 32px -6px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Dark Mode Premium Soft Shadows */
+html.dark .shadow-sm {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+}
+
+html.dark .shadow,
+html.dark .enterprise-shadow {
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.25), 0 2px 8px -2px rgba(0, 0, 0, 0.15) !important;
+}
+
+html.dark .shadow-md {
+  box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.3), 0 4px 12px -2px rgba(0, 0, 0, 0.2) !important;
+}
+
+html.dark .shadow-lg {
+  box-shadow: 0 18px 36px -6px rgba(0, 0, 0, 0.35), 0 6px 16px -3px rgba(0, 0, 0, 0.25) !important;
+}
+
+html.dark .shadow-xl {
+  box-shadow: 0 24px 48px -8px rgba(0, 0, 0, 0.4), 0 8px 24px -4px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .shadow-2xl {
+  box-shadow: 0 32px 64px -12px rgba(0, 0, 0, 0.45), 0 16px 32px -6px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* Mobile Bottom Navigation Bar Styles */
+.mobile-bottom-nav {
+  box-shadow: 0 -1px 0 0 rgba(226, 232, 240, 0.8), 0 10px 25px -3px rgba(15, 23, 42, 0.08), 0 4px 12px -4px rgba(15, 23, 42, 0.04) !important;
+}
+
+html.dark .mobile-bottom-nav {
+  box-shadow: 0 -1px 0 0 rgba(30, 41, 59, 0.8), 0 10px 25px -3px rgba(0, 0, 0, 0.35), 0 4px 12px -4px rgba(0, 0, 0, 0.25) !important;
+}
+
+html:not(.dark) .mobile-nav-plus-btn {
+  border-color: #ffffff !important;
+}
+
+html.dark .mobile-nav-plus-btn {
+  border-color: #0f172a !important;
+}
+
+/* iOS Safari auto-zoom prevention */
+@media (max-width: 767px) {
+  input, 
+  select, 
+  textarea {
+    font-size: 16px !important;
+  }
+}
