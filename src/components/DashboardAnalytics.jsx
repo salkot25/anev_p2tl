@@ -406,9 +406,9 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
           </div>
 
           {/* Breakdown & Chart Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Donut Chart - Komposisi Temuan */}
-            <div className={`p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col justify-between`}>
+            <div className={`lg:col-span-2 p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col justify-between`}>
               <div>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 pb-2 border-b border-slate-200 dark:border-slate-800">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
@@ -437,7 +437,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
                   const getLabelName = (itemClass) => {
                     if (compositionMetric === 'tarif') {
-                      const map = { 'R': 'Rumah Tangga (R)', 'B': 'Bisnis / Usaha (B)', 'S': 'Sosial / Tempat Ibadah (S)', 'I': 'Industri (I)', 'P': 'Publik / Kantor / PJU (P)' };
+                      const map = { 'R': 'Tarif R', 'B': 'Tarif B', 'S': 'Tarif S', 'I': 'Tarif I', 'P': 'Tarif P' };
                       return map[itemClass] || 'Lainnya';
                     }
                     if (compositionMetric === 'golongan') {
@@ -529,7 +529,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
             </div>
 
             {/* Bar Chart - Trend kWh */}
-            <div className={`p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col relative`}>
+            <div className={`lg:col-span-3 p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col relative`}>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
