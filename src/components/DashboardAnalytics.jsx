@@ -823,11 +823,47 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 {/* SVG Chart Container */}
                 <div className="lg:col-span-8 relative w-full h-auto overflow-x-auto min-h-[140px]">
                   <svg width="100%" height="150" viewBox="0 0 720 150" preserveAspectRatio="none" className="overflow-visible min-w-[500px]">
-                    <line x1="20" y1="120" x2="700" y2="120" className="stroke-slate-250 dark:stroke-slate-800/80" strokeWidth="1" />
+                    {/* Y-Axis Grid Lines & Labels */}
+                    {[0.25, 0.5, 0.75, 1.0].map((pct, i) => {
+                      const gridY = 120 - pct * 100;
+                      const val = yoyMaxVal * pct;
+                      const formattedVal = val >= 1000000 
+                        ? (val / 1000000).toFixed(1).replace('.0', '') + 'M' 
+                        : val >= 1000 
+                          ? Math.round(val / 1000) + 'k' 
+                          : Math.round(val);
+                      return (
+                        <g key={i} className="opacity-40 dark:opacity-30">
+                          <line
+                            x1="50"
+                            y1={gridY}
+                            x2="700"
+                            y2={gridY}
+                            className="stroke-slate-300 dark:stroke-slate-700"
+                            strokeWidth="0.75"
+                            strokeDasharray="3,3"
+                          />
+                          <text
+                            x="42"
+                            y={gridY + 3}
+                            textAnchor="end"
+                            fontSize="8"
+                            className="fill-slate-400 dark:fill-slate-500 font-bold font-mono"
+                          >
+                            {formattedVal}
+                          </text>
+                        </g>
+                      );
+                    })}
+
+                    <line x1="50" y1="120" x2="700" y2="120" className="stroke-slate-250 dark:stroke-slate-800/80" strokeWidth="1" />
                     {yoyChartData.map((d, idx) => {
-                      const groupWidth = 720 / 12;
-                      const barW = 12, gap = 2;
-                      const centerX = groupWidth * idx + groupWidth / 2;
+                      const chartLeft = 50;
+                      const chartRight = 700;
+                      const chartWidth = chartRight - chartLeft;
+                      const groupWidth = chartWidth / 12;
+                      const barW = 10, gap = 2;
+                      const centerX = chartLeft + groupWidth * idx + groupWidth / 2;
                       const prevBarX = centerX - barW - gap / 2;
                       const currBarX = centerX + gap / 2;
                       const maxH = 100;
@@ -840,9 +876,9 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                           {/* Column Hover Indicator Highlight Background */}
                           {isHovered && (
                             <rect
-                              x={groupWidth * idx + 4}
+                              x={chartLeft + groupWidth * idx + 2}
                               y="10"
-                              width={groupWidth - 8}
+                              width={groupWidth - 4}
                               height="115"
                               rx="6"
                               className="fill-slate-100/70 dark:fill-slate-850/40 pointer-events-none transition-colors duration-150"
@@ -855,7 +891,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
                           {/* Invisible Event Triggering Box (Gapless Mouse Capture) */}
                           <rect
-                            x={groupWidth * idx}
+                            x={chartLeft + groupWidth * idx}
                             y="0"
                             width={groupWidth}
                             height="150"
