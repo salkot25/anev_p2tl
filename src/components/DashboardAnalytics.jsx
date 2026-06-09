@@ -819,21 +819,21 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                 {/* SVG Chart Container */}
-                <div className="lg:col-span-8 relative w-full h-auto overflow-x-auto min-h-[160px]">
-                  <svg width="100%" height="240" viewBox="0 0 720 240" preserveAspectRatio="none" className="overflow-visible min-w-[500px]">
-                    <line x1="20" y1="210" x2="700" y2="210" className="stroke-slate-250 dark:stroke-slate-800/80" strokeWidth="1" />
+                <div className="lg:col-span-8 relative w-full h-auto overflow-x-auto min-h-[140px]">
+                  <svg width="100%" height="150" viewBox="0 0 720 150" preserveAspectRatio="none" className="overflow-visible min-w-[500px]">
+                    <line x1="20" y1="120" x2="700" y2="120" className="stroke-slate-250 dark:stroke-slate-800/80" strokeWidth="1" />
                     {yoyChartData.map((d, idx) => {
                       const groupWidth = 720 / 12;
                       const barW = 12, gap = 2;
                       const centerX = groupWidth * idx + groupWidth / 2;
                       const prevBarX = centerX - barW - gap / 2;
                       const currBarX = centerX + gap / 2;
-                      const maxH = 180;
+                      const maxH = 100;
                       const prevH = yoyMaxVal > 0 ? (d.prev / yoyMaxVal) * maxH : 0;
                       const currH = yoyMaxVal > 0 ? (d.current / yoyMaxVal) * maxH : 0;
-                      const targetY = yoyMaxVal > 0 ? 210 - (d.target / yoyMaxVal) * maxH : 210;
+                      const targetY = yoyMaxVal > 0 ? 120 - (d.target / yoyMaxVal) * maxH : 120;
                       const isHovered = hoveredYoyMonth === idx;
                       return (
                         <g key={idx}>
@@ -843,22 +843,22 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                               x={groupWidth * idx + 4}
                               y="10"
                               width={groupWidth - 8}
-                              height="205"
+                              height="115"
                               rx="6"
                               className="fill-slate-100/70 dark:fill-slate-850/40 pointer-events-none transition-colors duration-150"
                             />
                           )}
-                          <rect x={prevBarX} y={210 - prevH} width={barW} height={Math.max(prevH, 1)} rx="1.5" className={`${isHovered ? 'fill-slate-300 dark:fill-slate-750' : 'fill-slate-200 dark:fill-slate-800'} pointer-events-none transition-all duration-350`} />
-                          <rect x={currBarX} y={210 - currH} width={barW} height={Math.max(currH, 1)} rx="1.5" className={`${isHovered ? 'fill-emerald-400' : 'fill-emerald-500 dark:fill-emerald-500/80'} pointer-events-none transition-all duration-350`} />
+                          <rect x={prevBarX} y={120 - prevH} width={barW} height={Math.max(prevH, 1)} rx="1.5" className={`${isHovered ? 'fill-slate-300 dark:fill-slate-750' : 'fill-slate-200 dark:fill-slate-800'} pointer-events-none transition-all duration-350`} />
+                          <rect x={currBarX} y={120 - currH} width={barW} height={Math.max(currH, 1)} rx="1.5" className={`${isHovered ? 'fill-emerald-400' : 'fill-emerald-500 dark:fill-emerald-500/80'} pointer-events-none transition-all duration-350`} />
                           <line x1={prevBarX - 2} y1={targetY} x2={currBarX + barW + 2} y2={targetY} className="stroke-amber-500 pointer-events-none" strokeWidth="1.5" strokeDasharray="3,2" />
-                          <text x={centerX} y="226" textAnchor="middle" fontSize="9" className={`${isHovered ? 'fill-slate-700 dark:fill-slate-200 font-extrabold' : 'fill-slate-400 dark:fill-slate-500 font-bold'} pointer-events-none`}>{d.label}</text>
+                          <text x={centerX} y="136" textAnchor="middle" fontSize="9" className={`${isHovered ? 'fill-slate-700 dark:fill-slate-200 font-extrabold' : 'fill-slate-400 dark:fill-slate-500 font-bold'} pointer-events-none`}>{d.label}</text>
 
                           {/* Invisible Event Triggering Box (Gapless Mouse Capture) */}
                           <rect
                             x={groupWidth * idx}
                             y="0"
                             width={groupWidth}
-                            height="240"
+                            height="150"
                             fill="transparent"
                             className="cursor-pointer"
                             onMouseEnter={(e) => {
@@ -909,8 +909,8 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 </div>
 
                 {/* YoY Table with Mobile view control */}
-                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-6 pt-4 lg:pt-0 w-full">
-                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-6 pt-3 lg:pt-0 w-full">
+                  <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/80">
                     <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Rincian Perbandingan Bulanan</span>
                     <span className="text-[9px] text-slate-400 font-semibold">{yoyPage === 1 ? 'Semester 1' : 'Semester 2'}</span>
                   </div>
@@ -919,10 +919,10 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <table className="w-full text-left">
                       <thead>
                         <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800/80">
-                          <th className="pb-1.5">Bulan</th>
-                          <th className="pb-1.5 text-right">{prevYear}</th>
-                          <th className="pb-1.5 text-right">{currentYear}</th>
-                          <th className="pb-1.5 text-right">YoY (%)</th>
+                          <th className="pb-1">Bulan</th>
+                          <th className="pb-1 text-right">{prevYear}</th>
+                          <th className="pb-1 text-right">{currentYear}</th>
+                          <th className="pb-1 text-right">YoY (%)</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100/60 dark:divide-slate-800/40">
@@ -933,10 +933,10 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                           const isCurrentActive = actualMonthIndex <= month;
                           return (
                             <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                              <td className="py-1.5 font-bold text-slate-600 dark:text-slate-300">{d.label}</td>
-                              <td className="py-1.5 text-right text-slate-500 dark:text-slate-400 font-semibold">{formatIndoNumber(d.prev)}</td>
-                              <td className="py-1.5 text-right text-slate-800 dark:text-slate-100 font-bold">{isCurrentActive ? formatIndoNumber(d.current) : '-'}</td>
-                              <td className="py-1.5 text-right font-black">
+                              <td className="py-1 font-bold text-slate-600 dark:text-slate-300">{d.label}</td>
+                              <td className="py-1 text-right text-slate-500 dark:text-slate-400 font-semibold">{formatIndoNumber(d.prev)}</td>
+                              <td className="py-1 text-right text-slate-800 dark:text-slate-100 font-bold">{isCurrentActive ? formatIndoNumber(d.current) : '-'}</td>
+                              <td className="py-1 text-right font-black">
                                 {isCurrentActive ? (
                                   <span className={`inline-flex items-center gap-0.5 text-[10px] ${mDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                     {mDiff >= 0 ? '+' : ''}{Math.round(mPct)}%
@@ -951,7 +951,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   </div>
 
                   {/* Pagination control with swipe style */}
-                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/60">
                     <button
                       disabled={yoyPage === 1}
                       onClick={() => setYoYPage(1)}
