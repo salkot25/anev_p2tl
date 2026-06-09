@@ -528,13 +528,18 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                               <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: seg.color }} />
                               <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{getLabelName(seg.class)}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-right">
+                            <div className="flex items-center gap-4 text-right">
                               <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
                                 {seg.cases} kasus ({Math.round(seg.percent)}%)
                               </span>
-                              <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 min-w-[70px]">
-                                {formatIndoNumber(seg.kwh || 0)} kWh
-                              </span>
+                              <div className="flex flex-col items-end min-w-[85px] leading-tight">
+                                <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400">
+                                  {formatIndoNumber(seg.kwh || 0)} kWh
+                                </span>
+                                <span className="text-[9px] font-bold text-blue-600 dark:text-blue-400 mt-0.5">
+                                  Rp {formatIndoNumber(seg.ts || 0)}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         ))}

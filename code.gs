@@ -202,26 +202,29 @@ function getDashboardData(ss, date) {
         // Tariff breakdown
         if (tarif) {
           var tariffKey = tarif[0]; // R, B, S, I, P
-          if (!tariffMap[tariffKey]) tariffMap[tariffKey] = { kwh: 0, cases: 0 };
+          if (!tariffMap[tariffKey]) tariffMap[tariffKey] = { kwh: 0, cases: 0, ts: 0 };
           tariffMap[tariffKey].kwh   += kwh;
           tariffMap[tariffKey].cases += cases;
+          tariffMap[tariffKey].ts    += hTs;
         }
         
         // Golongan breakdown
         var gol = (row.gol || "").toUpperCase().trim();
         if (gol) {
-          if (!golonganMap[gol]) golonganMap[gol] = { kwh: 0, cases: 0 };
+          if (!golonganMap[gol]) golonganMap[gol] = { kwh: 0, cases: 0, ts: 0 };
           golonganMap[gol].kwh   += kwh;
           golonganMap[gol].cases += cases;
+          golonganMap[gol].ts    += hTs;
         }
         
         // Daya breakdown
         var daya = (row.daya || "").toUpperCase().trim();
         if (daya) {
           var dayaKey = classifyDaya(daya);
-          if (!dayaMap[dayaKey]) dayaMap[dayaKey] = { kwh: 0, cases: 0 };
+          if (!dayaMap[dayaKey]) dayaMap[dayaKey] = { kwh: 0, cases: 0, ts: 0 };
           dayaMap[dayaKey].kwh   += kwh;
           dayaMap[dayaKey].cases += cases;
+          dayaMap[dayaKey].ts    += hTs;
         }
         
         // Top findings (entries with kwh > 5000)
@@ -269,17 +272,17 @@ function getDashboardData(ss, date) {
   
   // Build tariff breakdown
   var tariffBreakdown = Object.keys(tariffMap).map(function(k) {
-    return { class: k, kwh: tariffMap[k].kwh, cases: tariffMap[k].cases, ts: tariffMap[k].kwh * 1000 };
+    return { class: k, kwh: tariffMap[k].kwh, cases: tariffMap[k].cases, ts: tariffMap[k].ts || 0 };
   });
 
   // Build golongan breakdown
   var golonganBreakdown = Object.keys(golonganMap).map(function(k) {
-    return { class: k, kwh: golonganMap[k].kwh, cases: golonganMap[k].cases, ts: golonganMap[k].kwh * 1000 };
+    return { class: k, kwh: golonganMap[k].kwh, cases: golonganMap[k].cases, ts: golonganMap[k].ts || 0 };
   });
 
   // Build daya breakdown
   var dayaBreakdown = Object.keys(dayaMap).map(function(k) {
-    return { class: k, kwh: dayaMap[k].kwh, cases: dayaMap[k].cases, ts: dayaMap[k].kwh * 1000 };
+    return { class: k, kwh: dayaMap[k].kwh, cases: dayaMap[k].cases, ts: dayaMap[k].ts || 0 };
   });
   
   // Sort top findings by kwh desc, take top 10
