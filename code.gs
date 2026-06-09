@@ -573,6 +573,19 @@ function readRealisasiSheetData(sheet) {
     
     var classif = classifyFinding(gol, tarifDaya);
     
+    // Do not count as case/finding if kwh is 0, unless gol is "P1"
+    if (kwh === 0 && gol !== "P1") {
+      classif = {
+        lkbk: 0,
+        ph3: 0,
+        dlpd: 0,
+        peng: 0,
+        tsp: 0,
+        tsm: 0,
+        lain: 0
+      };
+    }
+    
     data.push({
       "No": noVal,
       "No Agenda": noagenda,
@@ -596,14 +609,22 @@ function readRealisasiSheetData(sheet) {
       "Realisasi Harian kWh": kwh,
       "Realisasi Kumulatif kWh": kwh,
       "Realisasi Harian TS": ts,
+      "Realisasi_Harian_TS": ts,
       "Realisasi Kumulatif TS": ts,
       "Realisasi LKBK Plg": classif.lkbk,
+      "Realisasi_LKBK_Plg": classif.lkbk,
       "Realisasi 3Phasa Plg": classif.ph3,
+      "Realisasi_3Phasa_Plg": classif.ph3,
       "Realisasi DLPD Plg": classif.dlpd,
+      "Realisasi_DLPD_Plg": classif.dlpd,
       "Realisasi Pengembangan Plg": classif.peng,
+      "Realisasi_Pengembangan_Plg": classif.peng,
       "Realisasi TS Periodik Plg": classif.tsp,
+      "Realisasi_TS_Periodik_Plg": classif.tsp,
       "Realisasi TS Macet Plg": classif.tsm,
+      "Realisasi_TS_Macet_Plg": classif.tsm,
       "Realisasi Lainnya Plg": classif.lain,
+      "Realisasi_Lainnya_Plg": classif.lain,
       "Tanggal": dateVal,
       "Date": dateVal,
       "date": dateVal,
