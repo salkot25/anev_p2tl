@@ -487,9 +487,9 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   });
 
                   return (
-                    <div className="grid grid-cols-1 sm:grid-cols-10 gap-6 items-center py-2 flex-grow w-full">
-                      <div className="sm:col-span-6 flex justify-center w-full">
-                        <div className="relative w-48 h-48">
+                    <div className="flex flex-col items-center w-full py-2 flex-grow">
+                      <div className="flex justify-center items-center w-full mb-6">
+                        <div className="relative w-44 h-44 sm:w-48 sm:h-48">
                           <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
                             <circle cx="50" cy="50" r="40" fill="transparent" className="stroke-slate-100 dark:stroke-slate-800" strokeWidth="10" />
                             {donutSegments.map((seg, idx) => (
@@ -505,19 +505,21 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                           </div>
                         </div>
                       </div>
-                      <div className="sm:col-span-4 space-y-2.5 pr-1 w-full">
+                      
+                      <div className="w-full pt-4 border-t border-slate-100 dark:border-slate-800/60 space-y-2">
                         {donutSegments.map((seg, idx) => (
-                          <div key={idx} className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-1.5 last:border-0 last:pb-0">
+                          <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800/60 rounded-xl hover:bg-slate-100/50 dark:hover:bg-slate-900/20 transition-colors duration-150">
                             <div className="flex items-center gap-2 min-w-0">
-                              <span className={`w-2.5 h-2.5 rounded-full ${seg.twColor} flex-shrink-0`} />
-                              <div className="min-w-0">
-                                <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{getLabelName(seg.class)}</div>
-                                <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">{formatIndoNumber(seg.kwh || 0)} kWh</div>
-                              </div>
+                              <span className={`w-2 h-2 rounded-full ${seg.twColor} flex-shrink-0`} />
+                              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{getLabelName(seg.class)}</span>
                             </div>
-                            <div className="flex-shrink-0 text-right ml-2">
-                              <div className="text-[11px] font-extrabold text-slate-600 dark:text-slate-300">{seg.cases} kasus</div>
-                              <div className="text-[10px] font-bold text-slate-400">{Math.round(seg.percent)}%</div>
+                            <div className="flex items-center gap-3 text-right">
+                              <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                                {seg.cases} kasus ({Math.round(seg.percent)}%)
+                              </span>
+                              <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 min-w-[70px]">
+                                {formatIndoNumber(seg.kwh || 0)} kWh
+                              </span>
                             </div>
                           </div>
                         ))}
