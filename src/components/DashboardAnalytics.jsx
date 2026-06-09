@@ -821,80 +821,44 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
                 {/* SVG Chart Container */}
-                <div className="lg:col-span-8 relative w-full h-auto overflow-x-auto min-h-[140px]">
-                  <svg width="100%" height="150" viewBox="0 0 720 150" preserveAspectRatio="none" className="overflow-visible min-w-[500px]">
-                    {/* Y-Axis Grid Lines & Labels */}
-                    {[0.25, 0.5, 0.75, 1.0].map((pct, i) => {
-                      const gridY = 120 - pct * 100;
-                      const val = yoyMaxVal * pct;
-                      const formattedVal = val >= 1000000 
-                        ? (val / 1000000).toFixed(1).replace('.0', '') + 'M' 
-                        : val >= 1000 
-                          ? Math.round(val / 1000) + 'k' 
-                          : Math.round(val);
-                      return (
-                        <g key={i} className="opacity-40 dark:opacity-30">
-                          <line
-                            x1="50"
-                            y1={gridY}
-                            x2="700"
-                            y2={gridY}
-                            className="stroke-slate-300 dark:stroke-slate-700"
-                            strokeWidth="0.75"
-                            strokeDasharray="3,3"
-                          />
-                          <text
-                            x="42"
-                            y={gridY + 3}
-                            textAnchor="end"
-                            fontSize="8"
-                            className="fill-slate-400 dark:fill-slate-500 font-bold font-mono"
-                          >
-                            {formattedVal}
-                          </text>
-                        </g>
-                      );
-                    })}
-
-                    <line x1="50" y1="120" x2="700" y2="120" className="stroke-slate-250 dark:stroke-slate-800/80" strokeWidth="1" />
+                <div className="lg:col-span-8 relative w-full h-auto overflow-x-auto min-h-[160px]">
+                  <svg width="100%" height="250" viewBox="0 0 720 250" preserveAspectRatio="none" className="overflow-visible min-w-[500px]">
+                    <line x1="20" y1="215" x2="700" y2="215" className="stroke-slate-250 dark:stroke-slate-800/80" strokeWidth="1" />
                     {yoyChartData.map((d, idx) => {
-                      const chartLeft = 50;
-                      const chartRight = 700;
-                      const chartWidth = chartRight - chartLeft;
-                      const groupWidth = chartWidth / 12;
-                      const barW = 10, gap = 2;
-                      const centerX = chartLeft + groupWidth * idx + groupWidth / 2;
+                      const groupWidth = 720 / 12;
+                      const barW = 12, gap = 2;
+                      const centerX = groupWidth * idx + groupWidth / 2;
                       const prevBarX = centerX - barW - gap / 2;
                       const currBarX = centerX + gap / 2;
-                      const maxH = 100;
+                      const maxH = 185;
                       const prevH = yoyMaxVal > 0 ? (d.prev / yoyMaxVal) * maxH : 0;
                       const currH = yoyMaxVal > 0 ? (d.current / yoyMaxVal) * maxH : 0;
-                      const targetY = yoyMaxVal > 0 ? 120 - (d.target / yoyMaxVal) * maxH : 120;
+                      const targetY = yoyMaxVal > 0 ? 215 - (d.target / yoyMaxVal) * maxH : 215;
                       const isHovered = hoveredYoyMonth === idx;
                       return (
                         <g key={idx}>
                           {/* Column Hover Indicator Highlight Background */}
                           {isHovered && (
                             <rect
-                              x={chartLeft + groupWidth * idx + 2}
+                              x={groupWidth * idx + 4}
                               y="10"
-                              width={groupWidth - 4}
-                              height="115"
+                              width={groupWidth - 8}
+                              height="210"
                               rx="6"
                               className="fill-slate-100/70 dark:fill-slate-850/40 pointer-events-none transition-colors duration-150"
                             />
                           )}
-                          <rect x={prevBarX} y={120 - prevH} width={barW} height={Math.max(prevH, 1)} rx="1.5" className={`${isHovered ? 'fill-slate-300 dark:fill-slate-750' : 'fill-slate-200 dark:fill-slate-800'} pointer-events-none transition-all duration-350`} />
-                          <rect x={currBarX} y={120 - currH} width={barW} height={Math.max(currH, 1)} rx="1.5" className={`${isHovered ? 'fill-emerald-400' : 'fill-emerald-500 dark:fill-emerald-500/80'} pointer-events-none transition-all duration-350`} />
+                          <rect x={prevBarX} y={215 - prevH} width={barW} height={Math.max(prevH, 1)} rx="1.5" className={`${isHovered ? 'fill-slate-300 dark:fill-slate-750' : 'fill-slate-200 dark:fill-slate-800'} pointer-events-none transition-all duration-350`} />
+                          <rect x={currBarX} y={215 - currH} width={barW} height={Math.max(currH, 1)} rx="1.5" className={`${isHovered ? 'fill-emerald-400' : 'fill-emerald-500 dark:fill-emerald-500/80'} pointer-events-none transition-all duration-350`} />
                           <line x1={prevBarX - 2} y1={targetY} x2={currBarX + barW + 2} y2={targetY} className="stroke-amber-500 pointer-events-none" strokeWidth="1.5" strokeDasharray="3,2" />
-                          <text x={centerX} y="136" textAnchor="middle" fontSize="9" className={`${isHovered ? 'fill-slate-700 dark:fill-slate-200 font-extrabold' : 'fill-slate-400 dark:fill-slate-500 font-bold'} pointer-events-none`}>{d.label}</text>
+                          <text x={centerX} y="232" textAnchor="middle" fontSize="9" className={`${isHovered ? 'fill-slate-700 dark:fill-slate-200 font-extrabold' : 'fill-slate-400 dark:fill-slate-500 font-bold'} pointer-events-none`}>{d.label}</text>
 
                           {/* Invisible Event Triggering Box (Gapless Mouse Capture) */}
                           <rect
-                            x={chartLeft + groupWidth * idx}
+                            x={groupWidth * idx}
                             y="0"
                             width={groupWidth}
-                            height="150"
+                            height="250"
                             fill="transparent"
                             className="cursor-pointer"
                             onMouseEnter={(e) => {
