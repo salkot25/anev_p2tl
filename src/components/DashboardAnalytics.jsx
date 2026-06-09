@@ -487,30 +487,45 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   });
 
                   return (
-                    <div className="flex flex-col items-center w-full py-2 flex-grow">
-                      <div className="flex justify-center items-center w-full mb-6">
-                        <div className="relative w-44 h-44 sm:w-48 sm:h-48">
-                          <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90">
-                            <circle cx="50" cy="50" r="40" fill="transparent" className="stroke-slate-100 dark:stroke-slate-800" strokeWidth="10" />
-                            {donutSegments.map((seg, idx) => (
-                              <circle key={idx} cx="50" cy="50" r="40" fill="transparent" stroke={seg.color} strokeWidth="10" strokeDasharray={seg.strokeDasharray} strokeDashoffset={seg.strokeDashoffset} className="transition-all duration-500 ease-out" />
-                            ))}
-                          </svg>
-                          <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                            <span className="text-3xl font-black text-slate-800 dark:text-slate-100 leading-none">{totalCases}</span>
-                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mt-0.5">Kasus</span>
-                            <span className="text-[10px] font-bold text-emerald-500 dark:text-emerald-400 mt-0.5 leading-none">
+                    <div className="flex flex-col w-full py-1 flex-grow justify-between">
+                      <div>
+                        {/* Total Summary Row */}
+                        <div className="flex items-center justify-between mb-4 bg-slate-50/50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/60 p-3.5 rounded-2xl">
+                          <div>
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Total Kasus</span>
+                            <div className="text-xl font-black text-slate-800 dark:text-slate-100 mt-1">{totalCases} Kasus</div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">Total Energi</span>
+                            <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
                               {formatIndoNumber(activeDataset.reduce((s, d) => s + (d.kwh || 0), 0))} kWh
-                            </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Linear Segmented Progress Bar */}
+                        <div className="w-full mb-5 px-0.5">
+                          <div className="h-3 w-full bg-slate-100 dark:bg-slate-800/60 rounded-full flex overflow-hidden shadow-inner">
+                            {donutSegments.map((seg, idx) => (
+                              seg.percent > 0 && (
+                                <div
+                                  key={idx}
+                                  style={{ width: `${seg.percent}%`, backgroundColor: seg.color }}
+                                  className="h-full transition-all duration-500 ease-out first:rounded-l-full last:rounded-r-full hover:opacity-90 cursor-pointer"
+                                  title={`${getLabelName(seg.class)}: ${seg.cases} kasus (${Math.round(seg.percent)}%)`}
+                                />
+                              )
+                            ))}
                           </div>
                         </div>
                       </div>
                       
-                      <div className="w-full pt-4 border-t border-slate-100 dark:border-slate-800/60 space-y-2">
+                      {/* Data List */}
+                      <div className="w-full space-y-2 flex-grow overflow-y-auto max-h-[260px] pr-1">
                         {donutSegments.map((seg, idx) => (
-                          <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-950/30 border border-slate-100 dark:border-slate-800/60 rounded-xl hover:bg-slate-100/50 dark:hover:bg-slate-900/20 transition-colors duration-150">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className={`w-2 h-2 rounded-full ${seg.twColor} flex-shrink-0`} />
+                          <div key={idx} className="flex items-center justify-between p-2.5 bg-slate-50/30 dark:bg-slate-950/10 border border-slate-100 dark:border-slate-800/40 rounded-xl hover:bg-slate-100/50 dark:hover:bg-slate-900/30 transition-all duration-150">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style={{ backgroundColor: seg.color }} />
                               <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{getLabelName(seg.class)}</span>
                             </div>
                             <div className="flex items-center gap-3 text-right">
