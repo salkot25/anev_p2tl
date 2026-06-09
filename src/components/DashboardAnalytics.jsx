@@ -136,6 +136,8 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   const [compositionMetric, setCompositionMetric] = useState('tarif');
   const [granularity, setGranularity] = useState('bulan');
   const [monthlyTargets, setMonthlyTargets] = useState(Array(12).fill(130205));
+  const [showAllYoYTable, setShowAllYoYTable] = useState(false);
+  const [activeScenario, setActiveScenario] = useState('current');
 
   const activeWorkingDaysChecklist = useMemo(() => {
     if (workingDays && typeof workingDays === 'object') {
@@ -686,68 +688,73 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
         };
         const statusInfo = getKpiStatus(pctYtd, month, totalRealYear, targetKumulatifYtd);
 
+        // Responsive month display control for YoY comparison table
+        const activeMonthsCount = Math.max(1, month);
+        const visibleYoYData = showAllYoYTable ? yoyChartData : yoyChartData.slice(0, activeMonthsCount);
+
         return (
           <div className="space-y-6">
-            {/* Hero Status Card */}
-            <div className={`p-6 ${borderRadius.xxxl} border ${colors.border} ${shadows.md} bg-gradient-to-br from-emerald-50/50 via-white to-slate-50/50 dark:from-emerald-950/20 dark:via-slate-900 dark:to-slate-950 flex flex-col lg:flex-row justify-between items-stretch gap-6 relative overflow-hidden`}>
-              <div className="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute bottom-0 left-0 -mb-16 -ml-16 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl pointer-events-none" />
+            {/* Hero Status Card (Mobile-First) */}
+            <div className={`p-5 sm:p-6 ${borderRadius.xxl} border ${colors.border} ${shadows.md} bg-white dark:bg-slate-900 flex flex-col lg:flex-row justify-between items-stretch gap-6 relative overflow-hidden`}>
               <div className="flex-1 space-y-4 z-10 flex flex-col justify-between">
                 <div className="space-y-2.5">
-                  <div className="flex flex-wrap items-center gap-2.5">
-                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Status Pencapaian Kumulatif</span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black tracking-wide ${statusInfo.color}`}>{statusInfo.label}</span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Status Pencapaian Kumulatif</span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide ${statusInfo.color}`}>{statusInfo.label}</span>
                   </div>
-                  <h2 className="text-xl font-black text-slate-900 dark:text-slate-50 tracking-tight leading-tight">
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-50 tracking-tight leading-tight">
                     Analisis Pencapaian kWh Kumulatif Tahun {year}
                   </h2>
-                  <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold leading-relaxed max-w-3xl">{statusInfo.description}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl sm:block hidden">{statusInfo.description}</p>
                 </div>
-                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-200/60 dark:border-slate-800/60">
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Realisasi YTD</div>
-                    <div className="text-sm font-black text-slate-900 dark:text-slate-50">{formatIndoNumber(totalRealYear)} <span className="text-[10px] text-slate-500 font-semibold">kWh</span></div>
+                <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="space-y-0.5">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Realisasi YTD</div>
+                    <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(totalRealYear)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
-                  <div className="space-y-1 border-l border-slate-200 dark:border-slate-800 pl-4">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target YTD</div>
-                    <div className="text-sm font-black text-slate-900 dark:text-slate-50">{formatIndoNumber(targetKumulatifYtd)} <span className="text-[10px] text-slate-500 font-semibold">kWh</span></div>
+                  <div className="space-y-0.5 border-l border-slate-100 dark:border-slate-800/80 pl-3">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target YTD</div>
+                    <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(targetKumulatifYtd)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
-                  <div className="space-y-1 border-l border-slate-200 dark:border-slate-800 pl-4">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Target Tahunan</div>
-                    <div className="text-sm font-black text-slate-900 dark:text-slate-50">{formatIndoNumber(totalTargetYear)} <span className="text-[10px] text-slate-500 font-semibold">kWh</span></div>
+                  <div className="space-y-0.5 border-l border-slate-100 dark:border-slate-800/80 pl-3">
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target Tahunan</div>
+                    <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(totalTargetYear)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
                 </div>
               </div>
-              <div className="w-full lg:w-72 flex flex-row lg:flex-col items-center justify-center p-4 lg:p-6 bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/50 dark:border-slate-800/50 rounded-2xl z-10 shrink-0 gap-6">
-                <div className="flex flex-col items-center justify-center text-center">
-                  <div className="relative flex items-center justify-center w-28 h-28">
+              <div className="w-full lg:w-72 flex flex-row lg:flex-col items-center justify-between lg:justify-center p-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/50 rounded-xl z-10 shrink-0 gap-4 sm:gap-6">
+                <div className="flex items-center lg:justify-center gap-3 lg:flex-col">
+                  <div className="relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20">
                     <svg className="w-full h-full transform -rotate-90">
-                      <circle cx="56" cy="56" r="48" className="stroke-slate-200 dark:stroke-slate-800" strokeWidth="8" fill="transparent" />
-                      <circle cx="56" cy="56" r="48" className={`transition-all duration-1000 ease-out ${pctYtd >= 100 ? 'stroke-emerald-500' : pctYtd >= 90 ? 'stroke-teal-500' : pctYtd >= 75 ? 'stroke-amber-500' : 'stroke-rose-500'}`} strokeWidth="8" fill="transparent" strokeDasharray={2 * Math.PI * 48} strokeDashoffset={2 * Math.PI * 48 * (1 - Math.min(100, pctYtd) / 100)} strokeLinecap="round" />
+                      <circle cx="40" cy="40" r="32" className="stroke-slate-200 dark:stroke-slate-800" strokeWidth="6" fill="transparent" />
+                      <circle cx="40" cy="40" r="32" className={`transition-all duration-1000 ease-out ${pctYtd >= 100 ? 'stroke-emerald-500' : pctYtd >= 90 ? 'stroke-teal-500' : pctYtd >= 75 ? 'stroke-amber-500' : 'stroke-rose-500'}`} strokeWidth="6" fill="transparent" strokeDasharray={2 * Math.PI * 32} strokeDashoffset={2 * Math.PI * 32 * (1 - Math.min(100, pctYtd) / 100)} strokeLinecap="round" />
                     </svg>
                     <div className="absolute flex flex-col items-center justify-center">
-                      <span className="text-lg font-black text-slate-900 dark:text-slate-50">{Math.round(pctYtd)}%</span>
-                      <span className="text-[9px] font-black uppercase text-slate-400 tracking-wider">dari Target YTD</span>
+                      <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-50">{Math.round(pctYtd)}%</span>
                     </div>
                   </div>
+                  <div className="flex flex-col lg:items-center">
+                    <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Pencapaian YTD</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium sm:hidden block">{formatIndoNumber(totalRealYear)} / {formatIndoNumber(targetKumulatifYtd)} kWh</span>
+                  </div>
                 </div>
-                <div className="flex-1 lg:w-full space-y-2">
-                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                    <span>Progres Target Tahunan</span>
+                <div className="flex-1 lg:w-full space-y-1">
+                  <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-wide">
+                    <span>Target Tahunan</span>
                     <span className="text-slate-700 dark:text-slate-300">{Math.round(pctAnnual)}%</span>
                   </div>
-                  <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-1000 ease-out ${pctAnnual >= 100 ? 'bg-emerald-500' : pctAnnual >= 50 ? 'bg-emerald-500/80' : 'bg-emerald-500/50'}`} style={{ width: `${Math.min(100, pctAnnual)}%` }} />
+                  <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-1000 ease-out bg-emerald-500`} style={{ width: `${Math.min(100, pctAnnual)}%` }} />
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* YoY Chart */}
-            <div className={`p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md}`}>
+            {/* YoY Chart & Detail Table (Responsive Layout) */}
+            <div className={`p-5 sm:p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md}`}>
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/80">
                 <div className="space-y-1">
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                     <span>Perbandingan Bulanan kWh — {currentYear} vs {prevYear}</span>
                   </h3>
@@ -759,19 +766,20 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-4 text-[10px] font-bold shrink-0">
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-2.5 rounded-sm bg-slate-300 dark:bg-slate-600" /><span className="text-slate-500 dark:text-slate-400">{prevYear}</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-2.5 rounded-sm bg-emerald-500" /><span className="text-slate-500 dark:text-slate-400">{currentYear}</span></div>
-                  <div className="flex items-center gap-1.5"><div className="w-3 h-0.5 bg-amber-500" /><span className="text-slate-500 dark:text-slate-400">Target</span></div>
+                <div className="flex items-center gap-3 text-[9px] font-bold shrink-0">
+                  <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-slate-300 dark:bg-slate-600" /><span className="text-slate-500 dark:text-slate-400">{prevYear}</span></div>
+                  <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /><span className="text-slate-500 dark:text-slate-400">{currentYear}</span></div>
+                  <div className="flex items-center gap-1"><div className="w-2.5 h-0.5 bg-amber-500" /><span className="text-slate-500 dark:text-slate-400">Target</span></div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
-                <div className="lg:col-span-8 relative" style={{ height: 220 }}>
-                  <svg width="100%" height="220" viewBox="0 0 720 220" preserveAspectRatio="none" className="overflow-visible">
+                {/* SVG Chart Container */}
+                <div className="lg:col-span-8 relative w-full h-auto overflow-x-auto min-h-[160px]">
+                  <svg width="100%" height="220" viewBox="0 0 720 220" preserveAspectRatio="none" className="overflow-visible min-w-[500px]">
                     {yoyChartData.map((d, idx) => {
                       const groupWidth = 720 / 12;
-                      const barW = 14, gap = 2;
+                      const barW = 12, gap = 2;
                       const centerX = groupWidth * idx + groupWidth / 2;
                       const prevBarX = centerX - barW - gap / 2;
                       const currBarX = centerX + gap / 2;
@@ -781,21 +789,26 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                       const targetY = yoyMaxVal > 0 ? 185 - (d.target / yoyMaxVal) * maxH : 185;
                       return (
                         <g key={idx}>
-                          <rect x={prevBarX} y={185 - prevH} width={barW} height={Math.max(prevH, 1)} rx="1.5" className="fill-slate-300 dark:fill-slate-600/80 transition-all duration-350" />
+                          <rect x={prevBarX} y={185 - prevH} width={barW} height={Math.max(prevH, 1)} rx="1.5" className="fill-slate-200 dark:fill-slate-800 transition-all duration-350" />
                           <rect x={currBarX} y={185 - currH} width={barW} height={Math.max(currH, 1)} rx="1.5" className="fill-emerald-500 dark:fill-emerald-500/80 transition-all duration-350" />
                           <line x1={prevBarX - 2} y1={targetY} x2={currBarX + barW + 2} y2={targetY} className="stroke-amber-500" strokeWidth="1.5" strokeDasharray="3,2" />
-                          <text x={centerX} y="202" textAnchor="middle" fontSize="9" className="fill-slate-400 dark:fill-slate-500 font-extrabold">{d.label}</text>
+                          <text x={centerX} y="202" textAnchor="middle" fontSize="9" className="fill-slate-400 dark:fill-slate-500 font-bold">{d.label}</text>
                         </g>
                       );
                     })}
                   </svg>
                 </div>
-                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800 lg:pl-6 pt-4 lg:pt-0">
-                  <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2">Rincian Perbandingan Bulanan</div>
-                  <div className="overflow-y-auto max-h-[180px] pr-1 text-xs">
+
+                {/* YoY Table with Mobile view control */}
+                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-6 pt-4 lg:pt-0 w-full">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Rincian Perbandingan Bulanan</span>
+                    <span className="text-[9px] text-slate-400 font-semibold sm:hidden block">Tampil {visibleYoYData.length} Bulan</span>
+                  </div>
+                  <div className="overflow-x-auto pr-1 text-xs">
                     <table className="w-full text-left">
                       <thead>
-                        <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
+                        <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800/80">
                           <th className="pb-1.5">Bulan</th>
                           <th className="pb-1.5 text-right">{prevYear}</th>
                           <th className="pb-1.5 text-right">{currentYear}</th>
@@ -803,7 +816,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100/60 dark:divide-slate-800/40">
-                        {yoyChartData.map((d, idx) => {
+                        {visibleYoYData.map((d, idx) => {
                           const mDiff = d.current - d.prev;
                           const mPct = d.prev > 0 ? (mDiff / d.prev) * 100 : (d.current > 0 ? 100 : 0);
                           const isCurrentActive = idx < month;
@@ -825,98 +838,217 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                       </tbody>
                     </table>
                   </div>
+                  {/* Toggle view control for YoY table */}
+                  <button
+                    onClick={() => setShowAllYoYTable(!showAllYoYTable)}
+                    className="w-full mt-3 py-1.5 text-center text-[10px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border border-dashed border-slate-200 dark:border-slate-800 rounded-lg transition-all"
+                  >
+                    {showAllYoYTable ? 'Sembunyikan Bulan Mendatang' : 'Tampilkan Seluruh Bulan'}
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Diagnostic Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className={`p-5 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} space-y-2`}>
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-500/15"><Target className="w-4 h-4" /></div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Sisa Target Tahun</span>
+            {/* Diagnostic Cards (Mobile-First: 2x2 Grid, Desktop: 4 Grid) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className="p-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded border border-amber-500/10"><Target className="w-3.5 h-3.5" /></div>
+                    <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Sisa Target</span>
+                  </div>
+                  <div className="text-sm sm:text-lg font-bold text-slate-900 dark:text-slate-50 leading-tight">
+                    {formatIndoNumber(sisaTarget)} <span className="text-[10px] text-slate-400 font-medium">kWh</span>
+                  </div>
                 </div>
-                <div className="text-xl font-black text-slate-900 dark:text-slate-50">{formatIndoNumber(sisaTarget)} <span className="text-xs font-bold text-slate-400">kWh</span></div>
-                <div className="h-2 w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-full overflow-hidden">
-                  <div className={`h-full rounded-full transition-all duration-500 ${totalRealYear >= totalTargetYear ? 'bg-emerald-500' : totalRealYear >= totalTargetYear * 0.6 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, totalTargetYear > 0 ? (totalRealYear / totalTargetYear) * 100 : 0)}%` }} />
+                <div className="space-y-1">
+                  <div className="h-1 w-full bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full bg-emerald-500`} style={{ width: `${Math.min(100, totalTargetYear > 0 ? (totalRealYear / totalTargetYear) * 100 : 0)}%` }} />
+                  </div>
+                  <div className="text-[8px] text-slate-400 font-medium truncate">Progress: {totalTargetYear > 0 ? Math.round((totalRealYear / totalTargetYear) * 100) : 0}%</div>
                 </div>
-                <div className="text-[10px] text-slate-400 font-semibold">Tercapai: {formatIndoNumber(totalRealYear)} / {formatIndoNumber(totalTargetYear)} kWh ({totalTargetYear > 0 ? Math.round((totalRealYear / totalTargetYear) * 100) : 0}%)</div>
               </div>
 
-              <div className={`p-5 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} space-y-2`}>
-                <div className="flex items-center gap-2">
-                  <div className={`p-2 rounded-lg border ${rataRataDibutuhkan > (monthlyTargets[month - 1] ?? 130205) * 1.2 ? 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/15' : 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/15'}`}><AlertTriangle className="w-4 h-4" /></div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Kebutuhan/Bulan</span>
+              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`p-1 rounded border ${rataRataDibutuhkan > (monthlyTargets[month - 1] ?? 130205) * 1.2 ? 'bg-rose-500/10 text-rose-500 border-rose-500/10' : 'bg-sky-500/10 text-sky-600 border-sky-500/10'}`}><AlertTriangle className="w-3.5 h-3.5" /></div>
+                    <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Kebutuhan/Bulan</span>
+                  </div>
+                  <div className="text-sm sm:text-lg font-bold text-slate-900 dark:text-slate-50 leading-tight">
+                    {formatIndoNumber(rataRataDibutuhkan)} <span className="text-[10px] text-slate-400 font-medium">kWh</span>
+                  </div>
                 </div>
-                <div className="text-xl font-black text-slate-900 dark:text-slate-50">{formatIndoNumber(rataRataDibutuhkan)} <span className="text-xs font-bold text-slate-400">kWh</span></div>
-                <div className="text-[10px] text-slate-400 font-semibold">Rata-rata kWh yang harus dicapai di {sisaBulan} bulan tersisa</div>
-                {rataRataDibutuhkan > (monthlyTargets[month - 1] ?? 130205) * 1.2 && (
-                  <div className="text-[10px] text-rose-500 dark:text-rose-400 font-bold flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Melebihi rata-rata target bulanan!</div>
-                )}
+                <div className="text-[8px] text-slate-400 font-medium truncate">Untuk {sisaBulan} bulan tersisa</div>
               </div>
 
-              <div className={`p-5 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} space-y-2`}>
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/15"><Trophy className="w-4 h-4" /></div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Bulan Terbaik</span>
+              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-1.5 flex flex-col justify-between`}>
+                <div className="flex items-center gap-1.5">
+                  <div className="p-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-500/10"><Trophy className="w-3.5 h-3.5" /></div>
+                  <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Bulan Terbaik</span>
                 </div>
                 {bestMonth ? (
-                  <>
-                    <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">{bestMonth.month}</div>
-                    <div className="text-[10px] text-slate-400 font-semibold">{formatIndoNumber(bestMonth.kwh)} kWh · {bestMonth.cases} kasus</div>
-                  </>
-                ) : <div className="text-sm text-slate-400 font-semibold">Belum ada data</div>}
+                  <div>
+                    <div className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">{bestMonth.month}</div>
+                    <div className="text-[8px] text-slate-400 font-medium truncate">{formatIndoNumber(bestMonth.kwh)} kWh · {bestMonth.cases} kasus</div>
+                  </div>
+                ) : <div className="text-[10px] text-slate-400 font-medium">Belum ada data</div>}
               </div>
 
-              <div className={`p-5 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} space-y-2`}>
-                <div className="flex items-center gap-2">
-                  <div className="p-2 bg-rose-500/10 text-rose-500 dark:text-rose-400 rounded-lg border border-rose-500/15"><TrendingDown className="w-4 h-4" /></div>
-                  <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Bulan Terburuk</span>
+              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-1.5 flex flex-col justify-between`}>
+                <div className="flex items-center gap-1.5">
+                  <div className="p-1 bg-rose-500/10 text-rose-500 dark:text-rose-400 rounded border border-rose-500/10"><TrendingDown className="w-3.5 h-3.5" /></div>
+                  <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Bulan Terburuk</span>
                 </div>
                 {worstMonth ? (
-                  <>
-                    <div className="text-xl font-black text-rose-500 dark:text-rose-400">{worstMonth.month}</div>
-                    <div className="text-[10px] text-slate-400 font-semibold">{formatIndoNumber(worstMonth.kwh)} kWh · {worstMonth.cases} kasus</div>
-                  </>
-                ) : <div className="text-sm text-slate-400 font-semibold">Belum ada data</div>}
+                  <div>
+                    <div className="text-xs sm:text-sm font-bold text-rose-500 dark:text-rose-400">{worstMonth.month}</div>
+                    <div className="text-[8px] text-slate-400 font-medium truncate">{formatIndoNumber(worstMonth.kwh)} kWh · {worstMonth.cases} kasus</div>
+                  </div>
+                ) : <div className="text-[10px] text-slate-400 font-medium">Belum ada data</div>}
               </div>
             </div>
 
-            {/* Scenario Projections */}
-            <div className={`p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} space-y-4`}>
+            {/* Scenario Projections (Mobile-First: Toggles on Mobile, 3 Cards on Desktop) */}
+            <div className={`p-5 sm:p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} space-y-4`}>
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-                <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg border border-emerald-500/15"><TrendingUp className="w-4 h-4" /></div>
+                <div className="p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-500/10"><TrendingUp className="w-4 h-4" /></div>
                 <div>
-                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-100">Skenario Proyeksi Pencapaian Target Tahunan</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold">Simulasi pencapaian target kumulatif tahunan {year} ({formatIndoNumber(totalTargetYear)} kWh) berdasarkan 3 skenario taktis.</p>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">Skenario Proyeksi Pencapaian Target Tahunan</h3>
+                  <p className="text-[9px] text-slate-400 font-medium">Simulasi target kumulatif tahunan {year} ({formatIndoNumber(totalTargetYear)} kWh) berdasarkan 3 skenario taktis.</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Scenario 1 */}
-                <div className="p-4 bg-slate-50/40 dark:bg-slate-950/30 border border-slate-200/50 dark:border-slate-800/50 rounded-xl space-y-3 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-start">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Apabila Progres Seperti Saat Ini</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${gapCurrent <= 0 ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/10'}`}>
+              {/* Mobile Scenario Tabs / Selector */}
+              <div className="flex sm:hidden p-1 bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg">
+                {[
+                  { id: 'current', label: 'Rutin/Tren Kini' },
+                  { id: 'adjusted', label: 'Disesuaikan' },
+                  { id: 'optimistic', label: 'Optimis (110%)' }
+                ].map(scen => (
+                  <button
+                    key={scen.id}
+                    onClick={() => setActiveScenario(scen.id)}
+                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${
+                      activeScenario === scen.id
+                        ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    {scen.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Mobile Only: Active Scenario Card */}
+              <div className="sm:hidden block">
+                {activeScenario === 'current' && (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Apabila Progres Seperti Saat Ini</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${gapCurrent <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                         {gapCurrent <= 0 ? 'TERCAPAI' : 'PERLU AKSELERASI'}
                       </span>
                     </div>
-                    <div className="text-lg font-black text-slate-900 dark:text-slate-100">{formatIndoNumber(projectedKwhCurrent)} <span className="text-xs font-bold text-slate-400">kWh</span></div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Proyeksi Akhir Tahun</div>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
+                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(projectedKwhCurrent)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
+                    <div className="text-[9px] text-slate-400 font-medium">Proyeksi Akhir Tahun</div>
+                    <p className="text-[11px] text-slate-505 dark:text-slate-400 leading-relaxed font-medium">
                       {gapCurrent > 0
-                        ? <>Dengan ritme saat ini, akhir tahun diproyeksikan defisit <span className="font-black text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-black text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
-                        : <>Dengan ritme saat ini, akhir tahun diproyeksikan surplus <span className="font-black text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif tahunan diproyeksikan dapat tercapai dengan sukses.</>}
+                        ? <>Dengan ritme saat ini, akhir tahun diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
+                        : <>Dengan ritme saat ini, akhir tahun diproyeksikan surplus <span className="font-bold text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif tahunan diproyeksikan dapat tercapai dengan sukses.</>}
+                    </p>
+                    <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
+                      <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
+                      <div className="flex justify-between"><span>Kebutuhan Bulanan:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bln</span></div>
+                    </div>
+                    <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40">
+                      <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>{Math.round(pctCurrent)}%</span></div>
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-850 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${gapCurrent <= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, pctCurrent)}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeScenario === 'adjusted' && (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Jika Target Harian Kumulatif Tercapai</span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">TERCAPAI</span>
+                    </div>
+                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(totalTargetYear)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
+                    <div className="text-[9px] text-slate-400 font-medium">Disesuaikan untuk Target</div>
+                    <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed font-medium">
+                      {pctDailyIncrease > 0
+                        ? <>Agar target kumulatif tercapai, target harian sisa <span className="font-bold text-slate-700 dark:text-slate-300">{remainingWorkingDays} hari kerja</span> tahun ini harus disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (naik <span className="font-bold text-rose-500">{pctDailyIncrease}%</span> dari target harian awal).</>
+                        : <>Target kumulatif tahunan berjalan aman. Target harian disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (turun <span className="font-bold text-emerald-600">{Math.abs(pctDailyIncrease)}%</span> dari target harian awal).</>}
+                    </p>
+                    <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
+                      <div className="flex justify-between"><span>Target Harian Awal:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(baselineTargetHarian)} kWh/hari</span></div>
+                      <div className="flex justify-between"><span>Target Harian Baru:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(newTargetHarian)} kWh/hari</span></div>
+                    </div>
+                    <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40">
+                      <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>100%</span></div>
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: '100%' }} /></div>
+                    </div>
+                  </div>
+                )}
+
+                {activeScenario === 'optimistic' && (
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Cara Mencapai Target 110%</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${totalRealYear >= target110Year ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                        {totalRealYear >= target110Year ? 'TERCAPAI' : `PERLU EFFORT +${pctEffortRequired110}%`}
+                      </span>
+                    </div>
+                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(Math.round(target110Year))} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
+                    <div className="text-[9px] text-slate-400 font-medium">Target Optimis (110%)</div>
+                    <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed font-medium">
+                      {totalRealYear < target110Year
+                        ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {remainingMonths} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
+                        : <>Target optimis 110% tahunan sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
+                    </p>
+                    <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
+                      <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
+                      <div className="flex justify-between"><span>Kebutuhan Bulanan (110%):</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(avgRequiredKwh110)} kWh/bln</span></div>
+                    </div>
+                    <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40">
+                      <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Progres Terhadap Target 110%</span><span>{Math.round(target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%</span></div>
+                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className={`h-full rounded-full ${totalRealYear >= target110Year ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%` }} />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Desktop Only: 3 Column Parallel Layout */}
+              <div className="hidden sm:grid grid-cols-3 gap-6">
+                {/* Scenario 1 */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-3 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Apabila Progres Seperti Saat Ini</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${gapCurrent <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                        {gapCurrent <= 0 ? 'TERCAPAI' : 'PERLU AKSELERASI'}
+                      </span>
+                    </div>
+                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(projectedKwhCurrent)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
+                    <div className="text-[9px] text-slate-400 font-medium">Proyeksi Akhir Tahun</div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                      {gapCurrent > 0
+                        ? <>Dengan ritme saat ini, akhir tahun diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
+                        : <>Dengan ritme saat ini, akhir tahun diproyeksikan surplus <span className="font-bold text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif tahunan diproyeksikan dapat tercapai dengan sukses.</>}
                     </p>
                   </div>
                   <div>
-                    <div className="pt-2 border-t border-slate-200/20 dark:border-slate-800/60 text-[10px] font-bold text-slate-400 space-y-1">
-                      <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-700 dark:text-slate-200 font-extrabold">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
-                      <div className="flex justify-between"><span>Kebutuhan Bulanan:</span><span className="text-slate-700 dark:text-slate-200 font-extrabold">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bln</span></div>
+                    <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
+                      <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
+                      <div className="flex justify-between"><span>Kebutuhan Bulanan:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bln</span></div>
                     </div>
-                    <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>{Math.round(pctCurrent)}%</span></div>
+                    <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40 mt-2">
+                      <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>{Math.round(pctCurrent)}%</span></div>
                       <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${gapCurrent <= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, pctCurrent)}%` }} />
                       </div>
@@ -925,56 +1057,56 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 </div>
 
                 {/* Scenario 2 */}
-                <div className="p-4 bg-slate-50/40 dark:bg-slate-950/30 border border-slate-200/50 dark:border-slate-800/50 rounded-xl space-y-3 flex flex-col justify-between">
+                <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-3 flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Jika Target Harian Kumulatif Tercapai</span>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10">TERCAPAI</span>
+                      <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Jika Target Harian Kumulatif Tercapai</span>
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">TERCAPAI</span>
                     </div>
-                    <div className="text-lg font-black text-slate-900 dark:text-slate-100">{formatIndoNumber(totalTargetYear)} <span className="text-xs font-bold text-slate-400">kWh</span></div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Disesuaikan untuk Target</div>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
+                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(totalTargetYear)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
+                    <div className="text-[9px] text-slate-400 font-medium">Disesuaikan untuk Target</div>
+                    <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed font-medium">
                       {pctDailyIncrease > 0
-                        ? <>Agar target kumulatif tercapai, target harian sisa <span className="font-bold text-slate-800 dark:text-slate-200">{remainingWorkingDays} hari kerja</span> tahun ini harus disesuaikan menjadi <span className="font-black text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (naik <span className="font-black text-rose-500">{pctDailyIncrease}%</span> dari target harian awal).</>
-                        : <>Target kumulatif tahunan berjalan aman. Target harian disesuaikan menjadi <span className="font-black text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (turun <span className="font-black text-emerald-600">{Math.abs(pctDailyIncrease)}%</span> dari target harian awal).</>}
+                        ? <>Agar target kumulatif tercapai, target harian sisa <span className="font-bold text-slate-700 dark:text-slate-300">{remainingWorkingDays} hari kerja</span> tahun ini harus disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (naik <span className="font-bold text-rose-500">{pctDailyIncrease}%</span> dari target harian awal).</>
+                        : <>Target kumulatif tahunan berjalan aman. Target harian disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (turun <span className="font-bold text-emerald-600">{Math.abs(pctDailyIncrease)}%</span> dari target harian awal).</>}
                     </p>
                   </div>
                   <div>
-                    <div className="pt-2 border-t border-slate-200/20 dark:border-slate-800/60 text-[10px] font-bold text-slate-400 space-y-1">
-                      <div className="flex justify-between"><span>Target Harian Awal:</span><span className="text-slate-700 dark:text-slate-200 font-extrabold">{formatIndoNumber(baselineTargetHarian)} kWh/hari</span></div>
-                      <div className="flex justify-between"><span>Target Harian Baru:</span><span className="text-slate-700 dark:text-slate-200 font-extrabold">{formatIndoNumber(newTargetHarian)} kWh/hari</span></div>
+                    <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
+                      <div className="flex justify-between"><span>Target Harian Awal:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(baselineTargetHarian)} kWh/hari</span></div>
+                      <div className="flex justify-between"><span>Target Harian Baru:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(newTargetHarian)} kWh/hari</span></div>
                     </div>
-                    <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>100%</span></div>
+                    <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40 mt-2">
+                      <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>100%</span></div>
                       <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: '100%' }} /></div>
                     </div>
                   </div>
                 </div>
 
                 {/* Scenario 3 */}
-                <div className="p-4 bg-slate-50/40 dark:bg-slate-950/30 border border-slate-200/50 dark:border-slate-800/50 rounded-xl space-y-3 flex flex-col justify-between">
+                <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-3 flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
-                      <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Cara Mencapai Target 110%</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${totalRealYear >= target110Year ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/10' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/10'}`}>
+                      <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Cara Mencapai Target 110%</span>
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${totalRealYear >= target110Year ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                         {totalRealYear >= target110Year ? 'TERCAPAI' : `PERLU EFFORT +${pctEffortRequired110}%`}
                       </span>
                     </div>
-                    <div className="text-lg font-black text-slate-900 dark:text-slate-100">{formatIndoNumber(Math.round(target110Year))} <span className="text-xs font-bold text-slate-400">kWh</span></div>
-                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">Target Optimis (110%)</div>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-300 font-semibold leading-relaxed">
+                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(Math.round(target110Year))} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
+                    <div className="text-[9px] text-slate-400 font-medium">Target Optimis (110%)</div>
+                    <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed font-medium">
                       {totalRealYear < target110Year
-                        ? <>Agar target optimis 110% tercapai (<span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {remainingMonths} bulan harus ditingkatkan sebesar <span className="font-black text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
-                        : <>Target optimis 110% tahunan sebesar <span className="font-black text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
+                        ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {remainingMonths} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
+                        : <>Target optimis 110% tahunan sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
                     </p>
                   </div>
                   <div>
-                    <div className="pt-2 border-t border-slate-200/20 dark:border-slate-800/60 text-[10px] font-bold text-slate-400 space-y-1">
-                      <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-700 dark:text-slate-200 font-extrabold">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
-                      <div className="flex justify-between"><span>Kebutuhan Bulanan (110%):</span><span className="text-slate-700 dark:text-slate-200 font-extrabold">{formatIndoNumber(avgRequiredKwh110)} kWh/bln</span></div>
+                    <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
+                      <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
+                      <div className="flex justify-between"><span>Kebutuhan Bulanan (110%):</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(avgRequiredKwh110)} kWh/bln</span></div>
                     </div>
-                    <div className="space-y-1.5 pt-3 border-t border-slate-100 dark:border-slate-800 mt-2">
-                      <div className="flex justify-between text-[10px] font-bold text-slate-400"><span>Progres Terhadap Target 110%</span><span>{Math.round(target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%</span></div>
+                    <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40 mt-2">
+                      <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Progres Terhadap Target 110%</span><span>{Math.round(target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%</span></div>
                       <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${totalRealYear >= target110Year ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%` }} />
                       </div>
@@ -986,6 +1118,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
           </div>
         );
       })()}
+
     </div>
   );
 }
