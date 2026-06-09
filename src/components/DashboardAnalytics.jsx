@@ -137,8 +137,17 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   const [compositionMetric, setCompositionMetric] = useState('tarif');
   const [granularity, setGranularity] = useState('bulan');
   const [monthlyTargets, setMonthlyTargets] = useState(Array(12).fill(130205));
-  const [showAllYoYTable, setShowAllYoYTable] = useState(false);
+  const [selectedSemester, setSelectedSemester] = useState(1);
   const [activeScenario, setActiveScenario] = useState('current');
+
+  // Sync selected semester with the active month from date prop
+  useEffect(() => {
+    if (targets?.date) {
+      const parts = targets.date.split('-');
+      const m = parseInt(parts[1], 10) || 1;
+      setSelectedSemester(m > 6 ? 2 : 1);
+    }
+  }, [targets?.date]);
 
   const activeWorkingDaysChecklist = useMemo(() => {
     if (workingDays && typeof workingDays === 'object') {
@@ -711,9 +720,16 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
         };
         const statusInfo = getKpiStatus(pctYtd, month, totalRealYear, targetKumulatifYtd);
 
-        // Responsive month display control for YoY comparison table
-        const activeMonthsCount = Math.max(1, month);
-        const visibleYoYData = showAllYoYTable ? yoyChartData : yoyChartData.slice(0, activeMonthsCount);
+        // YoY comparison table partitioned by Semester
+        const s1Prev = yoyChartData.slice(0, 6).reduce((sum, d, idx) => sum + (idx < month ? d.prev : 0), 0);
+        const s1Current = yoyChartData.slice(0, 6).reduce((sum, d, idx) => sum + (idx < month ? d.current : 0), 0);
+        const s1YoYVal = month > 0 && s1Prev > 0 ? ((s1Current - s1Prev) / s1Prev) * 100 : null;
+
+        const s2Prev = yoyChartData.slice(6, 12).reduce((sum, d, idx) => sum + ((idx + 6) < month ? d.prev : 0), 0);
+        const s2Current = yoyChartData.slice(6, 12).reduce((sum, d, idx) => sum + ((idx + 6) < month ? d.current : 0), 0);
+        const s2YoYVal = month > 6 && s2Prev > 0 ? ((s2Current - s2Prev) / s2Prev) * 100 : null;
+
+        const visibleYoYData = selectedSemester === 1 ? yoyChartData.slice(0, 6) : yoyChartData.slice(6, 12);
 
         return (
           <div className="space-y-6">
@@ -822,52 +838,92 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   </svg>
                 </div>
 
-                {/* YoY Table with Mobile view control */}
-                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-6 pt-4 lg:pt-0 w-full">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Rincian Perbandingan Bulanan</span>
-                    <span className="text-[9px] text-slate-400 font-semibold sm:hidden block">Tampil {visibleYoYData.length} Bulan</span>
+                {/* YoY Table with Semester Selector */}
+                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-6 pt-4 lg:pt-0 w-full flex flex-col justify-between">
+                  <div>
+                    {/* Semester Slider Selector */}
+                    <div className="relative flex p-1 bg-slate-100 dark:bg-slate-900/50 border border-slate-200/40 dark:border-slate-800/40 rounded-xl mb-4">
+                      {/* Sliding indicator */}
+                      <div
+                        className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200/50 dark:border-slate-700/30 transition-transform duration-300 ease-out ${
+                          selectedSemester === 2 ? 'translate-x-full' : 'translate-x-0'
+                        }`}
+                      />
+                      <button
+                        onClick={() => setSelectedSemester(1)}
+                        className={`relative z-10 w-1/2 py-1.5 text-center transition-all ${
+                          selectedSemester === 1
+                            ? 'text-emerald-600 dark:text-emerald-400 font-black'
+                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-bold'
+                        }`}
+                      >
+                        <div className="text-[11px] uppercase tracking-wider">Semester 1</div>
+                        <div className="text-[9px] mt-0.5 opacity-90 font-bold">
+                          {s1YoYVal !== null ? (
+                            <span className={s1YoYVal >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                              {s1YoYVal >= 0 ? '+' : ''}{Math.round(s1YoYVal)}% YoY
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-medium">-</span>
+                          )}
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setSelectedSemester(2)}
+                        className={`relative z-10 w-1/2 py-1.5 text-center transition-all ${
+                          selectedSemester === 2
+                            ? 'text-emerald-600 dark:text-emerald-400 font-black'
+                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-bold'
+                        }`}
+                      >
+                        <div className="text-[11px] uppercase tracking-wider">Semester 2</div>
+                        <div className="text-[9px] mt-0.5 opacity-90 font-bold">
+                          {s2YoYVal !== null ? (
+                            <span className={s2YoYVal >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
+                              {s2YoYVal >= 0 ? '+' : ''}{Math.round(s2YoYVal)}% YoY
+                            </span>
+                          ) : (
+                            <span className="text-slate-400 font-medium">-</span>
+                          )}
+                        </div>
+                      </button>
+                    </div>
+
+                    <div className="overflow-x-auto pr-1 text-xs">
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800/80">
+                            <th className="pb-1.5">Bulan</th>
+                            <th className="pb-1.5 text-right">{prevYear}</th>
+                            <th className="pb-1.5 text-right">{currentYear}</th>
+                            <th className="pb-1.5 text-right">YoY (%)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100/60 dark:divide-slate-800/40">
+                          {visibleYoYData.map((d, idx) => {
+                            const mDiff = d.current - d.prev;
+                            const mPct = d.prev > 0 ? (mDiff / d.prev) * 100 : (d.current > 0 ? 100 : 0);
+                            const actualIdx = selectedSemester === 1 ? idx : idx + 6;
+                            const isCurrentActive = actualIdx < month;
+                            return (
+                              <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                                <td className="py-1.5 font-bold text-slate-600 dark:text-slate-300">{d.label}</td>
+                                <td className="py-1.5 text-right text-slate-500 dark:text-slate-400 font-semibold">{formatIndoNumber(d.prev)}</td>
+                                <td className="py-1.5 text-right text-slate-800 dark:text-slate-100 font-bold">{isCurrentActive ? formatIndoNumber(d.current) : '-'}</td>
+                                <td className="py-1.5 text-right font-black">
+                                  {isCurrentActive ? (
+                                    <span className={`inline-flex items-center gap-0.5 text-[10px] ${mDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                      {mDiff >= 0 ? '+' : ''}{Math.round(mPct)}%
+                                    </span>
+                                  ) : <span className="text-slate-400 font-medium">-</span>}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <div className="overflow-x-auto pr-1 text-xs">
-                    <table className="w-full text-left">
-                      <thead>
-                        <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800/80">
-                          <th className="pb-1.5">Bulan</th>
-                          <th className="pb-1.5 text-right">{prevYear}</th>
-                          <th className="pb-1.5 text-right">{currentYear}</th>
-                          <th className="pb-1.5 text-right">YoY (%)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100/60 dark:divide-slate-800/40">
-                        {visibleYoYData.map((d, idx) => {
-                          const mDiff = d.current - d.prev;
-                          const mPct = d.prev > 0 ? (mDiff / d.prev) * 100 : (d.current > 0 ? 100 : 0);
-                          const isCurrentActive = idx < month;
-                          return (
-                            <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                              <td className="py-1.5 font-bold text-slate-600 dark:text-slate-300">{d.label}</td>
-                              <td className="py-1.5 text-right text-slate-500 dark:text-slate-400 font-semibold">{formatIndoNumber(d.prev)}</td>
-                              <td className="py-1.5 text-right text-slate-800 dark:text-slate-100 font-bold">{isCurrentActive ? formatIndoNumber(d.current) : '-'}</td>
-                              <td className="py-1.5 text-right font-black">
-                                {isCurrentActive ? (
-                                  <span className={`inline-flex items-center gap-0.5 text-[10px] ${mDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                    {mDiff >= 0 ? '+' : ''}{Math.round(mPct)}%
-                                  </span>
-                                ) : <span className="text-slate-400 font-medium">-</span>}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                  {/* Toggle view control for YoY table */}
-                  <button
-                    onClick={() => setShowAllYoYTable(!showAllYoYTable)}
-                    className="w-full mt-3 py-1.5 text-center text-[10px] font-bold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 border border-dashed border-slate-200 dark:border-slate-800 rounded-lg transition-all"
-                  >
-                    {showAllYoYTable ? 'Sembunyikan Bulan Mendatang' : 'Tampilkan Seluruh Bulan'}
-                  </button>
                 </div>
               </div>
             </div>
