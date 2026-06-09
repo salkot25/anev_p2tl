@@ -10,7 +10,9 @@ import {
   Trophy,
   TrendingDown,
   BarChart3,
-  Info
+  Info,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import MonthlyTargets from './MonthlyTargets';
 
@@ -137,15 +139,15 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   const [compositionMetric, setCompositionMetric] = useState('tarif');
   const [granularity, setGranularity] = useState('bulan');
   const [monthlyTargets, setMonthlyTargets] = useState(Array(12).fill(130205));
-  const [selectedSemester, setSelectedSemester] = useState(1);
+  const [showAllYoYTable, setShowAllYoYTable] = useState(false);
   const [activeScenario, setActiveScenario] = useState('current');
+  const [yoyPage, setYoYPage] = useState(1);
 
-  // Sync selected semester with the active month from date prop
   useEffect(() => {
     if (targets?.date) {
-      const parts = targets.date.split('-');
-      const m = parseInt(parts[1], 10) || 1;
-      setSelectedSemester(m > 6 ? 2 : 1);
+      const dateParts = targets.date.split('-');
+      const currentMonth = parseInt(dateParts[1], 10) || (new Date().getMonth() + 1);
+      setYoYPage(currentMonth <= 6 ? 1 : 2);
     }
   }, [targets?.date]);
 
@@ -720,16 +722,19 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
         };
         const statusInfo = getKpiStatus(pctYtd, month, totalRealYear, targetKumulatifYtd);
 
-        // YoY comparison table partitioned by Semester
-        const s1Prev = yoyChartData.slice(0, 6).reduce((sum, d, idx) => sum + (idx < month ? d.prev : 0), 0);
-        const s1Current = yoyChartData.slice(0, 6).reduce((sum, d, idx) => sum + (idx < month ? d.current : 0), 0);
-        const s1YoYVal = month > 0 && s1Prev > 0 ? ((s1Current - s1Prev) / s1Prev) * 100 : null;
+        // Calculate Semester YoY Aggregates
+        // S1 is Jan - Jun (months 0 to 5)
+        const s1ThisYear = yoyChartData.slice(0, 6).reduce((sum, d, idx) => sum + (idx < month ? d.current : 0), 0);
+        const s1LastYear = yoyChartData.slice(0, 6).reduce((sum, d, idx) => sum + (idx < month ? d.prev : 0), 0);
+        const s1YoY = s1LastYear > 0 ? ((s1ThisYear - s1LastYear) / s1LastYear) * 100 : 0;
 
-        const s2Prev = yoyChartData.slice(6, 12).reduce((sum, d, idx) => sum + ((idx + 6) < month ? d.prev : 0), 0);
-        const s2Current = yoyChartData.slice(6, 12).reduce((sum, d, idx) => sum + ((idx + 6) < month ? d.current : 0), 0);
-        const s2YoYVal = month > 6 && s2Prev > 0 ? ((s2Current - s2Prev) / s2Prev) * 100 : null;
+        // S2 is Jul - Des (months 6 to 11)
+        const s2ThisYear = yoyChartData.slice(6, 12).reduce((sum, d, idx) => sum + ((idx + 6) < month ? d.current : 0), 0);
+        const s2LastYear = yoyChartData.slice(6, 12).reduce((sum, d, idx) => sum + ((idx + 6) < month ? d.prev : 0), 0);
+        const s2YoY = s2LastYear > 0 ? ((s2ThisYear - s2LastYear) / s2LastYear) * 100 : 0;
 
-        const visibleYoYData = selectedSemester === 1 ? yoyChartData.slice(0, 6) : yoyChartData.slice(6, 12);
+        // Paginated display control for YoY comparison table (6 rows per page)
+        const visibleYoYData = yoyPage === 1 ? yoyChartData.slice(0, 6) : yoyChartData.slice(6, 12);
 
         return (
           <div className="space-y-6">
@@ -838,91 +843,107 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   </svg>
                 </div>
 
-                {/* YoY Table with Semester Selector */}
-                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-6 pt-4 lg:pt-0 w-full flex flex-col justify-between">
-                  <div>
-                    {/* Semester Slider Selector */}
-                    <div className="relative flex p-1 bg-slate-100 dark:bg-slate-900/50 border border-slate-200/40 dark:border-slate-800/40 rounded-xl mb-4">
-                      {/* Sliding indicator */}
-                      <div
-                        className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200/50 dark:border-slate-700/30 transition-transform duration-300 ease-out ${
-                          selectedSemester === 2 ? 'translate-x-full' : 'translate-x-0'
-                        }`}
-                      />
-                      <button
-                        onClick={() => setSelectedSemester(1)}
-                        className={`relative z-10 w-1/2 py-1.5 text-center transition-all ${
-                          selectedSemester === 1
-                            ? 'text-emerald-600 dark:text-emerald-400 font-black'
-                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-bold'
-                        }`}
-                      >
-                        <div className="text-[11px] uppercase tracking-wider">Semester 1</div>
-                        <div className="text-[9px] mt-0.5 opacity-90 font-bold">
-                          {s1YoYVal !== null ? (
-                            <span className={s1YoYVal >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
-                              {s1YoYVal >= 0 ? '+' : ''}{Math.round(s1YoYVal)}% YoY
+                {/* YoY Table with Mobile view control */}
+                <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-6 pt-4 lg:pt-0 w-full">
+                  <div className="space-y-3 pb-3 mb-3 border-b border-slate-100 dark:border-slate-800/80">
+                    <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Rincian Perbandingan Semester</div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2.5 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/60 rounded-xl space-y-0.5">
+                        <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wide">Semester 1 (S1)</div>
+                        <div className="flex items-baseline justify-between gap-1 flex-wrap">
+                          <span className="text-[10px] font-extrabold text-slate-800 dark:text-slate-200">
+                            {formatIndoNumber(s1ThisYear)} kWh
+                          </span>
+                          {s1LastYear > 0 && month > 0 ? (
+                            <span className={`text-[9px] font-black ${s1ThisYear >= s1LastYear ? 'text-emerald-500' : 'text-rose-500'}`}>
+                              {s1ThisYear >= s1LastYear ? '+' : ''}{Math.round(s1YoY)}%
                             </span>
-                          ) : (
-                            <span className="text-slate-400 font-medium">-</span>
-                          )}
+                          ) : <span className="text-[9px] text-slate-450">-</span>}
                         </div>
-                      </button>
-                      <button
-                        onClick={() => setSelectedSemester(2)}
-                        className={`relative z-10 w-1/2 py-1.5 text-center transition-all ${
-                          selectedSemester === 2
-                            ? 'text-emerald-600 dark:text-emerald-400 font-black'
-                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-bold'
-                        }`}
-                      >
-                        <div className="text-[11px] uppercase tracking-wider">Semester 2</div>
-                        <div className="text-[9px] mt-0.5 opacity-90 font-bold">
-                          {s2YoYVal !== null ? (
-                            <span className={s2YoYVal >= 0 ? 'text-emerald-500' : 'text-rose-500'}>
-                              {s2YoYVal >= 0 ? '+' : ''}{Math.round(s2YoYVal)}% YoY
+                        <div className="text-[7.5px] font-semibold text-slate-400">vs {formatIndoNumber(s1LastYear)} (Tahun Lalu)</div>
+                      </div>
+
+                      <div className="p-2.5 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/60 rounded-xl space-y-0.5">
+                        <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wide">Semester 2 (S2)</div>
+                        <div className="flex items-baseline justify-between gap-1 flex-wrap">
+                          <span className="text-[10px] font-extrabold text-slate-800 dark:text-slate-200">
+                            {formatIndoNumber(s2ThisYear)} kWh
+                          </span>
+                          {s2LastYear > 0 && month > 6 ? (
+                            <span className={`text-[9px] font-black ${s2ThisYear >= s2LastYear ? 'text-emerald-500' : 'text-rose-500'}`}>
+                              {s2ThisYear >= s2LastYear ? '+' : ''}{Math.round(s2YoY)}%
                             </span>
-                          ) : (
-                            <span className="text-slate-400 font-medium">-</span>
-                          )}
+                          ) : <span className="text-[9px] text-slate-450">-</span>}
                         </div>
-                      </button>
+                        <div className="text-[7.5px] font-semibold text-slate-400">vs {formatIndoNumber(s2LastYear)} (Tahun Lalu)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto pr-1 text-xs">
+                    <table className="w-full text-left">
+                      <thead>
+                        <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800/80">
+                          <th className="pb-1.5">Bulan</th>
+                          <th className="pb-1.5 text-right">{prevYear}</th>
+                          <th className="pb-1.5 text-right">{currentYear}</th>
+                          <th className="pb-1.5 text-right">YoY (%)</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100/60 dark:divide-slate-800/40">
+                        {visibleYoYData.map((d, idx) => {
+                          const mDiff = d.current - d.prev;
+                          const mPct = d.prev > 0 ? (mDiff / d.prev) * 100 : (d.current > 0 ? 100 : 0);
+                          const actualMonthIndex = yoyPage === 1 ? idx + 1 : idx + 7;
+                          const isCurrentActive = actualMonthIndex <= month;
+                          return (
+                            <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                              <td className="py-1.5 font-bold text-slate-600 dark:text-slate-300">{d.label}</td>
+                              <td className="py-1.5 text-right text-slate-500 dark:text-slate-400 font-semibold">{formatIndoNumber(d.prev)}</td>
+                              <td className="py-1.5 text-right text-slate-800 dark:text-slate-100 font-bold">{isCurrentActive ? formatIndoNumber(d.current) : '-'}</td>
+                              <td className="py-1.5 text-right font-black">
+                                {isCurrentActive ? (
+                                  <span className={`inline-flex items-center gap-0.5 text-[10px] ${mDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                    {mDiff >= 0 ? '+' : ''}{Math.round(mPct)}%
+                                  </span>
+                                ) : <span className="text-slate-400 font-medium">-</span>}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination control with swipe style */}
+                  <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-100 dark:border-slate-800/60">
+                    <button
+                      disabled={yoyPage === 1}
+                      onClick={() => setYoYPage(1)}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      title="Semester 1"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                        {yoyPage === 1 ? 'Semester 1 (Jan - Jun)' : 'Semester 2 (Jul - Des)'}
+                      </span>
+                      <div className="flex gap-1 ml-1">
+                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${yoyPage === 1 ? 'bg-emerald-500 scale-125' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${yoyPage === 2 ? 'bg-emerald-500 scale-125' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                      </div>
                     </div>
 
-                    <div className="overflow-x-auto pr-1 text-xs">
-                      <table className="w-full text-left">
-                        <thead>
-                          <tr className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800/80">
-                            <th className="pb-1.5">Bulan</th>
-                            <th className="pb-1.5 text-right">{prevYear}</th>
-                            <th className="pb-1.5 text-right">{currentYear}</th>
-                            <th className="pb-1.5 text-right">YoY (%)</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100/60 dark:divide-slate-800/40">
-                          {visibleYoYData.map((d, idx) => {
-                            const mDiff = d.current - d.prev;
-                            const mPct = d.prev > 0 ? (mDiff / d.prev) * 100 : (d.current > 0 ? 100 : 0);
-                            const actualIdx = selectedSemester === 1 ? idx : idx + 6;
-                            const isCurrentActive = actualIdx < month;
-                            return (
-                              <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                                <td className="py-1.5 font-bold text-slate-600 dark:text-slate-300">{d.label}</td>
-                                <td className="py-1.5 text-right text-slate-500 dark:text-slate-400 font-semibold">{formatIndoNumber(d.prev)}</td>
-                                <td className="py-1.5 text-right text-slate-800 dark:text-slate-100 font-bold">{isCurrentActive ? formatIndoNumber(d.current) : '-'}</td>
-                                <td className="py-1.5 text-right font-black">
-                                  {isCurrentActive ? (
-                                    <span className={`inline-flex items-center gap-0.5 text-[10px] ${mDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                                      {mDiff >= 0 ? '+' : ''}{Math.round(mPct)}%
-                                    </span>
-                                  ) : <span className="text-slate-400 font-medium">-</span>}
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                    <button
+                      disabled={yoyPage === 2}
+                      onClick={() => setYoYPage(2)}
+                      className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      title="Semester 2"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
