@@ -845,39 +845,9 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
                 {/* YoY Table with Mobile view control */}
                 <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-6 pt-4 lg:pt-0 w-full">
-                  <div className="space-y-3 pb-3 mb-3 border-b border-slate-100 dark:border-slate-800/80">
-                    <div className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Rincian Perbandingan Semester</div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2.5 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/60 rounded-xl space-y-0.5">
-                        <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wide">Semester 1 (S1)</div>
-                        <div className="flex items-baseline justify-between gap-1 flex-wrap">
-                          <span className="text-[10px] font-extrabold text-slate-800 dark:text-slate-200">
-                            {formatIndoNumber(s1ThisYear)} kWh
-                          </span>
-                          {s1LastYear > 0 && month > 0 ? (
-                            <span className={`text-[9px] font-black ${s1ThisYear >= s1LastYear ? 'text-emerald-500' : 'text-rose-500'}`}>
-                              {s1ThisYear >= s1LastYear ? '+' : ''}{Math.round(s1YoY)}%
-                            </span>
-                          ) : <span className="text-[9px] text-slate-450">-</span>}
-                        </div>
-                        <div className="text-[7.5px] font-semibold text-slate-400">vs {formatIndoNumber(s1LastYear)} (Tahun Lalu)</div>
-                      </div>
-
-                      <div className="p-2.5 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/60 rounded-xl space-y-0.5">
-                        <div className="text-[8px] font-bold text-slate-400 uppercase tracking-wide">Semester 2 (S2)</div>
-                        <div className="flex items-baseline justify-between gap-1 flex-wrap">
-                          <span className="text-[10px] font-extrabold text-slate-800 dark:text-slate-200">
-                            {formatIndoNumber(s2ThisYear)} kWh
-                          </span>
-                          {s2LastYear > 0 && month > 6 ? (
-                            <span className={`text-[9px] font-black ${s2ThisYear >= s2LastYear ? 'text-emerald-500' : 'text-rose-500'}`}>
-                              {s2ThisYear >= s2LastYear ? '+' : ''}{Math.round(s2YoY)}%
-                            </span>
-                          ) : <span className="text-[9px] text-slate-450">-</span>}
-                        </div>
-                        <div className="text-[7.5px] font-semibold text-slate-400">vs {formatIndoNumber(s2LastYear)} (Tahun Lalu)</div>
-                      </div>
-                    </div>
+                  <div className="flex justify-between items-center mb-3 pb-2 border-b border-slate-100 dark:border-slate-800/80">
+                    <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Rincian Perbandingan Bulanan</span>
+                    <span className="text-[9px] text-slate-400 font-semibold">{yoyPage === 1 ? 'Semester 1' : 'Semester 2'}</span>
                   </div>
 
                   <div className="overflow-x-auto pr-1 text-xs">
