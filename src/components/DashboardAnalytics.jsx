@@ -882,30 +882,38 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 <div className="text-[8px] text-slate-400 font-medium truncate">Untuk {sisaBulan} bulan tersisa</div>
               </div>
 
-              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-1.5 flex flex-col justify-between`}>
-                <div className="flex items-center gap-1.5">
-                  <div className="p-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-500/10"><Trophy className="w-3.5 h-3.5" /></div>
-                  <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Bulan Terbaik</span>
-                </div>
-                {bestMonth ? (
-                  <div>
-                    <div className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400">{bestMonth.month}</div>
-                    <div className="text-[8px] text-slate-400 font-medium truncate">{formatIndoNumber(bestMonth.kwh)} kWh · {bestMonth.cases} kasus</div>
+              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`p-1 rounded border ${pctGrowthYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/10' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/10'}`}>
+                      {pctGrowthYtd >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                    </div>
+                    <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Pertumbuhan (YoY)</span>
                   </div>
-                ) : <div className="text-[10px] text-slate-400 font-medium">Belum ada data</div>}
+                  <div className="text-sm sm:text-lg font-bold text-slate-900 dark:text-slate-50 leading-tight">
+                    {pctGrowthYtd >= 0 ? '+' : ''}{Math.round(pctGrowthYtd)}%
+                  </div>
+                </div>
+                <div className="text-[8px] text-slate-400 font-medium truncate">
+                  {diffKwhYtd >= 0 ? '+' : ''}{formatIndoNumber(diffKwhYtd)} kWh vs {prevYear}
+                </div>
               </div>
 
-              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-1.5 flex flex-col justify-between`}>
-                <div className="flex items-center gap-1.5">
-                  <div className="p-1 bg-rose-500/10 text-rose-500 dark:text-rose-400 rounded border border-rose-500/10"><TrendingDown className="w-3.5 h-3.5" /></div>
-                  <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Bulan Terburuk</span>
-                </div>
-                {worstMonth ? (
-                  <div>
-                    <div className="text-xs sm:text-sm font-bold text-rose-500 dark:text-rose-400">{worstMonth.month}</div>
-                    <div className="text-[8px] text-slate-400 font-medium truncate">{formatIndoNumber(worstMonth.kwh)} kWh · {worstMonth.cases} kasus</div>
+              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`p-1 rounded border ${(targetKumulatifYtd - totalRealYear) <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/10' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/10'}`}>
+                      {(targetKumulatifYtd - totalRealYear) <= 0 ? <Trophy className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                    </div>
+                    <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Gap Kumulatif</span>
                   </div>
-                ) : <div className="text-[10px] text-slate-400 font-medium">Belum ada data</div>}
+                  <div className="text-sm sm:text-lg font-bold text-slate-900 dark:text-slate-50 leading-tight">
+                    {formatIndoNumber(Math.abs(targetKumulatifYtd - totalRealYear))} <span className="text-[10px] text-slate-400 font-medium">kWh</span>
+                  </div>
+                </div>
+                <div className={`text-[8px] font-bold truncate ${(targetKumulatifYtd - totalRealYear) <= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  {(targetKumulatifYtd - totalRealYear) <= 0 ? `Surplus dari target` : `Defisit dari target`}
+                </div>
               </div>
             </div>
 
