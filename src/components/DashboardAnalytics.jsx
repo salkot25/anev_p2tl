@@ -681,10 +681,10 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
           const diffStr = diff >= 0 ? `surplus +${formatIndoNumber(diff)} kWh` : `defisit ${formatIndoNumber(Math.abs(diff))} kWh`;
           const monthsList = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
           const monthName = monthsList[currentMonth - 1] || '';
-          if (pYtd >= 100) return { label: 'SANGAT BAIK', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20', iconColor: 'text-emerald-500', description: `Kinerja luar biasa! Hingga bulan ${monthName}, realisasi kumulatif tahunan mencapai ${formatIndoNumber(real)} kWh. Angka ini mencatatkan ${diffStr} di atas target YTD (${formatIndoNumber(targetYtd)} kWh).` };
-          if (pYtd >= 90) return { label: 'BAIK (ON TRACK)', color: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20', iconColor: 'text-teal-500', description: `Kinerja aman dan terkendali. Realisasi kumulatif tahunan hingga ${monthName} sebesar ${formatIndoNumber(real)} kWh berjalan on-track dengan pencapaian ${Math.round(pYtd)}% dari target YTD.` };
-          if (pYtd >= 75) return { label: 'CUKUP (PERLU PERHATIAN)', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20', iconColor: 'text-amber-500', description: `Kinerja berada dalam zona kuning. Hingga bulan ${monthName}, pencapaian kumulatif berada di bawah target YTD dengan ${diffStr} (${Math.round(pYtd)}% dari target YTD).` };
-          return { label: 'KURANG (KRITIS)', color: 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20', iconColor: 'text-rose-500', description: `Status waspada/kritis! Target kWh kumulatif tahunan mengalami ${diffStr} yang signifikan dibandingkan target YTD.` };
+          if (pYtd >= 100) return { label: 'SANGAT BAIK', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20', iconColor: 'text-emerald-500', description: `Kinerja luar biasa! Hingga bulan ${monthName}, realisasi kumulatif tahunan mencapai ${formatIndoNumber(real)} kWh. Angka ini mencatatkan ${diffStr} di atas target kumulatif (${formatIndoNumber(targetYtd)} kWh).` };
+          if (pYtd >= 90) return { label: 'BAIK (ON TRACK)', color: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20', iconColor: 'text-teal-500', description: `Kinerja aman dan terkendali. Realisasi kumulatif tahunan hingga ${monthName} sebesar ${formatIndoNumber(real)} kWh berjalan on-track dengan pencapaian ${Math.round(pYtd)}% dari target kumulatif.` };
+          if (pYtd >= 75) return { label: 'CUKUP (PERLU PERHATIAN)', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20', iconColor: 'text-amber-500', description: `Kinerja berada dalam zona kuning. Hingga bulan ${monthName}, pencapaian kumulatif berada di bawah target kumulatif dengan ${diffStr} (${Math.round(pYtd)}% dari target kumulatif).` };
+          return { label: 'KURANG (KRITIS)', color: 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20', iconColor: 'text-rose-500', description: `Status waspada/kritis! Target kWh kumulatif tahunan mengalami ${diffStr} yang signifikan dibandingkan target kumulatif.` };
         };
         const statusInfo = getKpiStatus(pctYtd, month, totalRealYear, targetKumulatifYtd);
 
@@ -709,11 +709,11 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 </div>
                 <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-100 dark:border-slate-800/80">
                   <div className="space-y-0.5">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Realisasi YTD</div>
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Realisasi Kumulatif</div>
                     <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(totalRealYear)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
                   <div className="space-y-0.5 border-l border-slate-100 dark:border-slate-800/80 pl-3">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target YTD</div>
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target Kumulatif</div>
                     <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(targetKumulatifYtd)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
                   <div className="space-y-0.5 border-l border-slate-100 dark:border-slate-800/80 pl-3">
@@ -734,7 +734,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </div>
                   </div>
                   <div className="flex flex-col lg:items-center">
-                    <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Pencapaian YTD</span>
+                    <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Pencapaian Kumulatif</span>
                     <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium sm:hidden block">{formatIndoNumber(totalRealYear)} / {formatIndoNumber(targetKumulatifYtd)} kWh</span>
                   </div>
                 </div>
@@ -759,7 +759,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <span>Perbandingan Bulanan kWh — {currentYear} vs {prevYear}</span>
                   </h3>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
-                    Kumulatif YTD: <span className="font-bold text-slate-700 dark:text-slate-200">{formatIndoNumber(totalRealYear)} kWh</span> vs <span className="font-bold text-slate-700 dark:text-slate-200">{formatIndoNumber(prevTotalKwhYtd)} kWh ({prevYear})</span>
+                    Realisasi Kumulatif: <span className="font-bold text-slate-700 dark:text-slate-200">{formatIndoNumber(totalRealYear)} kWh</span> vs <span className="font-bold text-slate-700 dark:text-slate-200">{formatIndoNumber(prevTotalKwhYtd)} kWh ({prevYear})</span>
                     <span className={`ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-black ${diffKwhYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400'}`}>
                       {diffKwhYtd >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                       {diffKwhYtd >= 0 ? '+' : ''}{Math.round(pctGrowthYtd)}% YoY
