@@ -140,6 +140,8 @@ function getDashboardData(ss, date) {
   // Per-month and per-year aggregates for execSummary
   var monthlyMap   = {};  // "YYYY-MM" -> { kwh, cases }
   var tariffMap    = {};  // "R"|"B"|... -> { kwh, cases }
+  var golonganMap  = {};  // "P1"|"P2"|... -> { kwh, cases }
+  var dayaMap      = {};  // "450 VA"|... -> { kwh, cases }
   var yearKwh      = 0;
   var yearCases    = 0;
   var yearTs       = 0;
@@ -205,6 +207,23 @@ function getDashboardData(ss, date) {
           tariffMap[tariffKey].cases += cases;
         }
         
+        // Golongan breakdown
+        var gol = (row.gol || "").toUpperCase().trim();
+        if (gol) {
+          if (!golonganMap[gol]) golonganMap[gol] = { kwh: 0, cases: 0 };
+          golonganMap[gol].kwh   += kwh;
+          golonganMap[gol].cases += cases;
+        }
+        
+        // Daya breakdown
+        var daya = (row.daya || "").toUpperCase().trim();
+        if (daya) {
+          var dayaKey = classifyDaya(daya);
+          if (!dayaMap[dayaKey]) dayaMap[dayaKey] = { kwh: 0, cases: 0 };
+          dayaMap[dayaKey].kwh   += kwh;
+          dayaMap[dayaKey].cases += cases;
+        }
+        
         // Top findings (entries with kwh > 5000)
         if (kwh >= 5000) {
           topFindings.push({
@@ -252,6 +271,16 @@ function getDashboardData(ss, date) {
   var tariffBreakdown = Object.keys(tariffMap).map(function(k) {
     return { class: k, kwh: tariffMap[k].kwh, cases: tariffMap[k].cases, ts: tariffMap[k].kwh * 1000 };
   });
+
+  // Build golongan breakdown
+  var golonganBreakdown = Object.keys(golonganMap).map(function(k) {
+    return { class: k, kwh: golonganMap[k].kwh, cases: golonganMap[k].cases, ts: golonganMap[k].kwh * 1000 };
+  });
+
+  // Build daya breakdown
+  var dayaBreakdown = Object.keys(dayaMap).map(function(k) {
+    return { class: k, kwh: dayaMap[k].kwh, cases: dayaMap[k].cases, ts: dayaMap[k].kwh * 1000 };
+  });
   
   // Sort top findings by kwh desc, take top 10
   topFindings.sort(function(a, b) { return b.kwh - a.kwh; });
@@ -268,8 +297,8 @@ function getDashboardData(ss, date) {
       totalTsYear: yearTs,
       monthlyTrend: monthlyTrend,
       tariffBreakdown: tariffBreakdown,
-      golonganBreakdown: [],
-      dayaBreakdown: [],
+      golonganBreakdown: golonganBreakdown,
+      dayaBreakdown: dayaBreakdown,
       kwhBreakdown: [],
       prevTotalCasesYear: prevYearCases,
       prevTotalKwhYear: prevYearKwh,
@@ -758,4 +787,17 @@ function writeSheetData(sheet, dataList, keys) {
   });
   
   sheet.getRange(2, 1, values.length, keys.length).setValues(values);
+}
+
+function classifyDaya(dayaStr) {
+  if (!dayaStr) return "Lainnya";
+  var d = String(dayaStr).toUpperCase().replace(/[\sVA.]/g, "");
+  var val = parseInt(d, 10);
+  if (isNaN(val)) return "Lainnya";
+  
+  if (val <= 450) return "450 VA";
+  if (val <= 900) return "900 VA";
+  if (val <= 1300) return "1300 VA";
+  if (val <= 2200) return "2200 VA";
+  return "> 2200 VA";
 }
