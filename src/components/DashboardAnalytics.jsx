@@ -144,6 +144,8 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   const [yoyPage, setYoYPage] = useState(1);
   const [hoveredYoyMonth, setHoveredYoyMonth] = useState(null);
   const [yoyTooltipPos, setYoyTooltipPos] = useState({ x: 0, y: 0 });
+  const [hoveredSegment, setHoveredSegment] = useState(null);
+  const [segmentTooltipPos, setSegmentTooltipPos] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
     if (targets?.date) {
@@ -421,7 +423,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
           {/* Breakdown & Chart Section */}
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             {/* Donut Chart - Komposisi Temuan */}
-            <div className={`lg:col-span-2 p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col justify-between`}>
+            <div className={`lg:col-span-2 p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col justify-between relative`}>
               <div>
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 pb-2 border-b border-slate-200 dark:border-slate-800">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
@@ -525,7 +527,19 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                                   key={idx}
                                   style={{ width: `${seg.percent}%`, backgroundColor: seg.color }}
                                   className="h-full transition-all duration-500 ease-out first:rounded-l-full last:rounded-r-full hover:opacity-90 cursor-pointer"
-                                  title={`${getLabelName(seg.class)}: ${seg.cases} kasus (${Math.round(seg.percent)}%)`}
+                                  onMouseEnter={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const container = e.currentTarget.closest('.relative');
+                                    if (container) {
+                                      const containerRect = container.getBoundingClientRect();
+                                      setSegmentTooltipPos({
+                                        x: (rect.left + rect.width / 2) - containerRect.left,
+                                        y: rect.top - containerRect.top
+                                      });
+                                    }
+                                    setHoveredSegment(seg);
+                                  }}
+                                  onMouseLeave={() => setHoveredSegment(null)}
                                 />
                               )
                             ))}
@@ -557,6 +571,21 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                           </div>
                         ))}
                       </div>
+
+                      {hoveredSegment !== null && (
+                        <div
+                          className="absolute bg-slate-900/95 dark:bg-slate-950/95 text-slate-50 border border-slate-700/50 backdrop-blur-md rounded-xl p-3 shadow-xl pointer-events-none text-[11px] font-semibold space-y-1.5 z-10 transition-all duration-150 -translate-x-1/2"
+                          style={{ left: segmentTooltipPos.x, top: segmentTooltipPos.y - 105 }}
+                        >
+                          <div className="font-extrabold border-b border-slate-800 pb-1 mb-1 flex items-center gap-1.5">
+                            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: hoveredSegment.color }} />
+                            <span className="text-slate-100">{getLabelName(hoveredSegment.class)}</span>
+                          </div>
+                          <div>Kasus: <span className="font-black text-slate-200">{hoveredSegment.cases} kasus ({Math.round(hoveredSegment.percent)}%)</span></div>
+                          <div className="border-t border-slate-800/60 pt-1 mt-1">Energi: <span className="font-black text-emerald-400">{formatIndoNumber(hoveredSegment.kwh || 0)} kWh</span></div>
+                          <div className="text-[10px] text-blue-400 font-bold">Susulan: <span>Rp {formatIndoNumber(hoveredSegment.ts || 0)}</span></div>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
