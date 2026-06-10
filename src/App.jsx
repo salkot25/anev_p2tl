@@ -365,6 +365,16 @@ export default function App() {
     syncBankToWithBackend(updatedList);
   };
 
+  const handleClearLocalData = () => {
+    if (window.confirm("Apakah Anda yakin ingin menghapus semua database lokal dari browser? Tindakan ini tidak dapat dibatalkan.")) {
+      localStorage.removeItem('p2tl_targets');
+      localStorage.removeItem('p2tl_bank_to');
+      setTargets([]);
+      setBankToTargets([]);
+      showToast("Seluruh database lokal berhasil dihapus.", "success");
+    }
+  };
+
   const handleSelectRecord = (record) => {
     setSelectedRecord(record);
     setIsDrawerOpen(true);
@@ -427,6 +437,7 @@ export default function App() {
             onSaveBackendUrl={handleSaveBackendUrl}
             targets={targets}
             bankToTargets={bankToTargets}
+            onClearLocalData={handleClearLocalData}
           />
         </div>
       ) : (

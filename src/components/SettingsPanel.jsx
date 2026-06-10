@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, Database, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, Save, HelpCircle, Building } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Settings, Database, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, Save, HelpCircle, Building, Trash2 } from 'lucide-react';
 
 export default function SettingsPanel({ 
   backendUrl: propBackendUrl, 
   onSaveBackendUrl, 
   onSyncAll,
   targets = [],
-  bankToTargets = []
+  bankToTargets = [],
+  onClearLocalData
 }) {
   const [url, setUrl] = useState(propBackendUrl || '');
   const [testStatus, setTestStatus] = useState('idle'); // idle, testing, success, error
@@ -14,6 +15,22 @@ export default function SettingsPanel({
   const [syncingTargets, setSyncingTargets] = useState(false);
   const [syncingBankTo, setSyncingBankTo] = useState(false);
   
+  // Estimate local database size in bytes
+  const localDatabaseSize = useMemo(() => {
+    let bytes = 0;
+    const targetsStr = localStorage.getItem('p2tl_targets');
+    const bankToStr = localStorage.getItem('p2tl_bank_to');
+    
+    if (targetsStr) bytes += new Blob([targetsStr]).size;
+    if (bankToStr) bytes += new Blob([bankToStr]).size;
+    
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }, [targets, bankToTargets]);
+
   // Local metadata parameters
   const [defaultUlp, setDefaultUlp] = useState(() => localStorage.getItem('p2tl_default_ulp') || 'ULP SALATIGA KOTA');
   const [defaultUp3, setDefaultUp3] = useState(() => localStorage.getItem('p2tl_default_up3') || 'UP3 SALATIGA');
@@ -168,11 +185,17 @@ export default function SettingsPanel({
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Status Database</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              {propBackendUrl 
-                ? `Terhubung ke Google Sheets API via Web App.` 
-                : 'Mode Offline (Semua data disimpan di cache browser Local Storage).'}
-            </p>
+            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+              <span>
+                {propBackendUrl 
+                  ? `Terhubung ke Google Sheets API via Web App.` 
+                  : 'Mode Offline (Semua data disimpan di cache browser Local Storage).'}
+              </span>
+              <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
+              <span className="font-bold text-slate-700 dark:text-slate-300">
+                Ukuran Database Lokal: {localDatabaseSize}
+              </span>
+            </div>
           </div>
         </div>
         
@@ -249,42 +272,72 @@ export default function SettingsPanel({
             )}
           </div>
 
-          {/* Card 2: Manual Sync Overwrite */}
-          {propBackendUrl && (
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-                <RefreshCw className="w-4.5 h-4.5 text-blue-500" />
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Penyelarasan Data Manual</h3>
-              </div>
+          {/* Card 2: Manual Sync & Clear Local Data */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <RefreshCw className="w-4.5 h-4.5 text-blue-500" />
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Penyelarasan Data Manual</h3>
+            </div>
 
-              <div className="p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-400">
-                <AlertTriangle className="w-4.5 h-4.5 text-amber-500 shrink-0 mt-0.5" />
+            {propBackendUrl ? (
+              <>
+                {(targets.length > 0 || bankToTargets.length > 0) && (
+                  <div className="p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-400">
+                    <AlertTriangle className="w-4.5 h-4.5 text-amber-500 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Perhatian Upload Overwrite</p>
+                      <p className="mt-0.5 leading-relaxed font-medium">Aksi di bawah ini akan mengirim seluruh database lokal yang tersimpan di browser Anda saat ini ke Google Spreadsheet dan **menimpa (overwrite)** baris yang ada di spreadsheet.</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+                  {targets.length > 0 && (
+                    <button 
+                      onClick={handleSyncTargets}
+                      disabled={syncingTargets}
+                      className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${syncingTargets ? 'animate-spin' : ''}`} />
+                      Upload Target ({targets.length} Baris)
+                    </button>
+                  )}
+                  {bankToTargets.length > 0 && (
+                    <button 
+                      onClick={handleSyncBankTo}
+                      disabled={syncingBankTo}
+                      className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${syncingBankTo ? 'animate-spin' : ''}`} />
+                      Upload Bank TO ({bankToTargets.length} Baris)
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                Penyelarasan ke Google Sheets tidak aktif karena URL Backend belum dikonfigurasi.
+              </div>
+            )}
+
+            <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 flex flex-col gap-3">
+              <div className="p-3.5 bg-rose-50 dark:bg-rose-955/20 border border-rose-100 dark:border-rose-900/20 rounded-2xl flex items-start gap-2.5 text-xs text-rose-800 dark:text-rose-455">
+                <AlertCircle className="w-4.5 h-4.5 text-rose-500 shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-bold">Perhatian Upload Overwrite</p>
-                  <p className="mt-0.5 leading-relaxed font-medium">Aksi di bawah ini akan mengirim seluruh database lokal yang tersimpan di browser Anda saat ini ke Google Spreadsheet dan **menimpa (overwrite)** baris yang ada di spreadsheet.</p>
+                  <p className="font-bold">Hapus Seluruh Data Lokal ({localDatabaseSize})</p>
+                  <p className="mt-0.5 leading-relaxed font-medium">Aksi ini akan menghapus permanen semua target dan bank TO yang disimpan secara lokal di browser ini sebesar **{localDatabaseSize}**.</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
-                <button 
-                  onClick={handleSyncTargets}
-                  disabled={syncingTargets}
-                  className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${syncingTargets ? 'animate-spin' : ''}`} />
-                  Upload Target ({targets.length} Baris)
-                </button>
-                <button 
-                  onClick={handleSyncBankTo}
-                  disabled={syncingBankTo}
-                  className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${syncingBankTo ? 'animate-spin' : ''}`} />
-                  Upload Bank TO ({bankToTargets.length} Baris)
-                </button>
-              </div>
+              <button 
+                onClick={onClearLocalData}
+                className="btn-secondary border-rose-200 hover:border-rose-350 dark:border-rose-900/40 text-rose-600 dark:text-rose-455 hover:bg-rose-50 dark:hover:bg-rose-950/20 py-2.5 text-xs font-bold w-full flex justify-center items-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Hapus Database Lokal
+              </button>
             </div>
-          )}
+          </div>
 
           {/* Card 3: Default Metadata Settings */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
