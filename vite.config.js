@@ -48,5 +48,5 @@ export default defineConfig({
       }
     })
   ],
-  base: '/anev_p2tl/',
+  base: '/',
 })
