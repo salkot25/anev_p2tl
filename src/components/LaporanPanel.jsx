@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Copy, CheckCircle2, Send, RefreshCw, Calendar, Zap, BarChart2 } from 'lucide-react';
 
 // Helper to calculate working days in a month
@@ -32,7 +32,9 @@ function normalizeDateString(dateVal) {
       if (!isNaN(d.getTime())) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
-    } catch (_) {}
+    } catch {
+      // ignore
+    }
     return '';
   }
   const str = dateVal.trim();
@@ -46,7 +48,9 @@ function normalizeDateString(dateVal) {
     if (!isNaN(d.getTime())) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
-  } catch (_) {}
+  } catch {
+    // ignore
+  }
   return str;
 }
 
@@ -60,10 +64,10 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
   });
   
   // kWh parameters
-  const [targetHarianKwh, setTargetHarianKwh] = useState('19.933');
-  const [realisasiHarianKwh, setRealisasiHarianKwh] = useState('12.393');
-  const [targetKumulatifKwh, setTargetKumulatifKwh] = useState('1.562.458');
-  const [realisasiKumulatifKwh, setRealisasiKumulatifKwh] = useState('1.136.448');
+  const [targetHarianKwh, setTargetHarianKwh] = useState('0');
+  const [realisasiHarianKwh, setRealisasiHarianKwh] = useState('0');
+  const [targetKumulatifKwh, setTargetKumulatifKwh] = useState('0');
+  const [realisasiKumulatifKwh, setRealisasiKumulatifKwh] = useState('0');
   
   // Custom manual override state for Sasaran Operasi categories 4, 5, and 6
   const [overrideTargetDev, setOverrideTargetDev] = useState('0');
@@ -99,7 +103,9 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
       if (savedChecklist) {
         try {
           activeWorkingDaysChecklist = JSON.parse(savedChecklist);
-        } catch (_) {}
+        } catch {
+          // ignore
+        }
       } else {
         const oldSetting = localStorage.getItem('p2tl_working_days') || '7';
         if (oldSetting === '5') activeWorkingDaysChecklist = { monFri: true, sat: false, sun: false };
@@ -130,7 +136,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
 
       // Helper for local calculations when offline or fetch fails
       const calculateTargetsLocally = (yr, mo, activeWD) => {
-        let monthlyTargetsArray = Array(12).fill(130205);
+        let monthlyTargetsArray = Array(12).fill(0);
         const cachedTargets = localStorage.getItem(`p2tl_monthly_targets_cache_${yr}`);
         if (cachedTargets) {
           try {
@@ -138,10 +144,12 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
             parsed.forEach(item => {
               const mIdx = Number(item.Month) - 1;
               if (mIdx >= 0 && mIdx < 12) {
-                monthlyTargetsArray[mIdx] = Number(item.Target_kWh) || 130205;
+                monthlyTargetsArray[mIdx] = Number(item.Target_kWh) || 0;
               }
             });
-          } catch (_) {}
+          } catch {
+            // ignore
+          }
         }
 
         // Read totalRealYear from logs cache
@@ -155,7 +163,9 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
                 totalRealYear += Number(log.Realisasi_Harian_kWh || log.realisasiHarianKwh || 0);
               }
             });
-          } catch (_) {}
+          } catch {
+            // ignore
+          }
         }
 
         const totalTargetYear = monthlyTargetsArray.reduce((s, v) => s + v, 0);
@@ -195,14 +205,14 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
           headers: { 'Accept': 'application/json' }
         });
 
-        let monthlyTargetsArray = Array(12).fill(130205);
+        let monthlyTargetsArray = Array(12).fill(0);
         if (targetsResponse.ok) {
           const targetsResult = await targetsResponse.json();
           if (targetsResult.status === 'success' && Array.isArray(targetsResult.data)) {
             targetsResult.data.forEach(item => {
               const mIdx = Number(item.Month) - 1;
               if (mIdx >= 0 && mIdx < 12) {
-                monthlyTargetsArray[mIdx] = Number(item.Target_kWh) || 130205;
+                monthlyTargetsArray[mIdx] = Number(item.Target_kWh) || 0;
               }
             });
             localStorage.setItem(`p2tl_monthly_targets_cache_${year}`, JSON.stringify(targetsResult.data));
@@ -356,7 +366,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
   const calculatedKwh = useMemo(() => {
     const parseNum = (str) => {
       if (!str) return NaN;
-      return parseFloat(str.replace(/\./g, '').replace(/,/g, '.').trim());
+      return parseFloat(String(str).replace(/\./g, '').replace(/,/g, '.').trim());
     };
 
     const targetK = parseNum(targetKumulatifKwh);

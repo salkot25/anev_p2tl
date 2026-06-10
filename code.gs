@@ -32,7 +32,25 @@ function setupTables() {
   dataToSheet.getRange(1, 1, 1, dataToHeaders.length).setValues([dataToHeaders]);
   dataToSheet.getRange(1, 1, 1, dataToHeaders.length).setFontWeight("bold").setBackground("#d9ead3");
   
-  Logger.log("Tabel 'bank to' dan 'data to' berhasil dibuat!");
+  // Setup "users" sheet
+  var usersSheet = ss.getSheetByName("users");
+  if (!usersSheet) {
+    usersSheet = ss.insertSheet("users");
+  }
+  usersSheet.clear();
+  var usersHeaders = [
+    "username", "password", "role", "whatsapp", "unit", "lastUpdated"
+  ];
+  usersSheet.getRange(1, 1, 1, usersHeaders.length).setValues([usersHeaders]);
+  usersSheet.getRange(1, 1, 1, usersHeaders.length).setFontWeight("bold").setBackground("#ffd966");
+  
+  // Seed default admin account
+  var defaultAdmin = [
+    "Admin", "Salkot@26", "Administrator", "08123456789", "Salatiga Kota", new Date().toISOString()
+  ];
+  usersSheet.getRange(2, 1, 1, usersHeaders.length).setValues([defaultAdmin]);
+  
+  Logger.log("Tabel 'bank to', 'data to', dan 'users' berhasil dibuat!");
 }
 
 // ==========================================
@@ -46,10 +64,13 @@ function doGet(e) {
   if (action === "readAll") {
     var bankToData = readSheetData(ss.getSheetByName("bank to"));
     var dataToData = readSheetData(ss.getSheetByName("data to"));
+    var usersSheet = ss.getSheetByName("users");
+    var usersData = usersSheet ? readSheetData(usersSheet) : [];
     return jsonResponse({
       status: "success",
       bankTo: bankToData,
-      targets: dataToData
+      targets: dataToData,
+      users: usersData
     });
   }
   
@@ -410,7 +431,7 @@ function getMonthlyTargets(ss, year) {
   if (!targetSheet) {
     var defaults = [];
     for (var i = 1; i <= 12; i++) {
-      defaults.push({ Month: i, Year: year, Target_kWh: 130205 });
+      defaults.push({ Month: i, Year: year, Target_kWh: 0 });
     }
     return { status: "success", data: defaults };
   }
@@ -430,7 +451,7 @@ function getMonthlyTargets(ss, year) {
   
   if (result.length === 0) {
     for (var m = 1; m <= 12; m++) {
-      result.push({ Month: m, Year: year, Target_kWh: 130205 });
+      result.push({ Month: m, Year: year, Target_kWh: 0 });
     }
   }
   
@@ -780,6 +801,15 @@ function doPost(e) {
     });
     
     return jsonResponse({ status: "success", message: "Target bulanan berhasil disimpan." });
+  }
+  
+  if (action === "syncUsers") {
+    var sheet = ss.getSheetByName("users");
+    if (!sheet) sheet = ss.insertSheet("users");
+    writeSheetData(sheet, postData.data, [
+      "username", "password", "role", "whatsapp", "unit", "lastUpdated"
+    ]);
+    return jsonResponse({ status: "success" });
   }
   
   return jsonResponse({ status: "error", message: "Aksi tidak dikenal." });

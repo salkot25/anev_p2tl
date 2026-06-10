@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   Search, 
@@ -33,7 +33,9 @@ function normalizeDateString(dateVal) {
       if (!isNaN(d.getTime())) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
-    } catch (_) {}
+    } catch {
+      // ignore
+    }
     return '';
   }
   const str = dateVal.trim();
@@ -47,8 +49,22 @@ function normalizeDateString(dateVal) {
     if (!isNaN(d.getTime())) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
-  } catch (_) {}
+  } catch {
+    // ignore
+  }
   return str;
+}
+
+function createNewRecord(manualForm) {
+  const timestamp = Date.now();
+  const dateStr = new Date().toISOString().replace('T', ' ').split('.')[0] + '+00';
+  return {
+    ...manualForm,
+    bank_id: manualForm.bank_id || `BTO${manualForm.IDPel}${timestamp}`,
+    TanggalUpload: dateStr,
+    TanggalOrder: dateStr,
+    TanggalPelaksanaan: dateStr
+  };
 }
 
 function MultiSelectDropdown({ label, options, selectedValues, onChange, allLabel }) {
@@ -347,14 +363,7 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
       return;
     }
 
-    const timestamp = Date.now();
-    const finalData = {
-      ...manualForm,
-      bank_id: manualForm.bank_id || `BTO${manualForm.IDPel}${timestamp}`,
-      TanggalUpload: new Date().toISOString().replace('T', ' ').split('.')[0] + '+00',
-      TanggalOrder: new Date().toISOString().replace('T', ' ').split('.')[0] + '+00',
-      TanggalPelaksanaan: new Date().toISOString().replace('T', ' ').split('.')[0] + '+00'
-    };
+    const finalData = createNewRecord(manualForm);
 
     onAddRecord(finalData);
     setIsAddModalOpen(false);
@@ -491,11 +500,16 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
     };
   }, [targetMatches]);
 
+  // Reset page to 1 on filter changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [targetMatches]);
+
   // Filter data based on choices
   const filteredTargets = useMemo(() => {
-    // Reset page to 1 on filter changes
-    setCurrentPage(1);
-
     return targetMatches
       .filter(m => m.search && m.subDlpd && m.regu && m.dlpd && m.status && m.date)
       .map(m => m.target);

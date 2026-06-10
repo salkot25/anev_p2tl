@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { RefreshCw, AlertCircle, Calendar } from 'lucide-react';
 import DashboardAnalytics from './DashboardAnalytics';
 
 /**
@@ -59,6 +59,17 @@ function buildDefaultData(date) {
   };
 }
 
+function getYearFromDate(dateStr) {
+  if (!dateStr) return String(new Date().getFullYear());
+  return dateStr.split('-')[0] || String(new Date().getFullYear());
+}
+
+const SUB_TABS = [
+  { id: 'kpi', label: 'Realisasi' },
+  { id: 'targets', label: 'Target' },
+  { id: 'summary', label: 'Ringkasan' }
+];
+
 export default function DashboardPanel({ backendUrl }) {
   const today = new Date();
   const offset = today.getTimezoneOffset();
@@ -71,6 +82,7 @@ export default function DashboardPanel({ backendUrl }) {
   const [error, setError] = useState(null);
   const [isOnline, setIsOnline] = useState(true);
   const [lastFetch, setLastFetch] = useState(null);
+  const [subTab, setSubTab] = useState('kpi');
 
   const fetchDashboardData = useCallback(async (date) => {
     setLoading(true);
@@ -88,7 +100,9 @@ export default function DashboardPanel({ backendUrl }) {
           setIsOnline(false);
           setLoading(false);
           return;
-        } catch (_) {}
+        } catch {
+          // Cache parsing failed, ignore
+        }
       }
       setData(buildDefaultData(date));
       setIsOnline(false);
@@ -149,7 +163,11 @@ export default function DashboardPanel({ backendUrl }) {
         setIsOnline(true);
         setLastFetch(new Date());
         // Cache the data
-        try { localStorage.setItem(CACHE_KEY, JSON.stringify(dashData)); } catch (_) {}
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(dashData));
+        } catch {
+          // Ignored
+        }
       } else {
         throw new Error(result.message || 'Invalid response');
       }
@@ -164,7 +182,7 @@ export default function DashboardPanel({ backendUrl }) {
           // Update date in cached data
           setData({ ...parsed, target: { ...parsed.target, date } });
           setError('Menggunakan data cache. Koneksi ke backend gagal.');
-        } catch (_) {
+        } catch {
           setData(buildDefaultData(date));
           setError('Koneksi ke backend gagal dan tidak ada cache tersedia.');
         }
@@ -178,77 +196,92 @@ export default function DashboardPanel({ backendUrl }) {
   }, [backendUrl]);
 
   useEffect(() => {
-    fetchDashboardData(selectedDate);
+    const timer = setTimeout(() => {
+      fetchDashboardData(selectedDate);
+    }, 0);
+    return () => clearTimeout(timer);
   }, [selectedDate, fetchDashboardData]);
 
   const handleRefresh = () => {
     fetchDashboardData(selectedDate);
   };
 
+  const currentYear = getYearFromDate(selectedDate);
+
   return (
     <div className="space-y-4 animate-fade-in-up">
-      {/* Dashboard Control Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-1">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Tanggal:</label>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="px-3 py-1.5 text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg outline-none text-slate-800 dark:text-slate-100 focus:border-emerald-500 transition-all"
-            />
+      {/* ── Unified Command Bar ─────────────────────────────────────────────── */}
+      <div className="flex flex-col gap-3">
+        {/* Row 1: Date + Status + Refresh */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="relative">
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="pl-8 pr-3 py-2 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-800 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all w-[148px]"
+              />
+              <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+            </div>
+
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Refresh data"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            </button>
           </div>
 
-          <button
-            onClick={handleRefresh}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-            <span>Refresh</span>
-          </button>
+          {/* Inline status indicator */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-amber-500 shadow-sm shadow-amber-500/50'}`} />
+            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 hidden sm:block">
+              {isOnline ? 'Online' : 'Offline'}
+            </span>
+            {lastFetch && (
+              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium hidden sm:block">
+                · {lastFetch.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {isOnline ? (
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
-              <Wifi className="w-3.5 h-3.5" />
-              <span>Terhubung ke Google Sheets</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-amber-600 dark:text-amber-400">
-              <WifiOff className="w-3.5 h-3.5" />
-              <span>Mode Offline / Cache</span>
-            </div>
-          )}
-          {lastFetch && (
-            <span className="text-[10px] text-slate-400 font-semibold hidden sm:block">
-              Diperbarui: {lastFetch.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-            </span>
-          )}
+        {/* Row 2: Sub-tab navigation pills */}
+        <div className="flex p-0.5 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+          {SUB_TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setSubTab(tab.id)}
+              className={`flex-1 px-3 py-2 text-[11px] font-bold rounded-[10px] transition-all duration-200 ${
+                subTab === tab.id
+                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/80 dark:border-slate-700/80'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+              }`}
+            >
+              {tab.id === 'summary' ? `${tab.label} (${currentYear})` : tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
       {/* Error Banner */}
       {error && (
-        <div className="flex items-start gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-700 dark:text-amber-400">
+        <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 rounded-xl text-amber-700 dark:text-amber-400">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <p className="text-xs font-semibold">{error}</p>
+          <p className="text-[11px] font-semibold leading-relaxed">{error}</p>
         </div>
       )}
 
       {/* Loading Skeleton */}
       {loading && !data && (
         <div className="space-y-4 animate-pulse">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-28 bg-slate-100 dark:bg-slate-800 rounded-xl" />
-            ))}
-          </div>
+          <div className="h-36 bg-slate-100 dark:bg-slate-800/60 rounded-2xl" />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl" />
-            <div className="h-64 bg-slate-100 dark:bg-slate-800 rounded-xl" />
+            <div className="h-64 bg-slate-100 dark:bg-slate-800/60 rounded-2xl" />
+            <div className="h-64 bg-slate-100 dark:bg-slate-800/60 rounded-2xl" />
           </div>
         </div>
       )}
@@ -260,6 +293,7 @@ export default function DashboardPanel({ backendUrl }) {
           realization={data.realization}
           execSummary={data.execSummary}
           backendUrl={backendUrl}
+          subTab={subTab}
         />
       )}
     </div>

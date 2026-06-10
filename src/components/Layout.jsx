@@ -1,4 +1,3 @@
-import React from "react";
 import {
   LayoutDashboard,
   LogOut,
@@ -7,7 +6,7 @@ import {
   Moon,
   Folder,
   Database,
-  MessageSquare,
+  Send,
   Settings
 } from "lucide-react";
 
@@ -19,7 +18,7 @@ const resolveIcon = (id, customIcon) => {
     dashboard: <LayoutDashboard size={20} />,
     list: <FileText size={20} />,
     bankto: <Database size={20} />,
-    laporan: <MessageSquare size={20} />,
+    laporan: <Send size={20} className="-rotate-45 relative right-[0.5px] top-[0.5px]" />,
     pengaturan: <Settings size={20} />
   };
 
@@ -216,32 +215,71 @@ export default function Layout({
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 flex justify-around items-center px-4 py-2 z-30 pb-safe mobile-bottom-nav transition-colors">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-around items-end px-2 py-2.5 z-30 pb-safe mobile-bottom-nav transition-all duration-300 border-t border-slate-200/30 dark:border-slate-800/40 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] overflow-visible">
         {tabs.map((tab) => {
           const isActive = currentTab === tab.id;
+          const isLaporan = tab.id === 'laporan';
+
+          if (isLaporan) {
+            // Empty placeholder to maintain grid alignment (adjusted for larger floating button)
+            return (
+              <div
+                key={tab.id}
+                className="w-[72px] h-[44px] shrink-0"
+              />
+            );
+          }
 
           return (
             <button
               key={tab.id}
               onClick={() => setCurrentTab(tab.id)}
-              className="flex flex-col items-center justify-center py-1.5 px-3 rounded-xl min-w-[64px] transition-all duration-200 shrink-0 cursor-pointer outline-none"
+              className="flex flex-col items-center justify-end py-1.5 px-2 rounded-2xl min-w-[64px] transition-all duration-200 shrink-0 cursor-pointer outline-none active:scale-95"
             >
               <div
-                className={`p-1 mb-0.5 transition-transform duration-200 ${isActive ? "scale-110 text-blue-600 dark:text-blue-400 font-bold" : "text-slate-500 dark:text-slate-400"}`}
+                className={`p-1 mb-0.5 transition-transform duration-200 ${
+                  isActive 
+                    ? "scale-110 text-blue-600 dark:text-blue-400 font-bold" 
+                    : "text-slate-450 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                }`}
               >
                 {tab.icon}
               </div>
               <span
-                className={`text-[10px] leading-none ${isActive ? "font-bold text-blue-600 dark:text-blue-400" : "font-semibold text-slate-500 dark:text-slate-400"}`}
+                className={`text-[9.5px] font-semibold transition-colors duration-200 ${
+                  isActive 
+                    ? "font-bold text-blue-600 dark:text-blue-400" 
+                    : "text-slate-500 dark:text-slate-400"
+                }`}
               >
                 {tab.label}
               </span>
               {isActive && (
-                <div className="w-4 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full mt-1 animate-fade-in"></div>
+                <div className="w-5 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full mt-1.5 animate-fade-in"></div>
               )}
             </button>
           );
         })}
+      </div>
+
+      {/* Floating Laporan Central Button (Sibling to avoid backdrop-filter clipping) */}
+      <div className="md:hidden fixed bottom-[calc(22px+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
+        <button
+          onClick={() => setCurrentTab('laporan')}
+          className="flex flex-col items-center justify-center shrink-0 cursor-pointer outline-none transition-transform active:scale-95 duration-150"
+          aria-label="Laporan Menu Utama"
+        >
+          {/* Circular primary wrapper with a thick white/dark border to create the cutout frame effect */}
+          <div
+            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 ${
+              currentTab === 'laporan'
+                ? 'bg-gradient-to-br from-blue-600 to-indigo-650 text-white scale-110 shadow-blue-500/35 border-[5px] border-white dark:border-slate-900' 
+                : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-[5px] border-white dark:border-slate-900 shadow-md shadow-slate-200/20 dark:shadow-none hover:scale-105'
+            }`}
+          >
+            <Send size={22} className="-rotate-45 relative right-[0.5px] top-[0.5px]" />
+          </div>
+        </button>
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Lock, User, Loader2, Database } from 'lucide-react';
+import { useState } from 'react';
+import { Lock, User, Loader2 } from 'lucide-react';
 
 export default function Login({ 
   onLogin, 
+  users = [],
   title = "Anev P2TL", 
   subtitle = "PLN Unit Pelaksana Pelayanan Pelanggan Salatiga", 
   copyright = "© 2026 PLN Salatiga. All rights reserved."
@@ -19,10 +20,15 @@ export default function Login({
     
     // Simulating authentication flow
     setTimeout(() => {
-      if (username === 'Admin' && password === 'Salkot@26') {
+      const matched = users.find(
+        u => u.username.toLowerCase() === username.trim().toLowerCase() && u.password === password
+      );
+      if (matched) {
         onLogin({
-          name: username,
-          role: 'Administrator'
+          name: matched.username,
+          role: matched.role,
+          whatsapp: matched.whatsapp,
+          unit: matched.unit
         });
       } else {
         setError('Nama pengguna atau kata sandi tidak sesuai.');

@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   CheckCircle,
   X,
   AlertTriangle
 } from 'lucide-react';
-import initialData from './data/initialData.json';
-import bankToData from './data/bankToData.json';
+// Hardcoded mock data imports removed
 import DashboardPanel from './components/DashboardPanel';
 import DataList from './components/DataList';
 import BankToPanel from './components/BankToPanel';
@@ -67,13 +66,64 @@ const normalizeBankToData = (dataList) => {
   });
 };
 
+const normalizeUsersData = (dataList) => {
+  if (!Array.isArray(dataList)) return [];
+  return dataList.map((item) => ({
+    username: String(item.username || item.Username || item['Nama User'] || item.NamaUser || '').trim(),
+    password: String(item.password || item.Password || ''),
+    role: String(item.role || item.Role || 'Petugas'),
+    whatsapp: String(item.whatsapp || item.Whatsapp || item['Nomor Whatsapp'] || item.whatsappNumber || '').trim(),
+    unit: String(item.unit || item.Unit || 'Salatiga Kota').trim(),
+    lastUpdated: item.lastUpdated || item.last_updated || item.LAST_UPDATED || item.LastUpdated || new Date(0).toISOString()
+  })).filter(u => u.username);
+};
+
 export default function App() {
-  const [targets, setTargets] = useState([]);
-  const [bankToTargets, setBankToTargets] = useState([]);
+  const [targets, setTargets] = useState(() => {
+    try {
+      const saved = localStorage.getItem('p2tl_targets');
+      if (saved) return normalizeData(JSON.parse(saved));
+    } catch (e) {
+      console.error('Gagal memuat local targets cache:', e);
+    }
+    return [];
+  });
+  const [bankToTargets, setBankToTargets] = useState(() => {
+    try {
+      const saved = localStorage.getItem('p2tl_bank_to');
+      if (saved) return normalizeBankToData(JSON.parse(saved));
+    } catch (e) {
+      console.error('Gagal memuat local bank to cache:', e);
+    }
+    return [];
+  });
+  const [users, setUsers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('p2tl_users');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return normalizeUsersData(parsed);
+        }
+      }
+    } catch (e) {
+      console.error('Gagal memuat local users cache:', e);
+    }
+    return [{
+      username: 'Admin',
+      password: 'Salkot@26',
+      role: 'Administrator',
+      whatsapp: '08123456789',
+      unit: 'Salatiga Kota',
+      lastUpdated: new Date(0).toISOString()
+    }];
+  });
   const [activeTab, setActiveTab] = useState('dashboard'); // dashboard, laporan, bankto, list, pengaturan
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    return localStorage.getItem('p2tl_theme') === 'dark';
+  });
   const [toast, setToast] = useState(null); // { message, type }
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [backendUrl, setBackendUrl] = useState(() => {
@@ -89,8 +139,25 @@ export default function App() {
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
+  const targetsRef = useRef(targets);
+  const bankToRef = useRef(bankToTargets);
+  const usersRef = useRef(users);
+
+  useEffect(() => { targetsRef.current = targets; }, [targets]);
+  useEffect(() => { bankToRef.current = bankToTargets; }, [bankToTargets]);
+  useEffect(() => { usersRef.current = users; }, [users]);
+
+  // Show auto-dismiss toast
+  const showToast = useCallback((message, type = 'success') => {
+    setToast({ message, type });
+    const timer = setTimeout(() => {
+      setToast(null);
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Sync helper: push targets (data to) to the backend
-  const syncTargetsWithBackend = async (newTargets) => {
+  const syncTargetsWithBackend = useCallback(async (newTargets) => {
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
     if (!url) return;
     try {
@@ -106,10 +173,10 @@ export default function App() {
     } catch (err) {
       console.error('Koneksi gagal saat menyelaraskan data target:', err);
     }
-  };
+  }, [backendUrl]);
 
   // Sync helper: push bank TO data to the backend
-  const syncBankToWithBackend = async (newBankTo) => {
+  const syncBankToWithBackend = useCallback(async (newBankTo) => {
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
     if (!url) return;
     try {
@@ -125,10 +192,29 @@ export default function App() {
     } catch (err) {
       console.error('Koneksi gagal saat menyelaraskan Bank TO:', err);
     }
-  };
+  }, [backendUrl]);
+
+  // Sync helper: push users data to the backend
+  const syncUsersWithBackend = useCallback(async (newUsers) => {
+    const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
+    if (!url) return;
+    try {
+      const response = await fetch(`${url}?action=syncUsers`, {
+        method: 'POST',
+        body: JSON.stringify({ data: newUsers }),
+        headers: { 'Content-Type': 'text/plain' } // Avoid OPTIONS preflight check CORS issue
+      });
+      const result = await response.json();
+      if (result.status !== 'success') {
+        console.error('Gagal sinkronisasi data user ke cloud:', result.message);
+      }
+    } catch (err) {
+      console.error('Koneksi gagal saat menyelaraskan data user:', err);
+    }
+  }, [backendUrl]);
 
   // Two-way synchronization function (conflict resolution: newest wins)
-  const syncDatabase = async (urlToUse) => {
+  const syncDatabase = useCallback(async (urlToUse) => {
     if (!urlToUse) return;
     try {
       const response = await fetch(`${urlToUse}?action=readAll`, {
@@ -139,92 +225,139 @@ export default function App() {
       if (result.status === 'success') {
         const cloudTargets = normalizeData(result.targets || []);
         const cloudBankTo = normalizeBankToData(result.bankTo || []);
+        const cloudUsers = normalizeUsersData(result.users || []);
 
         // Load correct local backups
         let localTargets = [];
         let localBankTo = [];
+        let localUsers = [];
         try {
           const savedT = localStorage.getItem('p2tl_targets');
           localTargets = savedT ? normalizeData(JSON.parse(savedT)) : [];
         } catch {
-          localTargets = targets;
+          localTargets = targetsRef.current;
         }
         try {
           const savedB = localStorage.getItem('p2tl_bank_to');
           localBankTo = savedB ? normalizeBankToData(JSON.parse(savedB)) : [];
         } catch {
-          localBankTo = bankToTargets;
+          localBankTo = bankToRef.current;
+        }
+        try {
+          const savedU = localStorage.getItem('p2tl_users');
+          localUsers = savedU ? normalizeUsersData(JSON.parse(savedU)) : [];
+        } catch {
+          localUsers = usersRef.current;
         }
 
         // --- MERGE TARGETS (data to) ---
         const mergedTargetsMap = new Map();
-        // Add cloud targets first
         cloudTargets.forEach(item => {
-          mergedTargetsMap.set(String(item.IDPel), item);
+          mergedTargetsMap.set(String(item.IDPel).toLowerCase(), item);
         });
 
         let targetsNeedPush = false;
-        // Merge local targets using timestamp check
         localTargets.forEach(localItem => {
-          const id = String(localItem.IDPel);
-          if (mergedTargetsMap.has(id)) {
-            const cloudItem = mergedTargetsMap.get(id);
+          const key = String(localItem.IDPel).toLowerCase();
+          if (mergedTargetsMap.has(key)) {
+            const cloudItem = mergedTargetsMap.get(key);
             const localTime = new Date(localItem.lastUpdated || 0).getTime();
             const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
             
             if (localTime > cloudTime) {
-              mergedTargetsMap.set(id, localItem);
+              mergedTargetsMap.set(key, localItem);
               targetsNeedPush = true;
             }
           } else {
             // Only exists locally
-            mergedTargetsMap.set(id, localItem);
+            mergedTargetsMap.set(key, localItem);
             targetsNeedPush = true;
           }
         });
 
-        const finalTargets = Array.from(mergedTargetsMap.values()).map((item, idx) => ({
-          ...item,
+        const finalTargets = Array.from(mergedTargetsMap.values()).map((t, idx) => ({
+          ...t,
           No: idx + 1
         }));
 
         // --- MERGE BANK TO ---
         const mergedBankToMap = new Map();
-        // Add cloud bank TO first
         cloudBankTo.forEach(item => {
-          mergedBankToMap.set(String(item.IDPEL), item);
+          mergedBankToMap.set(String(item.IDPEL).toLowerCase(), item);
         });
 
         let bankToNeedPush = false;
-        // Merge local bank TO using timestamp check
         localBankTo.forEach(localItem => {
-          const id = String(localItem.IDPEL);
-          if (mergedBankToMap.has(id)) {
-            const cloudItem = mergedBankToMap.get(id);
+          const key = String(localItem.IDPEL).toLowerCase();
+          if (mergedBankToMap.has(key)) {
+            const cloudItem = mergedBankToMap.get(key);
             const localTime = new Date(localItem.lastUpdated || 0).getTime();
             const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
             
             if (localTime > cloudTime) {
-              mergedBankToMap.set(id, localItem);
+              mergedBankToMap.set(key, localItem);
               bankToNeedPush = true;
             }
           } else {
             // Only exists locally
-            mergedBankToMap.set(id, localItem);
+            mergedBankToMap.set(key, localItem);
             bankToNeedPush = true;
           }
         });
 
-        const finalBankTo = Array.from(mergedBankToMap.values()).map((item, idx) => ({
-          ...item,
+        const finalBankTo = Array.from(mergedBankToMap.values()).map((t, idx) => ({
+          ...t,
           No: idx + 1
         }));
+
+        // --- MERGE USERS ---
+        const mergedUsersMap = new Map();
+        // Add cloud users first
+        cloudUsers.forEach(item => {
+          mergedUsersMap.set(String(item.username).toLowerCase(), item);
+        });
+
+        let usersNeedPush = false;
+        // Merge local users using timestamp check
+        localUsers.forEach(localItem => {
+          const key = String(localItem.username).toLowerCase();
+          if (mergedUsersMap.has(key)) {
+            const cloudItem = mergedUsersMap.get(key);
+            const localTime = new Date(localItem.lastUpdated || 0).getTime();
+            const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
+            
+            if (localTime > cloudTime) {
+              mergedUsersMap.set(key, localItem);
+              usersNeedPush = true;
+            }
+          } else {
+            // Only exists locally
+            mergedUsersMap.set(key, localItem);
+            usersNeedPush = true;
+          }
+        });
+
+        // Make sure default Admin is preserved if users are empty
+        const finalUsers = Array.from(mergedUsersMap.values());
+        if (finalUsers.length === 0) {
+          finalUsers.push({
+            username: 'Admin',
+            password: 'Salkot@26',
+            role: 'Administrator',
+            whatsapp: '08123456789',
+            unit: 'Salatiga Kota',
+            lastUpdated: new Date().toISOString()
+          });
+          usersNeedPush = true;
+        }
 
         // Update local state and local storage backup
         setTargets(finalTargets);
         setBankToTargets(finalBankTo);
+        setUsers(finalUsers);
         localStorage.setItem('p2tl_targets', JSON.stringify(finalTargets));
         localStorage.setItem('p2tl_bank_to', JSON.stringify(finalBankTo));
+        localStorage.setItem('p2tl_users', JSON.stringify(finalUsers));
 
         // Push if local changes are newer
         if (targetsNeedPush) {
@@ -232,6 +365,9 @@ export default function App() {
         }
         if (bankToNeedPush) {
           await syncBankToWithBackend(finalBankTo);
+        }
+        if (usersNeedPush) {
+          await syncUsersWithBackend(finalUsers);
         }
 
         showToast('Database disinkronkan dari Google Sheets!', 'success');
@@ -242,7 +378,7 @@ export default function App() {
       console.warn('Gagal sinkronisasi otomatis. Menggunakan database lokal.', err);
       showToast('Sinkronisasi cloud gagal. Menggunakan database lokal.', 'warning');
     }
-  };
+  }, [showToast, syncTargetsWithBackend, syncBankToWithBackend, syncUsersWithBackend]);
 
   const handleSaveBackendUrl = (url) => {
     setBackendUrl(url);
@@ -253,58 +389,15 @@ export default function App() {
     }
   };
 
-  // Load initial data from localStorage or seed file
-  useEffect(() => {
-    const saved = localStorage.getItem('p2tl_targets');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        const normalized = normalizeData(parsed);
-        setTargets(normalized);
-        localStorage.setItem('p2tl_targets', JSON.stringify(normalized));
-      } catch {
-        const normalized = normalizeData(initialData);
-        setTargets(normalized);
-        localStorage.setItem('p2tl_targets', JSON.stringify(normalized));
-      }
-    } else {
-      const normalized = normalizeData(initialData);
-      setTargets(normalized);
-      localStorage.setItem('p2tl_targets', JSON.stringify(normalized));
-    }
-
-    const savedBankTo = localStorage.getItem('p2tl_bank_to');
-    if (savedBankTo) {
-      try {
-        const parsed = JSON.parse(savedBankTo);
-        const normalized = normalizeBankToData(parsed);
-        setBankToTargets(normalized);
-        localStorage.setItem('p2tl_bank_to', JSON.stringify(normalized));
-      } catch {
-        const normalized = normalizeBankToData(bankToData);
-        setBankToTargets(normalized);
-        localStorage.setItem('p2tl_bank_to', JSON.stringify(normalized));
-      }
-    } else {
-      const normalized = normalizeBankToData(bankToData);
-      setBankToTargets(normalized);
-      localStorage.setItem('p2tl_bank_to', JSON.stringify(normalized));
-    }
-
-    // Set dark mode from preference or default
-    const savedTheme = localStorage.getItem('p2tl_theme');
-    if (savedTheme === 'dark') {
-      setDarkMode(true);
-      document.documentElement.classList.add('dark');
-    }
-  }, []);
-
   // Sync from cloud on mount or when backend URL is configured
   useEffect(() => {
     if (backendUrl && !isOffline) {
-      syncDatabase(backendUrl);
+      const timer = setTimeout(() => {
+        syncDatabase(backendUrl);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [backendUrl, isOffline]);
+  }, [backendUrl, isOffline, syncDatabase]);
 
   // Sync dark class on documentElement
   useEffect(() => {
@@ -339,7 +432,7 @@ export default function App() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, [backendUrl]);
+  }, [backendUrl, syncDatabase, showToast]);
 
   // Handle Theme switching from layout callback
   const handleThemeChange = (updater) => {
@@ -372,12 +465,19 @@ export default function App() {
     showToast('Anda berhasil keluar dari sistem.', 'success');
   };
 
-  // Show auto-dismiss toast
-  const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => {
-      setToast(null);
-    }, 4000);
+  // Handle users database update
+  const handleUsersChanged = (updatedUsers) => {
+    const normalized = normalizeUsersData(updatedUsers);
+    setUsers(normalized);
+    localStorage.setItem('p2tl_users', JSON.stringify(normalized));
+    
+    // Auto sync to cloud
+    const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
+    if (url && !navigator.onLine) {
+      showToast('Aplikasi offline. Perubahan data pengguna disimpan secara lokal.', 'warning');
+    } else if (url) {
+      syncDatabase(url);
+    }
   };
 
   // Handle uploaded data (merge or overwrite)
@@ -530,8 +630,8 @@ export default function App() {
 
   const menuTabs = [
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'laporan', label: 'Laporan' },
     { id: 'bankto', label: 'Bank TO' },
+    { id: 'laporan', label: 'Laporan' },
     { id: 'list', label: 'Data Target' },
     { id: 'pengaturan', label: 'Pengaturan' }
   ];
@@ -540,6 +640,7 @@ export default function App() {
     return (
       <Login 
         onLogin={handleLogin}
+        users={users}
         title="Anev P2TL"
         subtitle="PLN Unit Pelaksana Pelayanan Pelanggan Salatiga"
         copyright="© 2026 PLN Salatiga. All rights reserved."
@@ -594,6 +695,9 @@ export default function App() {
             targets={targets}
             bankToTargets={bankToTargets}
             onClearLocalData={handleClearLocalData}
+            currentUser={currentUser}
+            users={users}
+            onUsersChanged={handleUsersChanged}
           />
         </div>
       ) : (
@@ -609,7 +713,7 @@ export default function App() {
 
       {/* Floating toast notification */}
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-55 w-[90%] max-w-sm bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xl rounded-2xl p-4 flex items-center justify-between border border-slate-800 dark:border-slate-100 animate-toast">
+        <div className="fixed toast-top-safe left-1/2 -translate-x-1/2 z-[9999] w-[90%] max-w-sm bg-slate-900/95 text-white dark:bg-white/95 dark:text-slate-900 shadow-2xl rounded-2xl p-4 flex items-center justify-between border border-slate-800 dark:border-slate-100/80 animate-toast">
           <div className="flex gap-3 items-center">
             <div className={`p-1 rounded-lg flex-shrink-0 ${
               toast.type === 'error' ? 'bg-rose-500 text-white' :

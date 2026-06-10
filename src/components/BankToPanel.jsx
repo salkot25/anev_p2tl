@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   FileText, 
@@ -212,14 +212,14 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   };
 
   // Helper to resolve inspection history from main targets (realizedTargets)
-  const getInspectionHistory = (idpel) => {
+  const getInspectionHistory = useCallback((idpel) => {
     if (!realizedTargets || !idpel) return null;
     return realizedTargets.find(r => String(r.IDPel).trim() === String(idpel).trim());
-  };
+  }, [realizedTargets]);
 
   const drawerHistory = useMemo(() => {
     return selectedRecord ? getInspectionHistory(selectedRecord.IDPEL) : null;
-  }, [selectedRecord, realizedTargets]);
+  }, [selectedRecord, getInspectionHistory]);
 
   // Haversine distance helper (KM)
   const getDistance = (lat1, lon1, lat2, lon2) => {
@@ -259,9 +259,9 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
       }
     }
     
-    let status = '';
-    let badgeClass = '';
-    let desc = '';
+    let status;
+    let badgeClass;
+    let desc;
     
     if (maxD < 1) {
       status = 'Sangat Berdekatan';
@@ -289,7 +289,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     };
   }, [targets, selectedIds]);
 
-  const initMap = () => {
+  const initMap = useCallback(() => {
     if (!window.L || mapRef.current || !document.getElementById('selected-map-container')) return;
     
     const selectedTargets = targets.filter(t => selectedIds.has(String(t.IDPEL)));
@@ -327,7 +327,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     
     // Fit map bounds to show all markers
     map.fitBounds(markerGroup.getBounds(), { padding: [40, 40] });
-  };
+  }, [targets, selectedIds]);
 
   const focusCustomerOnMap = (t) => {
     if (!t.LATITUDE || !t.LONGITUDE || !mapRef.current) return;
@@ -367,7 +367,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
       }
       markersRef.current = {};
     };
-  }, [isMapOpen]);
+  }, [isMapOpen, initMap]);
 
   // --- 1. Filtering and Paging logic ---
   const filterOptions = useMemo(() => {
@@ -390,8 +390,15 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     };
   }, [targets]);
 
+  // Reset page index when filters change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [searchQuery, selectedUnits, selectedJenises, selectedSubs, selectedGardus]);
+
   const filteredTargets = useMemo(() => {
-    setCurrentPage(1);
     return targets.filter(t => {
       const matchesSearch = 
         String(t.IDPEL || '').includes(searchQuery) ||
@@ -831,10 +838,10 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               <p className="text-xs text-slate-400 mt-1.5 max-w-xs">Coba ubah kata kunci pencarian atau hapus filter yang aktif.</p>
               {activeFilters > 0 && (
                 <button onClick={() => {
-                  setSelectedUnit('ALL');
-                  setSelectedJenis('ALL');
-                  setSelectedSub('ALL');
-                  setSelectedGardu('ALL');
+                  setSelectedUnits(null);
+                  setSelectedJenises(null);
+                  setSelectedSubs(null);
+                  setSelectedGardus(null);
                 }}
                   className="mt-4 px-4 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
                   Reset Filter

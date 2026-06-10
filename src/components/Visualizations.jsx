@@ -1,4 +1,3 @@
-import React from 'react';
 
 export default function Visualizations({ targets }) {
   const total = targets.length;

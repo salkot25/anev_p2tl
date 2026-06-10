@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   TrendingUp,
-  Calendar,
   Layers,
   ArrowUpRight,
   ArrowDownRight,
@@ -32,20 +31,6 @@ function formatIndoNumber(value) {
   return new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(num);
 }
 
-function getIndonesianDateString(dateStr) {
-  if (!dateStr) return '..........';
-  const dateParts = dateStr.split('-');
-  if (dateParts.length !== 3) return dateStr;
-  const year = parseInt(dateParts[0], 10);
-  const month = parseInt(dateParts[1], 10) - 1;
-  const day = parseInt(dateParts[2], 10);
-  const dateObj = new Date(year, month, day);
-  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-  const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-    'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-  return `${days[dateObj.getDay()]}, ${String(day).padStart(2, '0')} ${months[dateObj.getMonth()]} ${year}`;
-}
-
 function getYearString(dateStr) {
   if (!dateStr) return '2026';
   return dateStr.split('-')[0] || '2026';
@@ -73,7 +58,9 @@ function normalizeDateString(dateVal) {
       if (!isNaN(d.getTime())) {
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
-    } catch (_) {}
+    } catch {
+      // Ignored
+    }
     return '';
   }
   const str = dateVal.trim();
@@ -87,7 +74,9 @@ function normalizeDateString(dateVal) {
     if (!isNaN(d.getTime())) {
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     }
-  } catch (_) {}
+  } catch {
+    // Ignored
+  }
   return str;
 }
 
@@ -131,15 +120,13 @@ function ProgressRing({ percentage, size = 60, strokeWidth = 5, colorClass = 'te
 }
 
 // ─── Main DashboardAnalytics Component ───────────────────────────────────────
-export default function DashboardAnalytics({ targets, realization, execSummary, workingDays, backendUrl }) {
-  const [subTab, setSubTab] = useState('kpi'); // 'kpi' | 'targets' | 'summary'
+export default function DashboardAnalytics({ targets, realization, execSummary, workingDays, backendUrl, subTab = 'kpi' }) {
   const [logs, setLogs] = useState([]);
   const [hoveredMonth, setHoveredMonth] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const [compositionMetric, setCompositionMetric] = useState('tarif');
   const [granularity, setGranularity] = useState('bulan');
-  const [monthlyTargets, setMonthlyTargets] = useState(Array(12).fill(130205));
-  const [showAllYoYTable, setShowAllYoYTable] = useState(false);
+  const [monthlyTargets, setMonthlyTargets] = useState(Array(12).fill(0));
   const [activeScenario, setActiveScenario] = useState('current');
   const [yoyPage, setYoYPage] = useState(1);
   const [hoveredYoyMonth, setHoveredYoyMonth] = useState(null);
@@ -151,7 +138,11 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
     if (targets?.date) {
       const dateParts = targets.date.split('-');
       const currentMonth = parseInt(dateParts[1], 10) || (new Date().getMonth() + 1);
-      setYoYPage(currentMonth <= 6 ? 1 : 2);
+      const targetPage = currentMonth <= 6 ? 1 : 2;
+      const timer = setTimeout(() => {
+        setYoYPage(targetPage);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [targets?.date]);
 
@@ -168,7 +159,9 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (_) {}
+      } catch {
+        // Ignored
+      }
     }
     const oldSetting = localStorage.getItem('p2tl_working_days') || '7';
     if (oldSetting === '5') return { monFri: true, sat: false, sun: false };
@@ -195,10 +188,15 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
           const cached = localStorage.getItem('p2tl_logs_cache');
           if (cached) setLogs(JSON.parse(cached));
         }
-      } catch (e) {
+      } catch (err) {
+        console.warn('Gagal memuat log:', err);
         const cached = localStorage.getItem('p2tl_logs_cache');
         if (cached) {
-          try { setLogs(JSON.parse(cached)); } catch (_) {}
+          try {
+            setLogs(JSON.parse(cached));
+          } catch {
+            // Ignored
+          }
         }
       }
     };
@@ -218,28 +216,31 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
           const result = await response.json();
           if (result.status === 'success' && Array.isArray(result.data)) {
             localStorage.setItem(cacheKey, JSON.stringify(result.data));
-            const mappedTargets = Array(12).fill(130205);
+            const mappedTargets = Array(12).fill(0);
             result.data.forEach(item => {
               const mIdx = Number(item.Month) - 1;
-              if (mIdx >= 0 && mIdx < 12) mappedTargets[mIdx] = Number(item.Target_kWh) || 130205;
+              if (mIdx >= 0 && mIdx < 12) mappedTargets[mIdx] = Number(item.Target_kWh) || 0;
             });
             setMonthlyTargets(mappedTargets);
             return;
           }
         }
         throw new Error('no url or bad response');
-      } catch (e) {
+      } catch (err) {
+        console.warn('Gagal memuat target bulanan:', err);
         const cached = localStorage.getItem(cacheKey);
         if (cached) {
           try {
             const parsed = JSON.parse(cached);
-            const mappedTargets = Array(12).fill(130205);
+            const mappedTargets = Array(12).fill(0);
             parsed.forEach(item => {
               const mIdx = Number(item.Month) - 1;
-              if (mIdx >= 0 && mIdx < 12) mappedTargets[mIdx] = Number(item.Target_kWh) || 130205;
+              if (mIdx >= 0 && mIdx < 12) mappedTargets[mIdx] = Number(item.Target_kWh) || 0;
             });
             setMonthlyTargets(mappedTargets);
-          } catch (_) {}
+          } catch {
+            // Ignored
+          }
         }
       }
     };
@@ -263,7 +264,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   const day = parseInt(parts[2], 10) || new Date().getDate();
 
   const workingDaysInMonth = getWorkingDaysCount(year, month - 1, activeWorkingDaysChecklist);
-  const targetMonth = monthlyTargets[month - 1] ?? 130205;
+  const targetMonth = monthlyTargets[month - 1] ?? 0;
   const isWorking = isDateWorkingDay(year, month - 1, day, activeWorkingDaysChecklist);
   const targetHarianCalculated = isWorking ? Math.round(targetMonth / workingDaysInMonth) : 0;
   const targetKumulatifCalculated = monthlyTargets.slice(0, month).reduce((sum, val) => sum + val, 0);
@@ -329,7 +330,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
     const trend = execSummary?.monthlyTrend || [];
     return trend.map((m, idx) => ({
-      label: m.month, kwh: m.kwh, target: monthlyTargets[idx] ?? 130205, cases: m.cases
+      label: m.month, kwh: m.kwh, target: monthlyTargets[idx] ?? 0, cases: m.cases
     }));
   };
 
@@ -349,74 +350,80 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   const bulanPercent = targetBulanKwh > 0 ? (relBulan / targetBulanKwh) * 100 : 0;
 
   return (
-    <div className="space-y-6">
-      {/* Top Header with Sub-tab Selector */}
-      <div className={`p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col md:flex-row justify-between items-start md:items-center gap-4`}>
-        <div>
-          <h2 className="text-lg font-black tracking-tight mb-1 text-slate-900 dark:text-slate-50">Kinerja P2TL ULP Salatiga Kota</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1.5">
-            <Calendar className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
-            <span>Data aktif untuk: <strong>{getIndonesianDateString(targets.date)}</strong></span>
-          </p>
-        </div>
-
-        {/* Subtab selection pills */}
-        <div className="flex p-1 bg-slate-100 dark:bg-slate-950/80 rounded-xl border border-slate-200 dark:border-slate-800">
-          {[{ id: 'kpi', label: 'Realisasi' }, { id: 'targets', label: 'Target' }, { id: 'summary', label: `Ringkasan (${currentYear})` }].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setSubTab(tab.id)}
-              className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
-                subTab === tab.id
-                  ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-800 shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
+    <div className="space-y-5">
       {/* ── TAB 1: KPI & BREAKDOWN ─────────────────────────────────────────── */}
       {subTab === 'kpi' && (
         <>
-          {/* Stats Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className={`p-5 ${colors.card} ${borderRadius.xl} border ${colors.border} flex items-center justify-between`}>
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Kinerja Harian</span>
-                <div className="text-xl font-black text-slate-800 dark:text-slate-50">{formatIndoNumber(relHarian)} kWh</div>
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Target: {formatIndoNumber(targetHarianCalculated)} kWh</div>
+          {/* KPI Metrics — Responsive Grid: Hero + Supporting */}
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-3 lg:gap-4">
+            {/* Hero: Kinerja Harian (primary focus) — spans 2 cols on desktop */}
+            <div className={`lg:col-span-2 p-5 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md}`}>
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1 min-w-0">
+                  <span className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest">Kinerja Hari Ini</span>
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-slate-50 tracking-tight">{formatIndoNumber(relHarian)}</span>
+                    <span className="text-xs font-bold text-slate-400">kWh</span>
+                    <span className={`text-[10px] font-extrabold px-1.5 py-0.5 rounded-md ${
+                      harianPercent >= 100
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : harianPercent >= 50
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                    }`}>{Math.round(harianPercent)}%</span>
+                  </div>
+                  <div className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">Target harian: {formatIndoNumber(targetHarianCalculated)} kWh</div>
+                </div>
+                <ProgressRing percentage={harianPercent} size={64} strokeWidth={5} colorClass={harianPercent >= 100 ? 'text-emerald-500' : harianPercent >= 50 ? 'text-amber-500' : 'text-rose-500'} />
               </div>
-              <ProgressRing percentage={harianPercent} colorClass={harianPercent >= 100 ? 'text-emerald-500' : harianPercent >= 50 ? 'text-amber-500' : 'text-rose-500'} />
             </div>
 
-            <div className={`p-5 ${colors.card} ${borderRadius.xl} border ${colors.border} flex items-center justify-between`}>
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Kinerja Bulanan</span>
-                <div className="text-xl font-black text-slate-800 dark:text-slate-50">{formatIndoNumber(relBulan)} kWh</div>
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Target: {formatIndoNumber(targetBulanKwh)} kWh ({currentMonthName})</div>
+            {/* Supporting Metrics: 3-col sub-grid on mobile, individual cells on desktop */}
+            <div className="grid grid-cols-3 lg:col-span-3 lg:grid-cols-3 gap-3 lg:gap-4">
+              {/* Bulanan */}
+              <div className={`p-3 sm:p-4 lg:p-5 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col justify-between`}>
+                <div className="space-y-0.5 sm:space-y-1">
+                  <div className="text-[8px] sm:text-[9px] font-bold uppercase text-slate-400 tracking-wider">Bulanan</div>
+                  <div className="text-sm sm:text-lg font-black text-slate-800 dark:text-slate-100">{formatIndoNumber(relBulan)}</div>
+                  <div className="text-[9px] sm:text-[10px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:block">Target: {formatIndoNumber(targetBulanKwh)} kWh</div>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 mt-2 sm:mt-3">
+                  <div className="flex-1 h-1 sm:h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${bulanPercent >= 70 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, bulanPercent)}%` }} />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 shrink-0">{Math.round(bulanPercent)}%</span>
+                </div>
               </div>
-              <ProgressRing percentage={bulanPercent} colorClass={bulanPercent >= 70 ? 'text-emerald-500' : 'text-amber-500'} />
-            </div>
 
-            <div className={`p-5 ${colors.card} ${borderRadius.xl} border ${colors.border} flex items-center justify-between`}>
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Kinerja {semesterLabel}</span>
-                <div className="text-xl font-black text-slate-800 dark:text-slate-50">{formatIndoNumber(realSemester)} kWh</div>
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Target: {formatIndoNumber(targetSemester)} kWh</div>
+              {/* Semester */}
+              <div className={`p-3 sm:p-4 lg:p-5 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col justify-between`}>
+                <div className="space-y-0.5 sm:space-y-1">
+                  <div className="text-[8px] sm:text-[9px] font-bold uppercase text-slate-400 tracking-wider">{semesterLabel}</div>
+                  <div className="text-sm sm:text-lg font-black text-slate-800 dark:text-slate-100">{formatIndoNumber(realSemester)}</div>
+                  <div className="text-[9px] sm:text-[10px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:block">Target: {formatIndoNumber(targetSemester)} kWh</div>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 mt-2 sm:mt-3">
+                  <div className="flex-1 h-1 sm:h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${semesterPercent >= 70 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, semesterPercent)}%` }} />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 shrink-0">{Math.round(semesterPercent)}%</span>
+                </div>
               </div>
-              <ProgressRing percentage={semesterPercent} colorClass={semesterPercent >= 70 ? 'text-emerald-500' : 'text-amber-500'} />
-            </div>
 
-            <div className={`p-5 ${colors.card} ${borderRadius.xl} border ${colors.border} flex items-center justify-between`}>
-              <div className="space-y-1">
-                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Kinerja Kumulatif</span>
-                <div className="text-xl font-black text-slate-800 dark:text-slate-50">{formatIndoNumber(relKumulatif)} kWh</div>
-                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Target: {formatIndoNumber(targetKumulatifCalculated)} kWh</div>
+              {/* Kumulatif */}
+              <div className={`p-3 sm:p-4 lg:p-5 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col justify-between`}>
+                <div className="space-y-0.5 sm:space-y-1">
+                  <div className="text-[8px] sm:text-[9px] font-bold uppercase text-slate-400 tracking-wider">Kumulatif</div>
+                  <div className="text-sm sm:text-lg font-black text-slate-800 dark:text-slate-100">{formatIndoNumber(relKumulatif)}</div>
+                  <div className="text-[9px] sm:text-[10px] font-semibold text-slate-500 dark:text-slate-400 hidden sm:block">Target: {formatIndoNumber(targetKumulatifCalculated)} kWh</div>
+                </div>
+                <div className="flex items-center gap-1 sm:gap-1.5 mt-2 sm:mt-3">
+                  <div className="flex-1 h-1 sm:h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${kumulatifPercent >= 70 ? 'bg-emerald-500' : 'bg-amber-500'}`} style={{ width: `${Math.min(100, kumulatifPercent)}%` }} />
+                  </div>
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 shrink-0">{Math.round(kumulatifPercent)}%</span>
+                </div>
               </div>
-              <ProgressRing percentage={kumulatifPercent} colorClass={kumulatifPercent >= 70 ? 'text-emerald-500' : 'text-amber-500'} />
             </div>
           </div>
 
@@ -732,9 +739,6 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
         const avgRequiredKwh110 = remainingMonths > 0 ? Math.round(sisaTarget110 / remainingMonths) : 0;
         const pctEffortRequired110 = (avgRealKwh > 0 && sisaTarget110 > 0) ? Math.round(((avgRequiredKwh110 / avgRealKwh) - 1) * 100) : 0;
         const monthlyTrendData = execSummary.monthlyTrend || [];
-        const monthsWithData = monthlyTrendData.filter(m => m.kwh > 0);
-        const bestMonth = monthsWithData.length > 0 ? monthsWithData.reduce((best, m) => m.kwh > best.kwh ? m : best, monthsWithData[0]) : null;
-        const worstMonth = monthsWithData.length > 0 ? monthsWithData.reduce((worst, m) => m.kwh < worst.kwh ? m : worst, monthsWithData[0]) : null;
         const yoyChartData = monthlyTrendData.map((m, idx) => ({ label: m.month, current: m.kwh, prev: prevMonthlyTrend[idx]?.kwh ?? 0, target: monthlyTargets[idx] ?? 0 }));
         const yoyMaxVal = Math.max(...yoyChartData.map(d => Math.max(d.current, d.prev, d.target)), 1);
         const targetKumulatifYtd = monthlyTargets.slice(0, month).reduce((sum, val) => sum + val, 0);
@@ -753,16 +757,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
         };
         const statusInfo = getKpiStatus(pctYtd, month, totalRealYear, targetKumulatifYtd);
 
-        // Calculate Semester YoY Aggregates
-        // S1 is Jan - Jun (months 0 to 5)
-        const s1ThisYear = yoyChartData.slice(0, 6).reduce((sum, d, idx) => sum + (idx < month ? d.current : 0), 0);
-        const s1LastYear = yoyChartData.slice(0, 6).reduce((sum, d, idx) => sum + (idx < month ? d.prev : 0), 0);
-        const s1YoY = s1LastYear > 0 ? ((s1ThisYear - s1LastYear) / s1LastYear) * 100 : 0;
-
-        // S2 is Jul - Des (months 6 to 11)
-        const s2ThisYear = yoyChartData.slice(6, 12).reduce((sum, d, idx) => sum + ((idx + 6) < month ? d.current : 0), 0);
-        const s2LastYear = yoyChartData.slice(6, 12).reduce((sum, d, idx) => sum + ((idx + 6) < month ? d.prev : 0), 0);
-        const s2YoY = s2LastYear > 0 ? ((s2ThisYear - s2LastYear) / s2LastYear) * 100 : 0;
+        // YoY calculations removed as they are unused
 
         // Paginated display control for YoY comparison table (6 rows per page)
         const visibleYoYData = yoyPage === 1 ? yoyChartData.slice(0, 6) : yoyChartData.slice(6, 12);
@@ -772,37 +767,37 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
             {/* Hero Status Card (Mobile-First) */}
             <div className={`p-5 sm:p-6 ${borderRadius.xxl} border ${colors.border} ${shadows.md} bg-white dark:bg-slate-900 flex flex-col lg:flex-row justify-between items-stretch gap-6 relative overflow-hidden`}>
               <div className="flex-1 space-y-4 z-10 flex flex-col justify-between">
-                <div className="space-y-2.5">
+                <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Status Pencapaian Kumulatif</span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide ${statusInfo.color}`}>{statusInfo.label}</span>
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wide ${statusInfo.color}`}>{statusInfo.label}</span>
                   </div>
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-50 tracking-tight leading-tight">
                     Analisis Pencapaian kWh Kumulatif Tahun {year}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl sm:block hidden">{statusInfo.description}</p>
                 </div>
-                <div className="grid grid-cols-3 gap-3 pt-4 border-t border-slate-100 dark:border-slate-800/80">
-                  <div className="space-y-0.5">
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="space-y-1">
                     <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Realisasi Kumulatif</div>
                     <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(totalRealYear)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
-                  <div className="space-y-0.5 border-l border-slate-100 dark:border-slate-800/80 pl-3">
+                  <div className="space-y-1 border-l border-slate-100 dark:border-slate-800/80 pl-4">
                     <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target Kumulatif</div>
                     <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(targetKumulatifYtd)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
-                  <div className="space-y-0.5 border-l border-slate-100 dark:border-slate-800/80 pl-3">
+                  <div className="space-y-1 border-l border-slate-100 dark:border-slate-800/80 pl-4">
                     <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target Tahunan</div>
                     <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(totalTargetYear)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
                 </div>
               </div>
-              <div className="w-full lg:w-72 flex flex-row lg:flex-col items-center justify-between lg:justify-center p-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-100 dark:border-slate-800/50 rounded-xl z-10 shrink-0 gap-4 sm:gap-6">
-                <div className="flex items-center lg:justify-center gap-3 lg:flex-col">
+              <div className="w-full lg:w-72 flex flex-row lg:flex-col items-center justify-between lg:justify-center p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/60 rounded-xl z-10 shrink-0 gap-4 sm:gap-6">
+                <div className="flex items-center lg:justify-center gap-4 lg:flex-col">
                   <div className="relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20">
-                    <svg className="w-full h-full transform -rotate-90">
+                    <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
                       <circle cx="40" cy="40" r="32" className="stroke-slate-200 dark:stroke-slate-800" strokeWidth="6" fill="transparent" />
-                      <circle cx="40" cy="40" r="32" className={`transition-all duration-1000 ease-out ${pctYtd >= 100 ? 'stroke-emerald-500' : pctYtd >= 90 ? 'stroke-teal-500' : pctYtd >= 75 ? 'stroke-amber-500' : 'stroke-rose-500'}`} strokeWidth="6" fill="transparent" strokeDasharray={2 * Math.PI * 32} strokeDashoffset={2 * Math.PI * 32 * (1 - Math.min(100, pctYtd) / 100)} strokeLinecap="round" />
+                      <circle cx="40" cy="40" r="32" className={`transition-all duration-1000 ease-out ${pctYtd >= 100 ? 'stroke-emerald-500 dark:stroke-emerald-400' : pctYtd >= 90 ? 'stroke-teal-500 dark:stroke-teal-400' : pctYtd >= 75 ? 'stroke-amber-500 dark:stroke-amber-400' : 'stroke-rose-500 dark:stroke-rose-400'}`} strokeWidth="6" fill="transparent" strokeDasharray={2 * Math.PI * 32} strokeDashoffset={2 * Math.PI * 32 * (1 - Math.min(100, pctYtd) / 100)} strokeLinecap="round" />
                     </svg>
                     <div className="absolute flex flex-col items-center justify-center">
                       <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-slate-50">{Math.round(pctYtd)}%</span>
@@ -818,7 +813,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <span>Target Tahunan</span>
                     <span className="text-slate-700 dark:text-slate-300">{Math.round(pctAnnual)}%</span>
                   </div>
-                  <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                  <div className="h-2 w-full bg-slate-200 dark:bg-slate-850 rounded-full overflow-hidden">
                     <div className={`h-full rounded-full transition-all duration-1000 ease-out bg-emerald-500`} style={{ width: `${Math.min(100, pctAnnual)}%` }} />
                   </div>
                 </div>
@@ -835,16 +830,16 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   </h3>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
                     Realisasi Kumulatif: <span className="font-bold text-slate-700 dark:text-slate-200">{formatIndoNumber(totalRealYear)} kWh</span> vs <span className="font-bold text-slate-700 dark:text-slate-200">{formatIndoNumber(prevTotalKwhYtd)} kWh ({prevYear})</span>
-                    <span className={`ml-2 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-black ${diffKwhYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400'}`}>
+                    <span className={`ml-2 inline-flex items-center gap-0.5 px-2 py-1 rounded text-[10px] font-black ${diffKwhYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400'}`}>
                       {diffKwhYtd >= 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
                       {diffKwhYtd >= 0 ? '+' : ''}{Math.round(pctGrowthYtd)}% YoY
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 text-[9px] font-bold shrink-0">
-                  <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-slate-300 dark:bg-slate-600" /><span className="text-slate-500 dark:text-slate-400">{prevYear}</span></div>
-                  <div className="flex items-center gap-1"><div className="w-2.5 h-2.5 rounded-sm bg-emerald-500" /><span className="text-slate-500 dark:text-slate-400">{currentYear}</span></div>
-                  <div className="flex items-center gap-1"><div className="w-2.5 h-0.5 bg-amber-500" /><span className="text-slate-500 dark:text-slate-400">Target</span></div>
+                <div className="flex items-center gap-4 text-[9px] font-bold shrink-0">
+                  <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-sm bg-slate-300 dark:bg-slate-600" /><span className="text-slate-500 dark:text-slate-400">{prevYear}</span></div>
+                  <div className="flex items-center gap-1"><div className="w-3 h-3 rounded-sm bg-emerald-500" /><span className="text-slate-500 dark:text-slate-400">{currentYear}</span></div>
+                  <div className="flex items-center gap-1"><div className="w-3 h-1 bg-amber-500" /><span className="text-slate-500 dark:text-slate-400">Target</span></div>
                 </div>
               </div>
 
@@ -917,7 +912,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                         top: '12px'
                       }}
                     >
-                      <div className="font-extrabold text-emerald-400 border-b border-slate-800/80 pb-1 mb-1.5 flex items-center justify-between gap-4">
+                      <div className="font-extrabold text-emerald-400 border-b border-slate-800/80 pb-1 mb-2 flex items-center justify-between gap-4">
                         <span>Bulan {yoyChartData[hoveredYoyMonth].label}</span>
                         <span className="text-[10px] text-slate-400 font-normal">YoY kWh</span>
                       </div>
@@ -939,7 +934,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
                 {/* YoY Table with Mobile view control */}
                 <div className="lg:col-span-4 border-t lg:border-t-0 lg:border-l border-slate-100 dark:border-slate-800/80 lg:pl-6 pt-3 lg:pt-0 w-full">
-                  <div className="flex justify-between items-center mb-2 pb-1.5 border-b border-slate-100 dark:border-slate-800/80">
+                  <div className="flex justify-between items-center mb-2 pb-2 border-b border-slate-100 dark:border-slate-800/80">
                     <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Rincian Perbandingan Bulanan</span>
                     <span className="text-[9px] text-slate-400 font-semibold">{yoyPage === 1 ? 'Semester 1' : 'Semester 2'}</span>
                   </div>
@@ -955,19 +950,19 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100/60 dark:divide-slate-800/40">
-                        {visibleYoYData.map((d, idx) => {
-                          const mDiff = d.current - d.prev;
-                          const mPct = d.prev > 0 ? (mDiff / d.prev) * 100 : (d.current > 0 ? 100 : 0);
+                        {visibleYoYData.map((m, idx) => {
+                          const mDiff = m.current - m.prev;
+                          const mPct = m.prev > 0 ? (mDiff / m.prev) * 100 : (m.current > 0 ? 100 : 0);
                           const actualMonthIndex = yoyPage === 1 ? idx + 1 : idx + 7;
                           const isCurrentActive = actualMonthIndex <= month;
                           return (
                             <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                              <td className="py-1 font-bold text-slate-600 dark:text-slate-300">{d.label}</td>
-                              <td className="py-1 text-right text-slate-500 dark:text-slate-400 font-semibold">{formatIndoNumber(d.prev)}</td>
-                              <td className="py-1 text-right text-slate-800 dark:text-slate-100 font-bold">{isCurrentActive ? formatIndoNumber(d.current) : '-'}</td>
+                              <td className="py-1 font-bold text-slate-600 dark:text-slate-300">{m.label}</td>
+                              <td className="py-1 text-right text-slate-500 dark:text-slate-400 font-semibold">{formatIndoNumber(m.prev)}</td>
+                              <td className="py-1 text-right text-slate-800 dark:text-slate-100 font-bold">{isCurrentActive ? formatIndoNumber(m.current) : '-'}</td>
                               <td className="py-1 text-right font-black">
                                 {isCurrentActive ? (
-                                  <span className={`inline-flex items-center gap-0.5 text-[10px] ${mDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                  <span className={`inline-flex items-center gap-1 text-[10px] ${mDiff >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
                                     {mDiff >= 0 ? '+' : ''}{Math.round(mPct)}%
                                   </span>
                                 ) : <span className="text-slate-400 font-medium">-</span>}
@@ -984,26 +979,26 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <button
                       disabled={yoyPage === 1}
                       onClick={() => setYoYPage(1)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                       title="Semester 1"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
                         {yoyPage === 1 ? 'Semester 1 (Jan - Jun)' : 'Semester 2 (Jul - Des)'}
                       </span>
                       <div className="flex gap-1 ml-1">
-                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${yoyPage === 1 ? 'bg-emerald-500 scale-125' : 'bg-slate-300 dark:bg-slate-700'}`} />
-                        <span className={`w-1.5 h-1.5 rounded-full transition-all ${yoyPage === 2 ? 'bg-emerald-500 scale-125' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                        <span className={`w-2 h-2 rounded-full transition-all ${yoyPage === 1 ? 'bg-emerald-500 scale-125' : 'bg-slate-300 dark:bg-slate-700'}`} />
+                        <span className={`w-2 h-2 rounded-full transition-all ${yoyPage === 2 ? 'bg-emerald-500 scale-125' : 'bg-slate-300 dark:bg-slate-700'}`} />
                       </div>
                     </div>
 
                     <button
                       disabled={yoyPage === 2}
                       onClick={() => setYoYPage(2)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                      className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                       title="Semester 2"
                     >
                       <ChevronRight className="w-4 h-4" />
@@ -1015,18 +1010,18 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-1.5 w-full">
-                    <div className="flex items-center gap-1.5">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2 w-full">
+                    <div className="flex items-center gap-2">
                       <div className="p-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded border border-amber-500/10"><Target className="w-3.5 h-3.5" /></div>
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Sisa Target</span>
                     </div>
                     <div className="group relative inline-block">
                       <Info className="w-3.5 h-3.5 text-slate-350 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-help transition-colors" />
-                      <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-2.5 bg-slate-950/95 dark:bg-slate-900 text-[10px] text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
+                      <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-3 bg-slate-950/95 dark:bg-slate-900 text-[10px] text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
                         <div className="font-bold border-b border-slate-800 pb-1 mb-1 text-[10px] text-amber-500 uppercase">Sisa Target</div>
                         <div>Sisa target kWh tahunan yang belum terpenuhi dari seluruh pelaksanaan kegiatan P2TL.</div>
-                        <div className="mt-1.5 pt-1.5 border-t border-dashed border-slate-800 text-[9px] text-slate-400">
+                        <div className="mt-2 pt-2 border-t border-dashed border-slate-800 text-[9px] text-slate-400">
                           <span className="font-semibold text-slate-300">Rumus:</span> Target Tahunan - Realisasi Kumulatif
                         </div>
                       </div>
@@ -1045,18 +1040,18 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
               </div>
 
               <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-1.5 w-full">
-                    <div className="flex items-center gap-1.5">
-                      <div className={`p-1 rounded border ${rataRataDibutuhkan > (monthlyTargets[month - 1] ?? 130205) * 1.2 ? 'bg-rose-500/10 text-rose-500 border-rose-500/10' : 'bg-sky-500/10 text-sky-600 border-sky-500/10'}`}><AlertTriangle className="w-3.5 h-3.5" /></div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2 w-full">
+                    <div className="flex items-center gap-2">
+                      <div className={`p-1 rounded border ${rataRataDibutuhkan > (monthlyTargets[month - 1] ?? 0) * 1.2 ? 'bg-rose-500/10 text-rose-500 border-rose-500/10' : 'bg-sky-500/10 text-sky-600 border-sky-500/10'}`}><AlertTriangle className="w-3.5 h-3.5" /></div>
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Kebutuhan/Bulan</span>
                     </div>
                     <div className="group relative inline-block">
                       <Info className="w-3.5 h-3.5 text-slate-350 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-help transition-colors" />
-                      <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-2.5 bg-slate-950/95 dark:bg-slate-900 text-[10px] text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
+                      <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-3 bg-slate-950/95 dark:bg-slate-900 text-[10px] text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
                         <div className="font-bold border-b border-slate-800 pb-1 mb-1 text-[10px] text-sky-500 dark:text-sky-400 uppercase">Kebutuhan/Bulan</div>
                         <div>Rata-rata kWh realisasi bulanan yang harus dicapai pada sisa bulan berjalan agar target tahunan terpenuhi 100% pada akhir tahun.</div>
-                        <div className="mt-1.5 pt-1.5 border-t border-dashed border-slate-800 text-[9px] text-slate-400">
+                        <div className="mt-2 pt-2 border-t border-dashed border-slate-800 text-[9px] text-slate-400">
                           <span className="font-semibold text-slate-300">Rumus:</span> Sisa Target / Sisa Bulan Tersisa
                         </div>
                       </div>
@@ -1070,9 +1065,9 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
               </div>
 
               <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-1.5 w-full">
-                    <div className="flex items-center gap-1.5">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2 w-full">
+                    <div className="flex items-center gap-2">
                       <div className={`p-1 rounded border ${pctGrowthYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/10' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/10'}`}>
                         {pctGrowthYtd >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                       </div>
@@ -1080,10 +1075,10 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </div>
                     <div className="group relative inline-block">
                       <Info className="w-3.5 h-3.5 text-slate-350 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-help transition-colors" />
-                      <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-2.5 bg-slate-950/95 dark:bg-slate-900 text-[10px] text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
+                      <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-3 bg-slate-950/95 dark:bg-slate-900 text-[10px] text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
                         <div className="font-bold border-b border-slate-800 pb-1 mb-1 text-[10px] text-emerald-500 dark:text-emerald-400 uppercase">Pertumbuhan (YoY)</div>
                         <div>Tingkat pertumbuhan kWh realisasi kumulatif tahun berjalan dibandingkan periode yang sama (Jan - bulan aktif) pada tahun lalu.</div>
-                        <div className="mt-1.5 pt-1.5 border-t border-dashed border-slate-800 text-[9px] text-slate-400">
+                        <div className="mt-2 pt-2 border-t border-dashed border-slate-800 text-[9px] text-slate-400">
                           <span className="font-semibold text-slate-300">Rumus:</span> ((Real. Kum. Thn Ini - Real. Kum. Thn Lalu) / Real. Kum. Thn Lalu) * 100
                         </div>
                       </div>
@@ -1099,9 +1094,9 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
               </div>
 
               <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between gap-1.5 w-full">
-                    <div className="flex items-center gap-1.5">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2 w-full">
+                    <div className="flex items-center gap-2">
                       <div className={`p-1 rounded border ${(targetKumulatifYtd - totalRealYear) <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/10' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/10'}`}>
                         {(targetKumulatifYtd - totalRealYear) <= 0 ? <Trophy className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
                       </div>
@@ -1109,10 +1104,10 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </div>
                     <div className="group relative inline-block">
                       <Info className="w-3.5 h-3.5 text-slate-350 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-help transition-colors" />
-                      <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-2.5 bg-slate-950/95 dark:bg-slate-900 text-[10px] text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
+                      <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-3 bg-slate-950/95 dark:bg-slate-900 text-[10px] text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
                         <div className="font-bold border-b border-slate-800 pb-1 mb-1 text-[10px] text-emerald-500 dark:text-emerald-400 uppercase">Gap Kumulatif</div>
                         <div>Selisih antara realisasi berjalan dengan target kumulatif berjalan (YTD). Surplus jika realisasi melebihi target, defisit jika kurang.</div>
-                        <div className="mt-1.5 pt-1.5 border-t border-dashed border-slate-800 text-[9px] text-slate-400">
+                        <div className="mt-2 pt-2 border-t border-dashed border-slate-800 text-[9px] text-slate-400">
                           <span className="font-semibold text-slate-300">Rumus:</span> Target Kumulatif Berjalan - Realisasi Kumulatif
                         </div>
                       </div>
@@ -1131,7 +1126,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
             {/* Scenario Projections (Mobile-First: Toggles on Mobile, 3 Cards on Desktop) */}
             <div className={`p-5 sm:p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} space-y-4`}>
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-                <div className="p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-500/10"><TrendingUp className="w-4 h-4" /></div>
+                <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-500/10"><TrendingUp className="w-4 h-4" /></div>
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">Skenario Proyeksi Pencapaian Target Tahunan</h3>
                   <p className="text-[9px] text-slate-400 font-medium">Simulasi target kumulatif tahunan {year} ({formatIndoNumber(totalTargetYear)} kWh) berdasarkan 3 skenario taktis.</p>
@@ -1148,7 +1143,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   <button
                     key={scen.id}
                     onClick={() => setActiveScenario(scen.id)}
-                    className={`flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all ${
+                    className={`flex-1 py-2 text-[10px] font-bold rounded-md transition-all ${
                       activeScenario === scen.id
                         ? 'bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm'
                         : 'text-slate-500 dark:text-slate-400'
@@ -1165,13 +1160,13 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Apabila Progres Seperti Saat Ini</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${gapCurrent <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                      <span className={`px-2 py-1 rounded-full text-[9px] font-black ${gapCurrent <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                         {gapCurrent <= 0 ? 'TERCAPAI' : 'PERLU AKSELERASI'}
                       </span>
                     </div>
                     <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(projectedKwhCurrent)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
                     <div className="text-[9px] text-slate-400 font-medium">Proyeksi Akhir Tahun</div>
-                    <p className="text-[11px] text-slate-505 dark:text-slate-400 leading-relaxed font-medium">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {gapCurrent > 0
                         ? <>Dengan ritme saat ini, akhir tahun diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
                         : <>Dengan ritme saat ini, akhir tahun diproyeksikan surplus <span className="font-bold text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif tahunan diproyeksikan dapat tercapai dengan sukses.</>}
@@ -1182,7 +1177,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </div>
                     <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40">
                       <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>{Math.round(pctCurrent)}%</span></div>
-                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-850 rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-slate-200 dark:bg-slate-850 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${gapCurrent <= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, pctCurrent)}%` }} />
                       </div>
                     </div>
@@ -1193,11 +1188,11 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Jika Target Harian Kumulatif Tercapai</span>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">TERCAPAI</span>
+                      <span className="px-2 py-1 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">TERCAPAI</span>
                     </div>
                     <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(totalTargetYear)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
                     <div className="text-[9px] text-slate-400 font-medium">Disesuaikan untuk Target</div>
-                    <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed font-medium">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {pctDailyIncrease > 0
                         ? <>Agar target kumulatif tercapai, target harian sisa <span className="font-bold text-slate-700 dark:text-slate-300">{remainingWorkingDays} hari kerja</span> tahun ini harus disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (naik <span className="font-bold text-rose-500">{pctDailyIncrease}%</span> dari target harian awal).</>
                         : <>Target kumulatif tahunan berjalan aman. Target harian disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (turun <span className="font-bold text-emerald-600">{Math.abs(pctDailyIncrease)}%</span> dari target harian awal).</>}
@@ -1208,7 +1203,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </div>
                     <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40">
                       <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>100%</span></div>
-                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: '100%' }} /></div>
+                      <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: '100%' }} /></div>
                     </div>
                   </div>
                 )}
@@ -1217,13 +1212,13 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800/80 rounded-xl space-y-3">
                     <div className="flex justify-between items-center">
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Cara Mencapai Target 110%</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${totalRealYear >= target110Year ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                      <span className={`px-2 py-1 rounded-full text-[9px] font-black ${totalRealYear >= target110Year ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                         {totalRealYear >= target110Year ? 'TERCAPAI' : `PERLU EFFORT +${pctEffortRequired110}%`}
                       </span>
                     </div>
                     <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(Math.round(target110Year))} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
                     <div className="text-[9px] text-slate-400 font-medium">Target Optimis (110%)</div>
-                    <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed font-medium">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {totalRealYear < target110Year
                         ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {remainingMonths} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
                         : <>Target optimis 110% tahunan sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
@@ -1234,7 +1229,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </div>
                     <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40">
                       <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Progres Terhadap Target 110%</span><span>{Math.round(target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%</span></div>
-                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-slate-200 dark:bg-slate-850 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${totalRealYear >= target110Year ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%` }} />
                       </div>
                     </div>
@@ -1249,7 +1244,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Apabila Progres Seperti Saat Ini</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${gapCurrent <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                      <span className={`px-2 py-1 rounded-full text-[9px] font-black ${gapCurrent <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                         {gapCurrent <= 0 ? 'TERCAPAI' : 'PERLU AKSELERASI'}
                       </span>
                     </div>
@@ -1268,7 +1263,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </div>
                     <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40 mt-2">
                       <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>{Math.round(pctCurrent)}%</span></div>
-                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${gapCurrent <= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, pctCurrent)}%` }} />
                       </div>
                     </div>
@@ -1280,11 +1275,11 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Jika Target Harian Kumulatif Tercapai</span>
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">TERCAPAI</span>
+                      <span className="px-2 py-1 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">TERCAPAI</span>
                     </div>
                     <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(totalTargetYear)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
                     <div className="text-[9px] text-slate-400 font-medium">Disesuaikan untuk Target</div>
-                    <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed font-medium">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {pctDailyIncrease > 0
                         ? <>Agar target kumulatif tercapai, target harian sisa <span className="font-bold text-slate-700 dark:text-slate-300">{remainingWorkingDays} hari kerja</span> tahun ini harus disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (naik <span className="font-bold text-rose-500">{pctDailyIncrease}%</span> dari target harian awal).</>
                         : <>Target kumulatif tahunan berjalan aman. Target harian disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (turun <span className="font-bold text-emerald-600">{Math.abs(pctDailyIncrease)}%</span> dari target harian awal).</>}
@@ -1297,7 +1292,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </div>
                     <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40 mt-2">
                       <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Proyeksi Pencapaian</span><span>100%</span></div>
-                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: '100%' }} /></div>
+                      <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div className="h-full rounded-full bg-emerald-500" style={{ width: '100%' }} /></div>
                     </div>
                   </div>
                 </div>
@@ -1307,13 +1302,13 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Cara Mencapai Target 110%</span>
-                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${totalRealYear >= target110Year ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                      <span className={`px-2 py-1 rounded-full text-[9px] font-black ${totalRealYear >= target110Year ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                         {totalRealYear >= target110Year ? 'TERCAPAI' : `PERLU EFFORT +${pctEffortRequired110}%`}
                       </span>
                     </div>
                     <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(Math.round(target110Year))} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
                     <div className="text-[9px] text-slate-400 font-medium">Target Optimis (110%)</div>
-                    <p className="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed font-medium">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {totalRealYear < target110Year
                         ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {remainingMonths} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
                         : <>Target optimis 110% tahunan sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
@@ -1326,7 +1321,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     </div>
                     <div className="space-y-1 pt-2 border-t border-slate-200/40 dark:border-slate-800/40 mt-2">
                       <div className="flex justify-between text-[9px] font-bold text-slate-400"><span>Progres Terhadap Target 110%</span><span>{Math.round(target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%</span></div>
-                      <div className="h-1.5 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+                      <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${totalRealYear >= target110Year ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%` }} />
                       </div>
                     </div>

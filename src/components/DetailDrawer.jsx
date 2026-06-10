@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, 
@@ -6,7 +6,6 @@ import {
   MapPin, 
   Hash, 
   User, 
-  Activity, 
   Clock, 
   Settings, 
   Layers, 

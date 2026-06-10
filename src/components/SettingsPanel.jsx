@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Settings, Database, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, Save, HelpCircle, Building, Trash2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Database, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, Save, HelpCircle, Building, Trash2, UserPlus, Edit, Search, User, Key, Phone, Shield, X } from 'lucide-react';
 
 export default function SettingsPanel({ 
   backendUrl: propBackendUrl, 
@@ -7,7 +7,10 @@ export default function SettingsPanel({
   onSyncAll,
   targets = [],
   bankToTargets = [],
-  onClearLocalData
+  onClearLocalData,
+  currentUser,
+  users = [],
+  onUsersChanged
 }) {
   const [url, setUrl] = useState(propBackendUrl || '');
   const [testStatus, setTestStatus] = useState('idle'); // idle, testing, success, error
@@ -20,11 +23,8 @@ export default function SettingsPanel({
   // Estimate local database size in bytes
   const localDatabaseSize = useMemo(() => {
     let bytes = 0;
-    const targetsStr = localStorage.getItem('p2tl_targets');
-    const bankToStr = localStorage.getItem('p2tl_bank_to');
-    
-    if (targetsStr) bytes += new Blob([targetsStr]).size;
-    if (bankToStr) bytes += new Blob([bankToStr]).size;
+    if (targets.length > 0) bytes += new Blob([JSON.stringify(targets)]).size;
+    if (bankToTargets.length > 0) bytes += new Blob([JSON.stringify(bankToTargets)]).size;
     
     if (bytes === 0) return '0 B';
     const k = 1024;
@@ -45,9 +45,132 @@ export default function SettingsPanel({
   });
   const [saveDaysStatus, setSaveDaysStatus] = useState(false);
 
+  // User management states
+  const [userSearch, setUserSearch] = useState('');
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({
+    username: '',
+    password: '',
+    role: 'Petugas',
+    whatsapp: '',
+    unit: 'Salatiga Kota'
+  });
+  const [userFormError, setUserFormError] = useState('');
+
+  // Filtered users list
+  const filteredUsers = useMemo(() => {
+    const q = userSearch.toLowerCase().trim();
+    if (!q) return users;
+    return users.filter(u => 
+      u.username.toLowerCase().includes(q) || 
+      u.role.toLowerCase().includes(q) || 
+      u.unit.toLowerCase().includes(q) || 
+      (u.whatsapp || '').includes(q)
+    );
+  }, [users, userSearch]);
+
+  const openAddUserModal = () => {
+    setEditingUser(null);
+    setUserForm({
+      username: '',
+      password: '',
+      role: 'Petugas',
+      whatsapp: '',
+      unit: 'Salatiga Kota'
+    });
+    setUserFormError('');
+    setIsUserModalOpen(true);
+  };
+
+  const openEditUserModal = (user) => {
+    setEditingUser(user);
+    setUserForm({
+      username: user.username,
+      password: user.password,
+      role: user.role,
+      whatsapp: user.whatsapp,
+      unit: user.unit
+    });
+    setUserFormError('');
+    setIsUserModalOpen(true);
+  };
+
+  const handleDeleteUser = (usernameToDelete) => {
+    if (usernameToDelete.toLowerCase() === currentUser?.name?.toLowerCase()) {
+      alert("Anda tidak dapat menghapus akun Anda sendiri.");
+      return;
+    }
+    const adminCount = users.filter(u => u.role === 'Administrator').length;
+    const targetUser = users.find(u => u.username.toLowerCase() === usernameToDelete.toLowerCase());
+    if (targetUser?.role === 'Administrator' && adminCount <= 1) {
+      alert("Sistem membutuhkan setidaknya satu Administrator. Anda tidak dapat menghapus administrator terakhir.");
+      return;
+    }
+    if (window.confirm(`Apakah Anda yakin ingin menghapus user ${usernameToDelete}?`)) {
+      const updated = users.filter(u => u.username.toLowerCase() !== usernameToDelete.toLowerCase());
+      onUsersChanged(updated);
+    }
+  };
+
+  const handleSaveUser = (e) => {
+    e.preventDefault();
+    setUserFormError('');
+
+    const trimmedUsername = userForm.username.trim();
+    if (!trimmedUsername) {
+      setUserFormError('Nama Pengguna wajib diisi.');
+      return;
+    }
+
+    if (!userForm.password.trim()) {
+      setUserFormError('Kata Sandi wajib diisi.');
+      return;
+    }
+
+    const updatedUsers = [...users];
+    const nowIso = new Date().toISOString();
+
+    if (editingUser) {
+      // Edit mode
+      const idx = updatedUsers.findIndex(u => u.username.toLowerCase() === editingUser.username.toLowerCase());
+      if (idx !== -1) {
+        updatedUsers[idx] = {
+          username: trimmedUsername,
+          password: userForm.password,
+          role: userForm.role,
+          whatsapp: userForm.whatsapp.trim(),
+          unit: userForm.unit.trim(),
+          lastUpdated: nowIso
+        };
+      }
+    } else {
+      // Add mode
+      const exists = updatedUsers.some(u => u.username.toLowerCase() === trimmedUsername.toLowerCase());
+      if (exists) {
+        setUserFormError('Nama Pengguna sudah terdaftar.');
+        return;
+      }
+      updatedUsers.push({
+        username: trimmedUsername,
+        password: userForm.password,
+        role: userForm.role,
+        whatsapp: userForm.whatsapp.trim(),
+        unit: userForm.unit.trim(),
+        lastUpdated: nowIso
+      });
+    }
+
+    onUsersChanged(updatedUsers);
+    setIsUserModalOpen(false);
+  };
+
   // Keep local state in sync with props
   useEffect(() => {
-    setUrl(propBackendUrl || '');
+    const timer = setTimeout(() => {
+      setUrl(propBackendUrl || '');
+    }, 0);
+    return () => clearTimeout(timer);
   }, [propBackendUrl]);
 
   // Test Connection
@@ -542,6 +665,273 @@ export default function SettingsPanel({
         </div>
 
       </div>
+
+      {/* --- User Management Section (Admin Only) --- */}
+      {currentUser?.role === 'Administrator' && (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col gap-6 mt-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+            <div className="flex items-center gap-2.5">
+              <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-xl">
+                <User className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Manajemen Pengguna</h3>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">Kelola akun akses, kata sandi, dan role petugas di database cloud.</p>
+              </div>
+            </div>
+            <button 
+              onClick={openAddUserModal}
+              className="btn-primary py-2 px-4 text-xs font-sans font-bold flex gap-2 items-center cursor-pointer shadow-lg shadow-blue-500/10"
+            >
+              <UserPlus className="w-4 h-4" />
+              Tambah User
+            </button>
+          </div>
+
+          {/* Search bar & statistics */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
+            <div className="relative flex-1 max-w-md">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="w-4 h-4 text-slate-400" />
+              </div>
+              <input 
+                type="text" 
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                className="input-text text-xs pl-9 py-2"
+                placeholder="Cari user berdasarkan nama, role, unit..."
+              />
+            </div>
+            <div className="text-[11px] text-slate-500 dark:text-slate-450 font-bold bg-slate-50 dark:bg-slate-950/20 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
+              Total Terdaftar: <span className="text-blue-600 dark:text-blue-400">{users.length}</span> Pengguna
+            </div>
+          </div>
+
+          {/* Users Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {filteredUsers.map((user) => {
+              const isAdminUser = user.role === 'Administrator';
+              const isSelf = user.username.toLowerCase() === currentUser?.name?.toLowerCase();
+              return (
+                <div 
+                  key={user.username}
+                  className="group bg-slate-50 dark:bg-slate-950/10 hover:bg-white dark:hover:bg-slate-900 border border-slate-150 dark:border-slate-800/40 hover:border-blue-500/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 rounded-2xl p-4 flex flex-col gap-4 relative overflow-hidden"
+                >
+                  {isSelf && (
+                    <div className="absolute top-0 right-0 bg-blue-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg uppercase tracking-wide">
+                      Anda
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 items-center">
+                    {/* User Initials Avatar with Gradient */}
+                    <div className={`w-10 h-10 rounded-xl font-bold font-sans text-sm flex items-center justify-center text-white bg-gradient-to-br ${
+                      isAdminUser ? 'from-amber-400 to-orange-500' : 'from-blue-500 to-indigo-650'
+                    }`}>
+                      {user.username.substring(0, 2).toUpperCase()}
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">{user.username}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase shrink-0 ${
+                          isAdminUser 
+                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/10' 
+                            : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/10'
+                        }`}>
+                          {user.role}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">{user.unit}</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-slate-100 dark:border-slate-850 pt-3 flex flex-col gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                    {user.whatsapp && (
+                      <div className="flex items-center gap-2 font-medium">
+                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <a 
+                          href={`https://wa.me/${String(user.whatsapp).replace(/\D/g, '')}`} 
+                          target="_blank" 
+                          rel="noreferrer"
+                          className="hover:underline hover:text-emerald-500 font-semibold"
+                        >
+                          {user.whatsapp}
+                        </a>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2 font-medium">
+                      <Key className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="font-mono text-slate-500 dark:text-slate-550 truncate animate-pulse" title={user.password}>
+                        Password: {user.password}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center mt-1 border-t border-slate-100 dark:border-slate-850 pt-2.5">
+                    <span className="text-[9px] text-slate-450 dark:text-slate-500 font-semibold">
+                      Updated: {new Date(user.lastUpdated).toLocaleDateString()}
+                    </span>
+                    
+                    <div className="flex gap-2 shrink-0">
+                      <button 
+                        onClick={() => openEditUserModal(user)}
+                        className="p-1.5 bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950/40 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-lg transition-colors cursor-pointer focus:outline-none"
+                        title="Edit User"
+                      >
+                        <Edit className="w-3.5 h-3.5" />
+                      </button>
+                      {!isSelf && (
+                        <button 
+                          onClick={() => handleDeleteUser(user.username)}
+                          className="p-1.5 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-455 rounded-lg transition-colors cursor-pointer focus:outline-none"
+                          title="Hapus User"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {filteredUsers.length === 0 && (
+              <div className="col-span-full py-8 text-center text-xs text-slate-400 dark:text-slate-500 font-bold border border-dashed border-slate-200 dark:border-slate-805 rounded-2xl">
+                Tidak ada user ditemukan.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- Add/Edit User Dialog Modal --- */}
+      {isUserModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up relative">
+            <button 
+              onClick={() => setIsUserModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 dark:text-slate-500 transition-colors focus:outline-none cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-4">
+              {editingUser ? `Edit User: ${editingUser.username}` : 'Tambah User Baru'}
+            </h3>
+
+            <form onSubmit={handleSaveUser} className="space-y-4">
+              {userFormError && (
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-xs text-rose-800 dark:text-rose-400 rounded-2xl flex items-center gap-2">
+                  <AlertCircle className="w-4.5 h-4.5 text-rose-500 shrink-0" />
+                  <span className="font-bold">{userFormError}</span>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Nama Pengguna (Username)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={userForm.username}
+                    onChange={(e) => setUserForm({...userForm, username: e.target.value})}
+                    className="input-text text-xs pl-9" 
+                    placeholder="Contoh: Petugas1"
+                    disabled={!!editingUser}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Kata Sandi (Password)</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Key className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={userForm.password}
+                    onChange={(e) => setUserForm({...userForm, password: e.target.value})}
+                    className="input-text text-xs pl-9" 
+                    placeholder="Masukkan kata sandi"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Role Akses</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Shield className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <select 
+                    value={userForm.role}
+                    onChange={(e) => setUserForm({...userForm, role: e.target.value})}
+                    className="input-text text-xs pl-9 cursor-pointer"
+                  >
+                    <option value="Petugas">Petugas</option>
+                    <option value="Administrator">Administrator</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Nomor WhatsApp</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Phone className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={userForm.whatsapp}
+                    onChange={(e) => setUserForm({...userForm, whatsapp: e.target.value})}
+                    className="input-text text-xs pl-9" 
+                    placeholder="Contoh: 08123456789"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Unit Kerja</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Building className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={userForm.unit}
+                    onChange={(e) => setUserForm({...userForm, unit: e.target.value})}
+                    className="input-text text-xs pl-9" 
+                    placeholder="Contoh: ULP Salatiga Kota"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 justify-end pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                <button 
+                  type="button"
+                  onClick={() => setIsUserModalOpen(false)}
+                  className="btn-secondary py-2 px-4 text-xs font-bold font-sans"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="submit"
+                  className="btn-primary py-2 px-5 text-xs font-bold font-sans flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  Simpan User
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
     </div>
   );
