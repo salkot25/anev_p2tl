@@ -66,8 +66,8 @@ export default function Layout({
       {/* Mobile Top AppBar Header */}
       <div className="md:hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800/80 px-4 py-3 flex items-center justify-between sticky top-0 z-20 shadow-sm transition-colors">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-sm shadow-md">
-            <Database size={16} />
+          <div className="w-8 h-8 rounded-lg overflow-hidden shadow-md">
+            <img src={`${import.meta.env.BASE_URL}logo192.png`} alt="Logo" className="w-full h-full object-cover" />
           </div>
           <div>
             <h1 className="font-bold text-slate-900 dark:text-white text-base leading-tight">
@@ -112,8 +112,8 @@ export default function Layout({
       <div className="hidden md:flex flex-col w-64 fixed left-0 top-0 bottom-0 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white flex-shrink-0 border-r border-slate-800/60">
         <div className="p-6 pb-4">
           <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-600/20">
-              <Database size={20} />
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-blue-600/20">
+              <img src={`${import.meta.env.BASE_URL}logo192.png`} alt="Logo" className="w-full h-full object-cover" />
             </div>
             <div>
               <h1 className="text-lg font-bold text-white tracking-tight leading-tight">

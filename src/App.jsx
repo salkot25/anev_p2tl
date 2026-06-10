@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
 import initialData from './data/initialData.json';
 import bankToData from './data/bankToData.json';
@@ -72,6 +73,7 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [toast, setToast] = useState(null); // { message, type }
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [backendUrl, setBackendUrl] = useState(() => {
     return localStorage.getItem('p2tl_backend_url') || '';
   });
@@ -221,6 +223,26 @@ export default function App() {
       localStorage.setItem('p2tl_theme', 'light');
     }
   }, [darkMode]);
+
+  // Monitor connection status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      showToast("Koneksi internet terhubung kembali. Aplikasi berjalan online.", "success");
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      showToast("Koneksi internet terputus. Aplikasi berjalan dalam mode offline.", "warning");
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Handle Theme switching from layout callback
   const handleThemeChange = (updater) => {
@@ -400,7 +422,14 @@ export default function App() {
   }
 
   return (
-    <Layout
+    <>
+      {isOffline && (
+        <div className="bg-rose-600 text-white text-center py-2 px-4 text-xs font-bold font-sans flex items-center justify-center gap-2 z-[9999] relative shrink-0">
+          <AlertTriangle className="w-4 h-4 animate-pulse shrink-0" />
+          <span>Koneksi internet terputus. Anda berjalan dalam mode offline (menggunakan database lokal).</span>
+        </div>
+      )}
+      <Layout
       currentTab={activeTab}
       setCurrentTab={setActiveTab}
       onLogout={handleLogout}
@@ -455,8 +484,14 @@ export default function App() {
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-55 w-[90%] max-w-sm bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-2xl rounded-2xl p-4 flex items-center justify-between border border-slate-800 dark:border-slate-100 animate-toast">
           <div className="flex gap-3 items-center">
-            <div className="p-1 bg-emerald-500 text-white rounded-lg flex-shrink-0">
-              <CheckCircle className="w-4 h-4" />
+            <div className={`p-1 rounded-lg flex-shrink-0 ${
+              toast.type === 'error' ? 'bg-rose-500 text-white' :
+              toast.type === 'warning' ? 'bg-amber-500 text-white' :
+              'bg-emerald-500 text-white'
+            }`}>
+              {toast.type === 'error' ? <X className="w-4 h-4" /> :
+               toast.type === 'warning' ? <AlertTriangle className="w-4 h-4" /> :
+               <CheckCircle className="w-4 h-4" />}
             </div>
             <p className="text-xs font-bold font-sans text-slate-100 dark:text-slate-800 pr-1">
               {toast.message}
@@ -482,5 +517,6 @@ export default function App() {
       />
 
     </Layout>
+  </>
   );
 }

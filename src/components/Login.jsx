@@ -42,8 +42,8 @@ export default function Login({
       <div className="max-w-sm w-full relative z-10 animate-fade-in-up">
         {/* Brand Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex w-16 h-16 rounded-2xl bg-blue-600 items-center justify-center text-white text-3xl font-extrabold mb-5 shadow-2xl shadow-blue-500/30">
-            <Database className="w-8 h-8" />
+          <div className="inline-flex w-16 h-16 rounded-2xl overflow-hidden mb-5 shadow-2xl shadow-blue-500/30">
+            <img src={`${import.meta.env.BASE_URL}logo192.png`} alt="Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-2xl font-bold text-white tracking-tight">{title}</h1>
           <p className="text-xs text-slate-400 mt-1 max-w-[280px] mx-auto">{subtitle}</p>
