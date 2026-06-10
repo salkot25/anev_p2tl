@@ -711,127 +711,130 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
           );
         })}
       </div>
-      {/* Search and Action Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-        
-        {/* Search Input wrapper */}
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
-          <input 
-            type="text" 
-            placeholder="Cari IDPel atau Nama Pelanggan..." 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="input-text pl-10 text-xs sm:text-sm font-sans"
-          />
-        </div>
-
-        {/* Buttons wrapper */}
-        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto shrink-0">
-          {selectedIds.size > 0 && (
-            <button onClick={handleExportSelected}
-              className="hidden sm:inline-flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-sans font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/10 transition-all cursor-pointer shrink-0 w-full sm:w-auto"
-            >
-              <Download className="w-4 h-4" />
-              <span>Ekspor ({selectedIds.size})</span>
-            </button>
-          )}
-
-          <button 
-            onClick={() => setShowFilters(!showFilters)}
-            className={`btn-secondary py-2.5 px-3 flex gap-2 items-center justify-center text-xs sm:text-sm font-sans w-full sm:w-auto ${
-              showFilters ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700' : ''
-            }`}
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-            Filters
-            {(selectedSubDlpds !== null || selectedRegus !== null || selectedDlpds !== null || selectedStatuses !== null || selectedDate !== '') && (
-              <span className="w-2 h-2 bg-brand-500 rounded-full" />
-            )}
-          </button>
-
-          <button 
-            onClick={() => {
-              setIsAddModalOpen(true);
-              setAddMode('manual');
-            }}
-            className="btn-primary py-2.5 px-3.5 flex gap-2 items-center justify-center text-xs sm:text-sm font-sans w-full sm:w-auto"
-          >
-            <Plus className="w-4.5 h-4.5" />
-            Tambah Data
-          </button>
-        </div>
-      </div>
-
-      {/* Filter panel dropdown */}
-      {showFilters && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-5 rounded-2xl grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 animate-fade-in shadow-sm">
-          {/* Regu Petugas */}
-          <MultiSelectDropdown
-            label="Regu Petugas"
-            options={filterOptions.regus}
-            selectedValues={selectedRegus}
-            onChange={setSelectedRegus}
-            allLabel="Semua Regu"
-          />
-
-          {/* DLPD */}
-          <MultiSelectDropdown
-            label="DLPD"
-            options={filterOptions.dlpds}
-            selectedValues={selectedDlpds}
-            onChange={setSelectedDlpds}
-            allLabel="Semua DLPD"
-          />
-
-          {/* Sub DLPD */}
-          <MultiSelectDropdown
-            label="Sub DLPD"
-            options={filterOptions.subDlpds}
-            selectedValues={selectedSubDlpds}
-            onChange={setSelectedSubDlpds}
-            allLabel="Semua Sub DLPD"
-          />
-
-          {/* Status Progress */}
-          <MultiSelectDropdown
-            label="Status Progress"
-            options={statusOptions}
-            selectedValues={selectedStatuses}
-            onChange={setSelectedStatuses}
-            allLabel="Semua Status"
-          />
-
-          {/* Filter Tanggal */}
-          <div className="flex flex-col gap-1.5 w-full">
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Filter Tanggal
-            </span>
+      {/* 02. Toolbar Card */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-2xl p-4 shadow-sm flex flex-col gap-4">
+        {/* Search and Action Bar */}
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+          
+          {/* Search Input wrapper */}
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500" />
             <input 
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="input-text py-2 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 rounded-xl outline-none text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+              type="text" 
+              placeholder="Cari IDPel atau Nama Pelanggan..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="input-text pl-10 text-xs sm:text-sm font-sans"
             />
           </div>
 
-          {/* Jenis Tanggal */}
-          <div className="flex flex-col gap-1.5 w-full">
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Jenis Tanggal
-            </span>
-            <select 
-              value={selectedDateType}
-              onChange={(e) => setSelectedDateType(e.target.value)}
-              className="w-full py-2 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+          {/* Buttons wrapper */}
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto shrink-0">
+            {selectedIds.size > 0 && (
+              <button onClick={handleExportSelected}
+                className="hidden sm:inline-flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-sans font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/10 transition-all cursor-pointer shrink-0 w-full sm:w-auto"
+              >
+                <Download className="w-4 h-4" />
+                <span>Ekspor ({selectedIds.size})</span>
+              </button>
+            )}
+
+            <button 
+              onClick={() => setShowFilters(!showFilters)}
+              className={`btn-secondary py-2.5 px-3 flex gap-2 items-center justify-center text-xs sm:text-sm font-sans w-full sm:w-auto ${
+                showFilters ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700' : ''
+              }`}
             >
-              <option value="pelaksanaan">Tgl Pelaksanaan</option>
-              <option value="order">Tgl Order</option>
-              <option value="upload">Tgl Upload</option>
-            </select>
+              <SlidersHorizontal className="w-4 h-4" />
+              Filters
+              {(selectedSubDlpds !== null || selectedRegus !== null || selectedDlpds !== null || selectedStatuses !== null || selectedDate !== '') && (
+                <span className="w-2 h-2 bg-brand-500 rounded-full" />
+              )}
+            </button>
+
+            <button 
+              onClick={() => {
+                setIsAddModalOpen(true);
+                setAddMode('manual');
+              }}
+              className="btn-primary py-2.5 px-3.5 flex gap-2 items-center justify-center text-xs sm:text-sm font-sans w-full sm:w-auto"
+            >
+              <Plus className="w-4.5 h-4.5" />
+              Tambah Data
+            </button>
           </div>
         </div>
-      )}
+
+        {/* Filter panel dropdown */}
+        {showFilters && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 pt-4 border-t border-slate-100 dark:border-slate-800/80 animate-fade-in">
+            {/* Regu Petugas */}
+            <MultiSelectDropdown
+              label="Regu Petugas"
+              options={filterOptions.regus}
+              selectedValues={selectedRegus}
+              onChange={setSelectedRegus}
+              allLabel="Semua Regu"
+            />
+
+            {/* DLPD */}
+            <MultiSelectDropdown
+              label="DLPD"
+              options={filterOptions.dlpds}
+              selectedValues={selectedDlpds}
+              onChange={setSelectedDlpds}
+              allLabel="Semua DLPD"
+            />
+
+            {/* Sub DLPD */}
+            <MultiSelectDropdown
+              label="Sub DLPD"
+              options={filterOptions.subDlpds}
+              selectedValues={selectedSubDlpds}
+              onChange={setSelectedSubDlpds}
+              allLabel="Semua Sub DLPD"
+            />
+
+            {/* Status Progress */}
+            <MultiSelectDropdown
+              label="Status Progress"
+              options={statusOptions}
+              selectedValues={selectedStatuses}
+              onChange={setSelectedStatuses}
+              allLabel="Semua Status"
+            />
+
+            {/* Filter Tanggal */}
+            <div className="flex flex-col gap-1.5 w-full">
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                Filter Tanggal
+              </span>
+              <input 
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="input-text py-2 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 rounded-xl outline-none text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+              />
+            </div>
+
+            {/* Jenis Tanggal */}
+            <div className="flex flex-col gap-1.5 w-full">
+              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                Jenis Tanggal
+              </span>
+              <select 
+                value={selectedDateType}
+                onChange={(e) => setSelectedDateType(e.target.value)}
+                className="w-full py-2 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
+              >
+                <option value="pelaksanaan">Tgl Pelaksanaan</option>
+                <option value="order">Tgl Order</option>
+                <option value="upload">Tgl Upload</option>
+              </select>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Target count display */}
       <div className="flex justify-between items-center px-1">

@@ -441,7 +441,7 @@ export default function App() {
           />
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm animate-fade-in-up">
+        <div className="animate-fade-in-up">
           <DataList 
             targets={targets} 
             onSelectRecord={handleSelectRecord}
