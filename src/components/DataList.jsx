@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Eye, CheckCircle2, AlertTriangle, AlertCircle, Plus, Upload, Download, X, RefreshCw, CheckCircle } from 'lucide-react';
 import { parseExcel } from '../utils/excelParser';
 import * as XLSX from 'xlsx';
@@ -696,8 +697,8 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
       )}
 
       {/* --- Unified Tambah Target P2TL Modal --- */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {isAddModalOpen && createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => {
             if (uploadStatus === 'parsing') return;
             setIsAddModalOpen(false);
@@ -930,7 +931,8 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

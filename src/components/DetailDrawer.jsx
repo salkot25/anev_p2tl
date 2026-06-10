@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, 
   Calendar, 
@@ -70,8 +71,8 @@ export default function DetailDrawer({ target, isOpen, onClose }) {
     { label: 'Tanggal Pelaksanaan', value: target.TanggalPelaksanaan }
   ];
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-end md:items-stretch md:justify-end animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-end md:items-stretch md:justify-end animate-fade-in">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" 
@@ -87,7 +88,7 @@ export default function DetailDrawer({ target, isOpen, onClose }) {
         {/* Header */}
         <div className="px-6 pb-4 pt-2 md:pt-8 flex justify-between items-start border-b border-slate-100 dark:border-slate-800/80">
           <div className="flex flex-col gap-1.5 flex-1">
-            <span className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">
+            <span className="text-xs font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest leading-none">
               Detail Target P2TL
             </span>
             <h3 className="text-lg font-bold text-slate-900 dark:text-white leading-tight font-sans">
@@ -101,7 +102,7 @@ export default function DetailDrawer({ target, isOpen, onClose }) {
           </div>
           <button 
             onClick={onClose}
-            className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-full text-slate-400 hover:text-slate-650 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
+            className="p-2 bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-full text-slate-400 hover:text-slate-655 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-200 dark:focus:ring-slate-800"
           >
             <X className="w-5 h-5" />
           </button>
@@ -157,6 +158,7 @@ export default function DetailDrawer({ target, isOpen, onClose }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
