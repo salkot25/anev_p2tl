@@ -165,7 +165,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState(new Set());
   
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(() => Number(localStorage.getItem('p2tl_bankto_items_per_page')) || 10);
 
   const [sortField, setSortField] = useState(null);
   const [sortDirection, setSortDirection] = useState('NONE');
@@ -453,7 +453,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   const paginatedTargets = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedTargets.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedTargets, currentPage]);
+  }, [sortedTargets, currentPage, itemsPerPage]);
 
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -1064,21 +1064,43 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
           )}
 
           {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/40 dark:bg-slate-950/20">
-              <button onClick={handlePrevPage} disabled={currentPage === 1}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer">
-                <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
-              </button>
+          {totalItems > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-3.5 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/40 dark:bg-slate-950/20">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-900 dark:text-white">{currentPage}</span>
-                <span className="text-xs text-slate-400">/</span>
-                <span className="text-xs text-slate-400">{totalPages}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">Tampilkan</span>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setItemsPerPage(val);
+                    localStorage.setItem('p2tl_bankto_items_per_page', val);
+                    setCurrentPage(1);
+                  }}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold py-1 px-2.5 rounded-lg outline-none cursor-pointer focus:border-blue-500 text-slate-700 dark:text-slate-300"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-xs text-slate-500 dark:text-slate-400">data per halaman</span>
               </div>
-              <button onClick={handleNextPage} disabled={currentPage === totalPages}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer">
-                Berikutnya <ChevronRight className="w-3.5 h-3.5" />
-              </button>
+
+              <div className="flex items-center gap-4">
+                <button onClick={handlePrevPage} disabled={currentPage === 1}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer">
+                  <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
+                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">{currentPage}</span>
+                  <span className="text-xs text-slate-400">/</span>
+                  <span className="text-xs text-slate-400">{totalPages}</span>
+                </div>
+                <button onClick={handleNextPage} disabled={currentPage === totalPages}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer">
+                  Berikutnya <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           )}
         </div>

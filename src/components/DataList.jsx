@@ -20,7 +20,8 @@ import {
   ArrowUp,
   ArrowDown,
   FileText,
-  Zap
+  Zap,
+  MapPin
 } from 'lucide-react';
 import { parseExcel } from '../utils/excelParser';
 import * as XLSX from 'xlsx';
@@ -420,7 +421,7 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
     XLSX.writeFile(wb, "Template_Data_TO.xlsx");
   };
 
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(() => Number(localStorage.getItem('p2tl_datato_items_per_page')) || 10);
 
   // Helper to map and compute matches per target row
   const targetMatches = useMemo(() => {
@@ -550,7 +551,7 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
   const paginatedTargets = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
     return sortedTargets.slice(startIndex, startIndex + itemsPerPage);
-  }, [sortedTargets, currentPage]);
+  }, [sortedTargets, currentPage, itemsPerPage]);
 
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -858,121 +859,140 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
         {currentPage > 1 && (
           <span className="text-xs text-slate-400">Halaman {currentPage} dari {totalPages}</span>
         )}
-      </div>
+      </div>      {/* 04. Main Data Table / Card Grid */}
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
+        {/* Initial empty state (when no data loaded at all) */}
+        {targets.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <AlertCircle className="w-10 h-10 text-slate-400 dark:text-slate-655 mb-3" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
+            <p className="text-xs text-slate-400 dark:text-slate-550 mt-1.5 max-w-[280px]">
+              Silakan unggah data Excel atau tambahkan target manual baru.
+            </p>
+          </div>
+        )}
 
-      {/* Initial empty state (when no data loaded at all) */}
-      {targets.length === 0 && (
-        <div className="card text-center p-8 flex flex-col items-center justify-center min-h-[200px] border border-slate-100 dark:border-slate-800">
-          <AlertCircle className="w-10 h-10 text-slate-400 dark:text-slate-600 mb-3" />
-          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
-          <p className="text-xs text-slate-400 dark:text-slate-550 mt-1 max-w-[280px]">
-            Silakan unggah data Excel atau tambahkan target manual baru.
-          </p>
-        </div>
-      )}
+        {/* Filter empty state for mobile (only when targets.length > 0 but filtered to 0) */}
+        {targets.length > 0 && totalItems === 0 && (
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center md:hidden">
+            <AlertCircle className="w-10 h-10 text-slate-400 dark:text-slate-655 mb-3" />
+            <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
+            <p className="text-xs text-slate-400 dark:text-slate-555 mt-1.5 max-w-[280px]">
+              Silakan sesuaikan kata kunci pencarian Anda atau reset filter panel.
+            </p>
+            {(searchQuery || selectedSubDlpds !== null || selectedRegus !== null || selectedDlpds !== null || selectedStatuses !== null || selectedDate !== '') && (
+              <button 
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedSubDlpds(null);
+                  setSelectedRegus(null);
+                  setSelectedDlpds(null);
+                  setSelectedStatuses(null);
+                  setSelectedDate('');
+                  setSelectedDateType('pelaksanaan');
+                }}
+                className="btn-secondary py-1.5 px-3 text-xs mt-4 font-sans font-semibold"
+              >
+                Reset Semua Filter
+              </button>
+            )}
+          </div>
+        )}
 
-      {/* Filter empty state for mobile (only when targets.length > 0 but filtered to 0) */}
-      {targets.length > 0 && totalItems === 0 && (
-        <div className="card text-center p-8 flex flex-col items-center justify-center min-h-[200px] border border-slate-100 dark:border-slate-800 md:hidden">
-          <AlertCircle className="w-10 h-10 text-slate-400 dark:text-slate-600 mb-3" />
-          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
-          <p className="text-xs text-slate-400 dark:text-slate-555 mt-1 max-w-[280px]">
-            Silakan sesuaikan kata kunci pencarian Anda atau reset filter panel.
-          </p>
-          {(searchQuery || selectedSubDlpds !== null || selectedRegus !== null || selectedDlpds !== null || selectedStatuses !== null || selectedDate !== '') && (
-            <button 
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedSubDlpds(null);
-                setSelectedRegus(null);
-                setSelectedDlpds(null);
-                setSelectedStatuses(null);
-                setSelectedDate('');
-                setSelectedDateType('pelaksanaan');
-              }}
-              className="btn-secondary py-1.5 px-3 text-xs mt-4 font-sans font-semibold"
-            >
-              Reset Semua Filter
-            </button>
-          )}
-        </div>
-      )}
+        {/* Mobile-First Layout: Card Grid */}
+        {totalItems > 0 && (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800/40 md:hidden p-4 space-y-3">
+            {paginatedTargets.map((target) => {
+              const isSelected = selectedIds.has(String(target.IDPel));
+              const lat = target.LATITUDE || target.Latitude;
+              const lng = target.LONGITUDE || target.Longitude;
 
-      {/* Mobile-First Layout: Card Grid */}
-      {totalItems > 0 && (
-        <div className="grid grid-cols-1 gap-3 md:hidden">
-        {paginatedTargets.map((target) => {
-          const isSelected = selectedIds.has(String(target.IDPel));
-          return (
-            <div 
-              key={target.No || target.IDPel}
-              onClick={() => onSelectRecord(target)}
-              className={`border p-4.5 rounded-2xl active:scale-[0.99] transition-all cursor-pointer flex flex-col justify-between gap-3.5 shadow-sm ${
-                isSelected 
-                  ? 'bg-blue-500/5 border-blue-250 dark:border-blue-900/50 shadow-sm shadow-blue-500/5'
-                  : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800/80 hover:border-slate-200'
-              }`}
-            >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2 flex-1 pr-2 min-w-0">
-                  <input type="checkbox" checked={isSelected}
-                    onChange={() => toggleSelect(target.IDPel)} 
-                    onClick={e => e.stopPropagation()}
-                    className="rounded border-slate-300 dark:border-slate-700 text-blue-650 focus:ring-blue-500 cursor-pointer w-4 h-4 shrink-0" 
-                  />
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest leading-none">
-                      {target.IDPel}
-                    </span>
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-150 leading-tight mt-1 truncate font-sans">
+              return (
+                <div 
+                  key={target.No || target.IDPel}
+                  onClick={() => onSelectRecord(target)}
+                  className={`p-4 flex flex-col gap-3 rounded-2xl border transition-all duration-200 cursor-pointer ${
+                    isSelected 
+                      ? 'bg-blue-500/5 dark:bg-blue-500/10 border-blue-250 dark:border-blue-900/50 shadow-sm shadow-blue-500/5'
+                      : 'bg-white dark:bg-slate-900 border-slate-205 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
+                  } mb-3 last:mb-0`}
+                >
+                  {/* Top row: Checkbox, IDPEL, Status progress badge */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected}
+                        onChange={() => toggleSelect(target.IDPel)} 
+                        onClick={e => e.stopPropagation()}
+                        className="rounded border-slate-300 dark:border-slate-700 text-blue-605 focus:ring-blue-500 cursor-pointer w-4 h-4 shrink-0" 
+                      />
+                      <span className="text-[11px] font-bold font-mono text-slate-400 dark:text-slate-500">{target.IDPel}</span>
+                    </div>
+                    <div className="flex-shrink-0">
+                      {getStatusBadge(target.StatusProgress)}
+                    </div>
+                  </div>
+
+                  {/* Customer Name and Address */}
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-slate-900 dark:text-white leading-tight truncate">
                       {target.NamaPelanggan}
+                    </h4>
+                    {(target.Alamat || target.ALAMAT) && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1">
+                        {target.Alamat || target.ALAMAT}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Structured visual specifications grid */}
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2.5 border-t border-slate-100 dark:border-slate-800/60 text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Tarif & Daya</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{target.Tarif} / {target.Daya} VA</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Gardu</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold truncate block" title={target.Gardu || target.GARDU || '-'}>{target.Gardu || target.GARDU || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">Regu Petugas</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">{target.ReguPetugas || '—'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">DLPD</span>
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold truncate block" title={target.DLPD}>{target.DLPD || '—'}</span>
+                    </div>
+                  </div>
+
+                  {/* Footer: quick action buttons */}
+                  <div className="flex justify-between items-center pt-2 mt-1 border-t border-slate-100 dark:border-slate-800/60">
+                    <button 
+                      onClick={e => {
+                        e.stopPropagation();
+                        if (lat && lng) {
+                          window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
+                        }
+                      }}
+                      disabled={!lat || !lng}
+                      className="flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 disabled:opacity-40 disabled:pointer-events-none hover:underline"
+                    >
+                      <MapPin className="w-3.5 h-3.5" /> Google Maps
+                    </button>
+                    <span className="flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline">
+                      <Eye className="w-3.5 h-3.5" /> Detail Lengkap
                     </span>
                   </div>
                 </div>
-                <div className="flex-shrink-0">
-                  {getStatusBadge(target.StatusProgress)}
-                </div>
-              </div>
+              );
+            })}
+          </div>
+        )}
 
-              {/* Specifications row */}
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-550 dark:text-slate-400 font-medium pt-1">
-                <span>{target.Tarif} / {target.Daya} VA</span>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <span>Gardu: {target.Gardu || target.GARDU || '-'}</span>
-              </div>
-
-              <div className="flex justify-between items-center border-t border-slate-50 dark:border-slate-800/40 pt-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                    Regu
-                  </span>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                    {target.ReguPetugas || '-'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                    DLPD
-                  </span>
-                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 max-w-[80px] truncate" title={target.DLPD || ''}>
-                    {target.DLPD || '-'}
-                  </span>
-                </div>
-                <div className="text-[11px] font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1">
-                  <Eye className="w-3.5 h-3.5" />
-                  Detail
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-      )}
-
-      {/* Desktop Layout: Dense Tabular Grid */}
-      {targets.length > 0 && (
-        <div className="hidden md:block overflow-hidden bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm">
-          <div className="overflow-x-auto">
+        {/* Desktop Layout: Dense Tabular Grid */}
+        {targets.length > 0 && (
+          <div className="hidden md:block overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-100 dark:bg-slate-800 dark:border-slate-800/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans select-none">
@@ -1066,14 +1086,14 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
                         <td className="py-3 px-4 font-bold text-slate-900 dark:text-white max-w-[150px] truncate font-sans">
                           {target.NamaPelanggan}
                         </td>
-                        <td className="py-3 px-4 font-medium text-slate-550 dark:text-slate-400">
+                        <td className="py-3 px-4 font-medium text-slate-555 dark:text-slate-400">
                           {target.Tarif} / {target.Daya} VA
                         </td>
                         <td className="py-3 px-4 max-w-[160px]">
                           <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate" title={target.DLPD || ''}>
                             {target.DLPD || '—'}
                           </div>
-                          <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate" title={target.SubDLPD || ''}>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-550 truncate" title={target.SubDLPD || ''}>
                             {target.SubDLPD || '—'}
                           </div>
                         </td>
@@ -1090,35 +1110,49 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Pagination controls */}
-      {totalPages > 1 && (
-        <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800/80 pt-4 px-1 mt-1.5">
-          <button 
-            onClick={handlePrevPage}
-            disabled={currentPage === 1}
-            className="btn-secondary py-2 px-3 flex gap-1 items-center text-xs cursor-pointer disabled:opacity-45 disabled:pointer-events-none"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Sebelumnya
-          </button>
-          
-          <span className="text-xs text-slate-400 select-none">
-            Hal {currentPage} dari {totalPages}
-          </span>
+        {/* Pagination controls */}
+        {totalItems > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-3.5 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/40 dark:bg-slate-950/20">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">Tampilkan</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setItemsPerPage(val);
+                  localStorage.setItem('p2tl_datato_items_per_page', val);
+                  setCurrentPage(1);
+                }}
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold py-1.5 px-2.5 rounded-lg outline-none cursor-pointer focus:border-blue-500 text-slate-700 dark:text-slate-300 font-sans"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-xs text-slate-500 dark:text-slate-400 font-sans">data per halaman</span>
+            </div>
 
-          <button 
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-            className="btn-secondary py-2 px-3 flex gap-1 items-center text-xs cursor-pointer disabled:opacity-45 disabled:pointer-events-none"
-          >
-            Berikutnya
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )}
+            <div className="flex items-center gap-4">
+              <button onClick={handlePrevPage} disabled={currentPage === 1}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-sans">
+                <ChevronLeft className="w-3.5 h-3.5" /> Sebelumnya
+              </button>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-900 dark:text-white font-sans">{currentPage}</span>
+                <span className="text-xs text-slate-400 font-sans">/</span>
+                <span className="text-xs text-slate-400 font-sans">{totalPages}</span>
+              </div>
+              <button onClick={handleNextPage} disabled={currentPage === totalPages}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-650 dark:text-slate-400 hover:border-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-all cursor-pointer font-sans">
+                Berikutnya <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* --- Unified Tambah Target P2TL Modal --- */}
       {isAddModalOpen && createPortal(
