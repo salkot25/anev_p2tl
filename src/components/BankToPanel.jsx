@@ -10,6 +10,7 @@ import {
   Plus, 
   ChevronLeft, 
   ChevronRight, 
+  ChevronDown,
   Eye, 
   Map, 
   X, 
@@ -18,18 +19,143 @@ import {
   AlertTriangle, 
   Download, 
   RefreshCw, 
-  AlertCircle 
+  AlertCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { parseBankToExcel } from '../utils/excelParser';
 import * as XLSX from 'xlsx';
 
+function MultiSelectDropdown({ label, options, selectedValues, onChange, allLabel }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleToggleOption = (val) => {
+    let next;
+    const currentSelected = selectedValues === null ? options : selectedValues;
+    if (currentSelected.includes(val)) {
+      next = currentSelected.filter(v => v !== val);
+    } else {
+      next = [...currentSelected, val];
+    }
+    
+    if (next.length === options.length) {
+      onChange(null);
+    } else {
+      onChange(next);
+    }
+  };
+
+  const handleSelectAll = () => {
+    onChange(null);
+  };
+
+  const handleClearAll = () => {
+    onChange([]);
+  };
+
+  const isSelected = (val) => {
+    if (selectedValues === null) return true;
+    return selectedValues.includes(val);
+  };
+
+  const filteredOptions = useMemo(() => {
+    return options.filter(o => {
+      const displayStr = String(o === '' ? '(Tanpa Data)' : o);
+      return displayStr.toLowerCase().includes(search.toLowerCase());
+    });
+  }, [options, search]);
+
+  const displayText = useMemo(() => {
+    if (selectedValues === null) return allLabel;
+    if (selectedValues.length === 0) return 'Tidak ada data';
+    if (selectedValues.length === options.length) return allLabel;
+    return `${selectedValues.length} Terpilih`;
+  }, [selectedValues, options, allLabel]);
+
+  return (
+    <div className="relative flex flex-col gap-1.5 w-full" ref={dropdownRef}>
+      <label className="text-[10px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest">{label}</label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full py-2 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-700 dark:text-slate-300 transition-all flex items-center justify-between hover:border-slate-350 dark:hover:border-slate-750 cursor-pointer active:scale-[0.98]"
+      >
+        <span className="truncate pr-2">{displayText}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-450 dark:text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-805 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in min-w-[200px]">
+          {options.length > 5 && (
+            <div className="p-2 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30">
+              <input
+                type="text"
+                placeholder="Cari..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full py-1 px-2.5 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-700 dark:text-slate-300"
+              />
+            </div>
+          )}
+          
+          <div className="flex items-center justify-between p-2 border-b border-slate-100 dark:border-slate-800/60 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-slate-50/30 dark:bg-slate-950/10 shrink-0">
+            <button type="button" onClick={handleSelectAll} className="hover:underline cursor-pointer">Pilih Semua</button>
+            <button type="button" onClick={handleClearAll} className="hover:underline cursor-pointer">Hapus Semua</button>
+          </div>
+          
+          <div className="max-h-48 overflow-y-auto p-1.5 space-y-0.5 scrollbar-thin">
+            {filteredOptions.length === 0 ? (
+              <div className="py-3 text-center text-slate-450 dark:text-slate-550 text-[11px]">Tidak ada kecocokan</div>
+            ) : (
+              filteredOptions.map(o => {
+                const isItemSel = isSelected(o);
+                return (
+                  <label
+                    key={o}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs cursor-pointer select-none transition-colors ${
+                      isItemSel 
+                        ? 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-900 dark:text-blue-100 font-semibold' 
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isItemSel}
+                      onChange={() => handleToggleOption(o)}
+                      className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer w-3.5 h-3.5"
+                    />
+                    <span className="truncate">{o === '' ? '(Tanpa Data)' : o}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function BankToPanel({ targets, realizedTargets = [], onDataLoaded, onAddRecord }) {
   // Navigation & Sub-views states
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUnit, setSelectedUnit] = useState('ALL');
-  const [selectedJenis, setSelectedJenis] = useState('ALL');
-  const [selectedSub, setSelectedSub] = useState('ALL');
-  const [selectedGardu, setSelectedGardu] = useState('ALL');
+  const [selectedUnits, setSelectedUnits] = useState(null);
+  const [selectedJenises, setSelectedJenises] = useState(null);
+  const [selectedSubs, setSelectedSubs] = useState(null);
+  const [selectedGardus, setSelectedGardus] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -40,6 +166,32 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   const [selectedIds, setSelectedIds] = useState(new Set());
   
   const itemsPerPage = 10;
+
+  const [sortField, setSortField] = useState(null);
+  const [sortDirection, setSortDirection] = useState('NONE');
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      if (sortDirection === 'ASC') {
+        setSortDirection('DESC');
+      } else if (sortDirection === 'DESC') {
+        setSortDirection('NONE');
+        setSortField(null);
+      } else {
+        setSortDirection('ASC');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('ASC');
+    }
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-40 ml-1.5 inline-block" />;
+    if (sortDirection === 'ASC') return <ArrowUp className="w-3 h-3 text-blue-500 ml-1.5 inline-block" />;
+    if (sortDirection === 'DESC') return <ArrowDown className="w-3 h-3 text-blue-500 ml-1.5 inline-block" />;
+    return <ArrowUpDown className="w-3 h-3 opacity-40 ml-1.5 inline-block" />;
+  };
 
   // Uploader State
   const [dragActive, setDragActive] = useState(false);
@@ -224,16 +376,14 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     const subs = new Set();
     const gardus = new Set();
     targets.forEach(t => {
-      if (t.UNIT) units.add(t.UNIT);
-      if (t.JENIS_TO) jenises.add(t.JENIS_TO);
-      if (t.SUBDLPD) subs.add(t.SUBDLPD);
-      if (t.GARDU) {
-        const prefix = String(t.GARDU).trim().substring(0, 7);
-        if (prefix) gardus.add(prefix);
-      }
+      units.add(t.UNIT ? String(t.UNIT).trim() : '');
+      jenises.add(t.JENIS_TO ? String(t.JENIS_TO).trim() : '');
+      subs.add(t.SUBDLPD ? String(t.SUBDLPD).trim() : '');
+      const prefix = t.GARDU ? String(t.GARDU).trim().substring(0, 7) : '';
+      gardus.add(prefix);
     });
     return {
-      units: Array.from(units).sort(),
+      units: Array.from(units).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
       jenises: Array.from(jenises).sort(),
       subs: Array.from(subs).sort(),
       gardus: Array.from(gardus).sort()
@@ -244,26 +394,59 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     setCurrentPage(1);
     return targets.filter(t => {
       const matchesSearch = 
-        String(t.IDPEL).includes(searchQuery) ||
-        String(t.NAMA).toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesUnit = selectedUnit === 'ALL' || String(t.UNIT) === selectedUnit;
-      const matchesJenis = selectedJenis === 'ALL' || t.JENIS_TO === selectedJenis;
-      const matchesSub = selectedSub === 'ALL' || t.SUBDLPD === selectedSub;
+        String(t.IDPEL || '').includes(searchQuery) ||
+        String(t.NAMA || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(t.ALAMAT || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(t.GARDU || '').toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const unitVal = t.UNIT ? String(t.UNIT).trim() : '';
+      const matchesUnit = selectedUnits === null || selectedUnits.includes(unitVal);
+      
+      const jenisVal = t.JENIS_TO ? String(t.JENIS_TO).trim() : '';
+      const matchesJenis = selectedJenises === null || selectedJenises.includes(jenisVal);
+      
+      const subVal = t.SUBDLPD ? String(t.SUBDLPD).trim() : '';
+      const matchesSub = selectedSubs === null || selectedSubs.includes(subVal);
       
       const prefix = t.GARDU ? String(t.GARDU).trim().substring(0, 7) : '';
-      const matchesGardu = selectedGardu === 'ALL' || prefix === selectedGardu;
+      const matchesGardu = selectedGardus === null || selectedGardus.includes(prefix);
       
       return matchesSearch && matchesUnit && matchesJenis && matchesSub && matchesGardu;
     });
-  }, [targets, searchQuery, selectedUnit, selectedJenis, selectedSub, selectedGardu]);
+  }, [targets, searchQuery, selectedUnits, selectedJenises, selectedSubs, selectedGardus]);
+
+  // sortedTargets useMemo
+  const sortedTargets = useMemo(() => {
+    if (!sortField || sortDirection === 'NONE') return filteredTargets;
+    
+    return [...filteredTargets].sort((a, b) => {
+      let valA = a[sortField];
+      let valB = b[sortField];
+      
+      if (sortField === 'DAYA') {
+        valA = parseInt(a.DAYA, 10) || 0;
+        valB = parseInt(b.DAYA, 10) || 0;
+      }
+      
+      if (typeof valA === 'string') {
+        return sortDirection === 'ASC' 
+          ? valA.localeCompare(valB) 
+          : valB.localeCompare(valA);
+      } else {
+        return sortDirection === 'ASC' 
+          ? (valA > valB ? 1 : -1) 
+          : (valA < valB ? 1 : -1);
+      }
+    });
+  }, [filteredTargets, sortField, sortDirection]);
 
   const totalItems = filteredTargets.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   
   const paginatedTargets = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredTargets.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredTargets, currentPage]);
+    return sortedTargets.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedTargets, currentPage]);
 
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -458,7 +641,12 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   const withCoords   = targets.filter(t => t.LATITUDE && t.LONGITUDE).length;
   const inspected    = targets.filter(t => getInspectionHistory(t.IDPEL)).length;
   const highPower    = targets.filter(t => parseInt(t.DAYA, 10) >= 6600).length;
-  const activeFilters = [selectedUnit !== 'ALL', selectedJenis !== 'ALL', selectedSub !== 'ALL', selectedGardu !== 'ALL'].filter(Boolean).length;
+  const activeFilters = [
+    selectedUnits !== null,
+    selectedJenises !== null,
+    selectedSubs !== null,
+    selectedGardus !== null
+  ].filter(Boolean).length;
 
   return (
     <>
@@ -528,13 +716,13 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
             </div>
 
             {/* Toolbar Buttons */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 shrink-0 scrollbar-none">
+            <div className="grid grid-cols-2 md:flex md:items-center gap-2 w-full md:w-auto shrink-0">
               {/* Filter Toggle */}
               <button onClick={() => setShowFilters(!showFilters)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer shrink-0 ${
+                className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border-2 transition-all cursor-pointer w-full md:w-auto ${
                   showFilters || activeFilters > 0
                     ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:border-slate-350 dark:hover:border-slate-700'
                 }`}>
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 <span>Filter</span>
@@ -547,12 +735,12 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               {selectedIds.size > 0 && (
                 <>
                   <button onClick={() => setIsMapOpen(true)}
-                    className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer shrink-0">
+                    className="hidden md:inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer shrink-0 w-full md:w-auto">
                     <Map className="w-3.5 h-3.5 text-blue-500" />
                     <span>Peta ({selectedIds.size})</span>
                   </button>
                   <button onClick={handleExportSelected}
-                    className="hidden md:inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/10 transition-all cursor-pointer shrink-0">
+                    className="hidden md:inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/10 transition-all cursor-pointer shrink-0 w-full md:w-auto">
                     <Download className="w-3.5 h-3.5" />
                     <span>Ekspor ({selectedIds.size})</span>
                   </button>
@@ -561,7 +749,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
 
               {/* Add TO Button */}
               <button onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/10 transition-all cursor-pointer shrink-0">
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-sm shadow-blue-500/10 transition-all cursor-pointer w-full md:w-auto">
                 <Plus className="w-3.5 h-3.5" />
                 <span>Tambah TO</span>
               </button>
@@ -571,21 +759,34 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
           {/* Accordion Filter Panel */}
           {showFilters && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 animate-fade-in">
-              {[
-                { label: 'Unit Pelayanan', value: selectedUnit,  set: setSelectedUnit,  options: filterOptions.units,  allLabel: 'Semua Unit'    },
-                { label: 'Jenis TO',       value: selectedJenis, set: setSelectedJenis, options: filterOptions.jenises, allLabel: 'Semua Jenis'   },
-                { label: 'Sub-DLPD',       value: selectedSub,   set: setSelectedSub,   options: filterOptions.subs,   allLabel: 'Semua Sub-DLPD' },
-                { label: 'Gardu (7 Karakter)', value: selectedGardu, set: setSelectedGardu, options: filterOptions.gardus,  allLabel: 'Semua Gardu'   },
-              ].map(f => (
-                <div key={f.label} className="flex flex-col gap-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{f.label}</label>
-                  <select value={f.value} onChange={e => f.set(e.target.value)}
-                    className="w-full py-2 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 text-slate-700 dark:text-slate-300 transition-all cursor-pointer">
-                    <option value="ALL">{f.allLabel}</option>
-                    {f.options.map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-              ))}
+              <MultiSelectDropdown 
+                label="Unit Pelayanan" 
+                options={filterOptions.units} 
+                selectedValues={selectedUnits} 
+                onChange={setSelectedUnits} 
+                allLabel="Semua Unit" 
+              />
+              <MultiSelectDropdown 
+                label="Jenis TO" 
+                options={filterOptions.jenises} 
+                selectedValues={selectedJenises} 
+                onChange={setSelectedJenises} 
+                allLabel="Semua Jenis" 
+              />
+              <MultiSelectDropdown 
+                label="Sub-DLPD" 
+                options={filterOptions.subs} 
+                selectedValues={selectedSubs} 
+                onChange={setSelectedSubs} 
+                allLabel="Semua Sub-DLPD" 
+              />
+              <MultiSelectDropdown 
+                label="Gardu (7 Karakter)" 
+                options={filterOptions.gardus} 
+                selectedValues={selectedGardus} 
+                onChange={setSelectedGardus} 
+                allLabel="Semua Gardu" 
+              />
             </div>
           )}
         </div>        {/* 03. Result Info bar */}
@@ -609,16 +810,32 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
         {/* 04. Main Data Table / Card Grid */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-2xl shadow-sm overflow-hidden">
 
-          {/* Empty state */}
-          {totalItems === 0 && (
+          {/* Initial empty state (when no data loaded at all) */}
+          {targets.length === 0 && (
             <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+              <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4">
+                <AlertCircle className="w-8 h-8 text-slate-350 dark:text-slate-600" />
+              </div>
+              <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
+              <p className="text-xs text-slate-400 mt-1.5 max-w-xs">Silakan unggah data Excel atau tambahkan target manual baru.</p>
+            </div>
+          )}
+
+          {/* Filter empty state for mobile (only when targets.length > 0 but filtered to 0) */}
+          {targets.length > 0 && totalItems === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center md:hidden">
               <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4">
                 <AlertCircle className="w-8 h-8 text-slate-350 dark:text-slate-600" />
               </div>
               <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
               <p className="text-xs text-slate-400 mt-1.5 max-w-xs">Coba ubah kata kunci pencarian atau hapus filter yang aktif.</p>
               {activeFilters > 0 && (
-                <button onClick={() => { setSelectedUnit('ALL'); setSelectedJenis('ALL'); setSelectedSub('ALL'); setSelectedGardu('ALL'); }}
+                <button onClick={() => {
+                  setSelectedUnit('ALL');
+                  setSelectedJenis('ALL');
+                  setSelectedSub('ALL');
+                  setSelectedGardu('ALL');
+                }}
                   className="mt-4 px-4 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
                   Reset Filter
                 </button>
@@ -696,37 +913,89 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               })}
             </div>
           )}
-
           {/* Desktop Table */}
-          {totalItems > 0 && (
+          {targets.length > 0 && (
             <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200/50 dark:border-slate-800/80 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                  <tr className="bg-slate-50 dark:bg-slate-950/60 border-b border-slate-200/50 dark:border-slate-800/80 text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest select-none">
                     <th className="py-3.5 px-4 w-10">
                       <input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll}
                         className="rounded border-slate-300 dark:border-slate-700 text-blue-650 focus:ring-blue-500 cursor-pointer w-4 h-4" />
                     </th>
                     <th className="py-3.5 px-3 w-10 text-center">#</th>
-                    <th className="py-3.5 px-4">IDPEL</th>
-                    <th className="py-3.5 px-4">Pelanggan</th>
-                    <th className="py-3.5 px-4">Alamat</th>
-                    <th className="py-3.5 px-4">Tarif / Daya</th>
-                    <th className="py-3.5 px-4">Gardu / Tiang</th>
-                    <th className="py-3.5 px-4">Jenis TO</th>
-                    <th className="py-3.5 px-4">Sub-DLPD</th>
+                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('IDPEL')}>
+                      <div className="flex items-center gap-1">
+                        <span>IDPEL</span>
+                        {getSortIcon('IDPEL')}
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('NAMA')}>
+                      <div className="flex items-center gap-1">
+                        <span>Pelanggan</span>
+                        {getSortIcon('NAMA')}
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('ALAMAT')}>
+                      <div className="flex items-center gap-1">
+                        <span>Alamat</span>
+                        {getSortIcon('ALAMAT')}
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('DAYA')}>
+                      <div className="flex items-center gap-1">
+                        <span>Tarif / Daya</span>
+                        {getSortIcon('DAYA')}
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('GARDU')}>
+                      <div className="flex items-center gap-1">
+                        <span>Gardu / Tiang</span>
+                        {getSortIcon('GARDU')}
+                      </div>
+                    </th>
+                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('JENIS_TO')}>
+                      <div className="flex items-center gap-1">
+                        <span>Jenis TO / Sub-DLPD</span>
+                        {getSortIcon('JENIS_TO')}
+                      </div>
+                    </th>
                     <th className="py-3.5 px-4 text-center w-12">Peta</th>
-                    <th className="py-3.5 px-4 text-center w-12">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-xs text-slate-750 dark:text-slate-300">
-                  {paginatedTargets.map((item, idx) => {
+                  {totalItems === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-16 px-4 text-center">
+                        <div className="flex flex-col items-center justify-center">
+                          <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-3">
+                            <AlertCircle className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+                          </div>
+                          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
+                          <p className="text-xs text-slate-400 mt-1.5 max-w-xs">Coba ubah kata kunci pencarian atau hapus filter kolom/tabel yang aktif.</p>
+                          {activeFilters > 0 && (
+                            <button onClick={() => {
+                              setSelectedUnits(null);
+                              setSelectedJenises(null);
+                              setSelectedSubs(null);
+                              setSelectedGardus(null);
+                            }}
+                              className="mt-4 px-4 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
+                              Reset Semua Filter
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    paginatedTargets.map((item, idx) => {
                     const history = getInspectionHistory(item.IDPEL);
                     const isSelected = selectedIds.has(String(item.IDPEL));
                     const isHighPower = parseInt(item.DAYA, 10) >= 6600;
                     return (
                       <tr key={item.No || item.IDPEL}
-                        className={`transition-colors duration-150 ${isSelected ? 'bg-blue-500/5 dark:bg-blue-500/10' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30'}`}>
+                        onClick={() => handleSelectRecord(item)}
+                        className={`transition-colors duration-150 cursor-pointer ${isSelected ? 'bg-blue-500/5 dark:bg-blue-500/10' : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/30'}`}>
                         <td className="py-3 px-4">
                           <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.IDPEL)} onClick={e => e.stopPropagation()}
                             className="rounded border-slate-300 dark:border-slate-700 text-blue-650 focus:ring-blue-500 cursor-pointer w-4 h-4" />
@@ -760,13 +1029,15 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                           <div className="text-[11px] font-mono text-slate-700 dark:text-slate-300 truncate" title={item.GARDU}>{item.GARDU || '—'}</div>
                           <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate" title={item.TIANG}>{item.TIANG || '—'}</div>
                         </td>
-                        <td className="py-3 px-4">
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/10 dark:border-blue-900/30 uppercase whitespace-nowrap">
-                            {item.JENIS_TO || '—'}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 max-w-[140px] truncate text-slate-400 dark:text-slate-500 text-[11px]" title={item.SUBDLPD || ''}>
-                          {item.SUBDLPD || <span className="text-slate-300 dark:text-slate-700">—</span>}
+                        <td className="py-3 px-4 max-w-[160px]">
+                          <div className="mb-1">
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/10 dark:border-blue-900/30 uppercase whitespace-nowrap">
+                              {item.JENIS_TO || '—'}
+                            </span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate" title={item.SUBDLPD || ''}>
+                            {item.SUBDLPD || '—'}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-center">
                           <button onClick={e => openMap(item.LATITUDE, item.LONGITUDE, e)}
@@ -776,16 +1047,10 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                             <MapPin className="w-4 h-4" />
                           </button>
                         </td>
-                        <td className="py-3 px-4 text-center">
-                          <button onClick={() => handleSelectRecord(item)}
-                            className="p-2 hover:bg-blue-50 dark:hover:bg-blue-950/25 text-blue-600 dark:text-blue-400 rounded-lg transition-all cursor-pointer"
-                            title="Lihat Detail">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </td>
+
                       </tr>
                     );
-                  })}
+                  }))}
                 </tbody>
               </table>
             </div>

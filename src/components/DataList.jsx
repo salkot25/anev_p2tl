@@ -1,6 +1,27 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, SlidersHorizontal, ChevronLeft, ChevronRight, Eye, CheckCircle2, AlertTriangle, AlertCircle, Plus, Upload, Download, X, RefreshCw, CheckCircle } from 'lucide-react';
+import { 
+  Search, 
+  SlidersHorizontal, 
+  ChevronLeft, 
+  ChevronRight, 
+  ChevronDown,
+  Eye, 
+  CheckCircle2, 
+  AlertTriangle, 
+  AlertCircle, 
+  Plus, 
+  Upload, 
+  Download, 
+  X, 
+  RefreshCw, 
+  CheckCircle,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  FileText,
+  Zap
+} from 'lucide-react';
 import { parseExcel } from '../utils/excelParser';
 import * as XLSX from 'xlsx';
 
@@ -30,16 +51,166 @@ function normalizeDateString(dateVal) {
   return str;
 }
 
+function MultiSelectDropdown({ label, options, selectedValues, onChange, allLabel }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const dropdownRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleToggleOption = (val) => {
+    let next;
+    const currentSelected = selectedValues === null ? options : selectedValues;
+    if (currentSelected.includes(val)) {
+      next = currentSelected.filter(v => v !== val);
+    } else {
+      next = [...currentSelected, val];
+    }
+    
+    if (next.length === options.length) {
+      onChange(null);
+    } else {
+      onChange(next);
+    }
+  };
+
+  const handleSelectAll = () => {
+    onChange(null);
+  };
+
+  const handleClearAll = () => {
+    onChange([]);
+  };
+
+  const isSelected = (val) => {
+    if (selectedValues === null) return true;
+    return selectedValues.includes(val);
+  };
+
+  const filteredOptions = useMemo(() => {
+    return options.filter(o => {
+      const displayStr = String(o === '' ? '(Tanpa Data)' : o);
+      return displayStr.toLowerCase().includes(search.toLowerCase());
+    });
+  }, [options, search]);
+
+  const displayText = useMemo(() => {
+    if (selectedValues === null) return allLabel;
+    if (selectedValues.length === 0) return 'Tidak ada data';
+    if (selectedValues.length === options.length) return allLabel;
+    return `${selectedValues.length} Terpilih`;
+  }, [selectedValues, options, allLabel]);
+
+  return (
+    <div className="relative flex flex-col gap-1.5 w-full" ref={dropdownRef}>
+      <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{label}</label>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full py-2 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-700 dark:text-slate-300 transition-all flex items-center justify-between hover:border-slate-350 dark:hover:border-slate-750 cursor-pointer active:scale-[0.98]"
+      >
+        <span className="truncate pr-2">{displayText}</span>
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-450 dark:text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : 'rotate-0'}`} />
+      </button>
+      
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in min-w-[200px]">
+          {options.length > 5 && (
+            <div className="p-2 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/30">
+              <input
+                type="text"
+                placeholder="Cari..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full py-1 px-2.5 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-700 dark:text-slate-300"
+              />
+            </div>
+          )}
+          
+          <div className="flex items-center justify-between p-2 border-b border-slate-100 dark:border-slate-800/60 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-slate-50/30 dark:bg-slate-950/10 shrink-0">
+            <button type="button" onClick={handleSelectAll} className="hover:underline cursor-pointer">Pilih Semua</button>
+            <button type="button" onClick={handleClearAll} className="hover:underline cursor-pointer">Hapus Semua</button>
+          </div>
+          
+          <div className="max-h-48 overflow-y-auto p-1.5 space-y-0.5 scrollbar-thin">
+            {filteredOptions.length === 0 ? (
+              <div className="py-3 text-center text-slate-450 dark:text-slate-550 text-[11px]">Tidak ada kecocokan</div>
+            ) : (
+              filteredOptions.map(o => {
+                const isItemSel = isSelected(o);
+                return (
+                  <label
+                    key={o}
+                    className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs cursor-pointer select-none transition-colors ${
+                      isItemSel 
+                        ? 'bg-blue-500/10 dark:bg-blue-500/20 text-blue-900 dark:text-blue-100 font-semibold' 
+                        : 'hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isItemSel}
+                      onChange={() => handleToggleOption(o)}
+                      className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer w-3.5 h-3.5"
+                    />
+                    <span className="truncate">{o === '' ? '(Tanpa Data)' : o}</span>
+                  </label>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DataList({ targets, onSelectRecord, onAddRecord, onDataLoaded }) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSubDlpd, setSelectedSubDlpd] = useState('ALL');
-  const [selectedRegu, setSelectedRegu] = useState('ALL');
-  const [selectedDlpd, setSelectedDlpd] = useState('ALL');
-  const [selectedStatus, setSelectedStatus] = useState('ALL');
+  const [selectedSubDlpds, setSelectedSubDlpds] = useState(null);
+  const [selectedRegus, setSelectedRegus] = useState(null);
+  const [selectedDlpds, setSelectedDlpds] = useState(null);
+  const [selectedStatuses, setSelectedStatuses] = useState(null);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedDateType, setSelectedDateType] = useState('pelaksanaan'); // pelaksanaan, order, upload
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const statusOptions = useMemo(() => ['Sesuai (Normal)', 'Temuan (Pelanggaran)', 'Pending'], []);
+  
+  const [sortField, setSortField] = useState(null);
+  const [sortDirection, setSortDirection] = useState('NONE'); // NONE, ASC, DESC
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      if (sortDirection === 'ASC') {
+        setSortDirection('DESC');
+      } else if (sortDirection === 'DESC') {
+        setSortDirection('NONE');
+        setSortField(null);
+      } else {
+        setSortDirection('ASC');
+      }
+    } else {
+      setSortField(field);
+      setSortDirection('ASC');
+    }
+  };
+
+  const getSortIcon = (field) => {
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 opacity-40 ml-1.5 inline-block" />;
+    if (sortDirection === 'ASC') return <ArrowUp className="w-3 h-3 text-blue-500 ml-1.5 inline-block" />;
+    if (sortDirection === 'DESC') return <ArrowDown className="w-3 h-3 text-blue-500 ml-1.5 inline-block" />;
+    return <ArrowUpDown className="w-3 h-3 opacity-40 ml-1.5 inline-block" />;
+  };
   
   // Unified Add Target Modal State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -246,23 +417,28 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
   const targetMatches = useMemo(() => {
     return targets.map(t => {
       const matchesSearch = 
-        String(t.IDPel).includes(searchQuery) ||
-        String(t.NamaPelanggan).toLowerCase().includes(searchQuery.toLowerCase());
+        String(t.IDPel || '').includes(searchQuery) ||
+        String(t.NamaPelanggan || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(t.Gardu || t.GARDU || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        String(t.Alamat || t.ALAMAT || '').toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesSubDlpd = selectedSubDlpd === 'ALL' || t.SubDLPD === selectedSubDlpd;
-      const matchesRegu = selectedRegu === 'ALL' || t.ReguPetugas === selectedRegu;
-      const matchesDlpd = selectedDlpd === 'ALL' || t.DLPD === selectedDlpd;
+      const subVal = t.SubDLPD ? String(t.SubDLPD).trim() : '';
+      const matchesSubDlpd = selectedSubDlpds === null || selectedSubDlpds.includes(subVal);
       
-      let matchesStatus = true;
-      if (selectedStatus !== 'ALL') {
-        const statusLower = String(t.StatusProgress).toLowerCase();
-        if (selectedStatus === 'sesuai') {
-          matchesStatus = statusLower.includes('sesuai');
-        } else if (selectedStatus === 'temuan') {
-          matchesStatus = statusLower.includes('temuan');
-        } else if (selectedStatus === 'pending') {
-          matchesStatus = !statusLower.includes('sesuai') && !statusLower.includes('temuan');
-        }
+      const reguVal = t.ReguPetugas ? String(t.ReguPetugas).trim() : '';
+      const matchesRegu = selectedRegus === null || selectedRegus.includes(reguVal);
+      
+      const dlpdVal = t.DLPD ? String(t.DLPD).trim() : '';
+      const matchesDlpd = selectedDlpds === null || selectedDlpds.includes(dlpdVal);
+      
+      let matchesStatus = false;
+      if (selectedStatuses === null) {
+        matchesStatus = true;
+      } else {
+        const statusLower = String(t.StatusProgress || '').toLowerCase();
+        if (selectedStatuses.includes('Sesuai (Normal)') && statusLower.includes('sesuai')) matchesStatus = true;
+        if (selectedStatuses.includes('Temuan (Pelanggaran)') && statusLower.includes('temuan')) matchesStatus = true;
+        if (selectedStatuses.includes('Pending') && !statusLower.includes('sesuai') && !statusLower.includes('temuan')) matchesStatus = true;
       }
 
       let matchesDate = true;
@@ -285,7 +461,7 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
         date: matchesDate
       };
     });
-  }, [targets, searchQuery, selectedSubDlpd, selectedRegu, selectedDlpd, selectedStatus, selectedDate, selectedDateType]);
+  }, [targets, searchQuery, selectedSubDlpds, selectedRegus, selectedDlpds, selectedStatuses, selectedDate, selectedDateType]);
 
   // Extract unique filter options dynamically linked based on other active filters
   const filterOptions = useMemo(() => {
@@ -296,15 +472,15 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
     targetMatches.forEach(m => {
       // Options for Sub DLPD (filtered by search, regu, dlpd, status, date)
       if (m.search && m.regu && m.dlpd && m.status && m.date) {
-        if (m.target.SubDLPD) subDlpds.add(m.target.SubDLPD);
+        subDlpds.add(m.target.SubDLPD ? String(m.target.SubDLPD).trim() : '');
       }
       // Options for Regu (filtered by search, subDlpd, dlpd, status, date)
       if (m.search && m.subDlpd && m.dlpd && m.status && m.date) {
-        if (m.target.ReguPetugas) regus.add(m.target.ReguPetugas);
+        regus.add(m.target.ReguPetugas ? String(m.target.ReguPetugas).trim() : '');
       }
       // Options for DLPD (filtered by search, subDlpd, regu, status, date)
       if (m.search && m.subDlpd && m.regu && m.status && m.date) {
-        if (m.target.DLPD) dlpds.add(m.target.DLPD);
+        dlpds.add(m.target.DLPD ? String(m.target.DLPD).trim() : '');
       }
     });
 
@@ -325,14 +501,42 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
       .map(m => m.target);
   }, [targetMatches]);
 
+  // Sort data based on sort configuration
+  const sortedTargets = useMemo(() => {
+    if (!sortField || sortDirection === 'NONE') return filteredTargets;
+    
+    return [...filteredTargets].sort((a, b) => {
+      let valA = a[sortField];
+      let valB = b[sortField];
+      
+      if (sortField === 'Daya') {
+        valA = parseInt(a.Daya, 10) || 0;
+        valB = parseInt(b.Daya, 10) || 0;
+      } else if (sortField === 'DurasiMenit') {
+        valA = parseInt(a.DurasiMenit, 10) || 0;
+        valB = parseInt(b.DurasiMenit, 10) || 0;
+      }
+      
+      if (typeof valA === 'string') {
+        return sortDirection === 'ASC' 
+          ? valA.localeCompare(valB) 
+          : valB.localeCompare(valA);
+      } else {
+        return sortDirection === 'ASC' 
+          ? (valA > valB ? 1 : -1) 
+          : (valA < valB ? 1 : -1);
+      }
+    });
+  }, [filteredTargets, sortField, sortDirection]);
+
   // Pagination calculations
   const totalItems = filteredTargets.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
   
   const paginatedTargets = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredTargets.slice(startIndex, startIndex + itemsPerPage);
-  }, [filteredTargets, currentPage]);
+    return sortedTargets.slice(startIndex, startIndex + itemsPerPage);
+  }, [sortedTargets, currentPage]);
 
   const handlePrevPage = () => {
     if (currentPage > 1) setCurrentPage(currentPage - 1);
@@ -340,6 +544,82 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
 
   const handleNextPage = () => {
     if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+  };
+
+  // --- Selection states and actions ---
+  const paginatedIds = useMemo(() => paginatedTargets.map(t => String(t.IDPel)), [paginatedTargets]);
+  
+  const isAllSelected = useMemo(() => {
+    if (paginatedIds.length === 0) return false;
+    return paginatedIds.every(id => selectedIds.has(id));
+  }, [paginatedIds, selectedIds]);
+
+  const toggleSelectAll = () => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (isAllSelected) {
+        paginatedIds.forEach(id => next.delete(id));
+      } else {
+        paginatedIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
+  };
+
+  const toggleSelect = (idpel) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      const idStr = String(idpel);
+      if (next.has(idStr)) {
+        next.delete(idStr);
+      } else {
+        next.add(idStr);
+      }
+      return next;
+    });
+  };
+
+  const handleExportSelected = () => {
+    const selectedTargets = targets.filter(t => selectedIds.has(String(t.IDPel)));
+    if (selectedTargets.length === 0) return;
+
+    const dataToExport = selectedTargets.map((t, index) => ({
+      'No': index + 1,
+      'IDPel': parseInt(t.IDPel, 10) || t.IDPel,
+      'Nama Pelanggan': t.NamaPelanggan || '',
+      'Tarif': t.Tarif || '',
+      'Daya': t.Daya || 0,
+      'Gardu': t.Gardu || '',
+      'Tiang': t.Tiang || '',
+      'ULP': t.ULP || '',
+      'UP3': t.UP3 || '',
+      'DLPD': t.DLPD || '',
+      'Sub DLPD': t.SubDLPD || '',
+      'Tanggal Upload': t.TanggalUpload || '',
+      'Regu Petugas': t.ReguPetugas || '',
+      'Tanggal Order': t.TanggalOrder || '',
+      'Tanggal Pelaksanaan': t.TanggalPelaksanaan || '',
+      'Status Progress': t.StatusProgress || '',
+      'Durasi (Menit)': t.DurasiMenit || 0,
+      'Sumber': t.Sumber || '',
+      'bank_id': t.bank_id || ''
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(dataToExport);
+    
+    ws['!cols'] = [
+      { wch: 5 }, { wch: 15 }, { wch: 25 }, { wch: 8 }, { wch: 8 }, { wch: 15 }, { wch: 15 },
+      { wch: 20 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 22 }, { wch: 12 },
+      { wch: 22 }, { wch: 22 }, { wch: 30 }, { wch: 15 }, { wch: 10 }, { wch: 30 }
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DATA TO");
+    
+    const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    XLSX.writeFile(wb, `${dateStr}_DATA_TO_Export.xlsx`);
+    
+    setSelectedIds(new Set());
   };
 
   // Status badge styling helper
@@ -376,8 +656,61 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
     }
   };
 
+  // --- Summary stats ---
+  const totalCount = targets.length;
+  const inspectedCount = targets.filter(t => t.StatusProgress && t.StatusProgress !== 'Target Operasi').length;
+  const temuanCount = targets.filter(t => t.StatusProgress && String(t.StatusProgress).toLowerCase().includes('temuan')).length;
+  const highPowerCount = targets.filter(t => parseInt(t.Daya, 10) >= 6600).length;
+
   return (
-    <div className="w-full flex flex-col gap-4">
+    <div className="w-full flex flex-col gap-5">
+      {/* 01. Summary Stats Bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { 
+            label: 'Total Target TO', 
+            value: totalCount, 
+            sub: 'Pelanggan terdaftar', 
+            color: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/10 dark:border-blue-500/10',
+            icon: FileText
+          },
+          { 
+            label: 'Selesai Diperiksa', 
+            value: inspectedCount, 
+            sub: `${totalCount > 0 ? ((inspectedCount / totalCount) * 100).toFixed(0) : 0}% terealisasi`, 
+            color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/10 dark:border-emerald-500/10',
+            icon: CheckCircle
+          },
+          { 
+            label: 'Temuan Pelanggaran', 
+            value: temuanCount, 
+            sub: `${inspectedCount > 0 ? ((temuanCount / inspectedCount) * 100).toFixed(0) : 0}% rasio temuan`, 
+            color: 'text-rose-600 dark:text-rose-455 bg-rose-500/10 dark:bg-rose-500/20 border-rose-500/10 dark:border-rose-500/10',
+            icon: AlertTriangle
+          },
+          { 
+            label: 'Daya ≥ 6,6 kVA', 
+            value: highPowerCount, 
+            sub: 'Pelanggan 3 phasa', 
+            color: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/10 dark:border-amber-500/10',
+            icon: Zap
+          },
+        ].map((s, idx) => {
+          const Icon = s.icon;
+          return (
+            <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/85 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all duration-200 hover:shadow-md">
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">{s.label}</span>
+                <span className="text-2xl font-black font-mono leading-none text-slate-900 dark:text-white block">{s.value.toLocaleString('id-ID')}</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">{s.sub}</span>
+              </div>
+              <div className={`p-3 rounded-xl border ${s.color} shrink-0`}>
+                <Icon className="w-5 h-5" />
+              </div>
+            </div>
+          );
+        })}
+      </div>
       {/* Search and Action Bar */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         
@@ -394,16 +727,25 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
         </div>
 
         {/* Buttons wrapper */}
-        <div className="flex items-center gap-2">
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto shrink-0">
+          {selectedIds.size > 0 && (
+            <button onClick={handleExportSelected}
+              className="hidden sm:inline-flex items-center justify-center gap-2 py-2.5 px-3.5 rounded-xl text-xs sm:text-sm font-sans font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/10 transition-all cursor-pointer shrink-0 w-full sm:w-auto"
+            >
+              <Download className="w-4 h-4" />
+              <span>Ekspor ({selectedIds.size})</span>
+            </button>
+          )}
+
           <button 
             onClick={() => setShowFilters(!showFilters)}
-            className={`btn-secondary py-2.5 px-3 flex gap-2 items-center text-xs sm:text-sm font-sans ${
+            className={`btn-secondary py-2.5 px-3 flex gap-2 items-center justify-center text-xs sm:text-sm font-sans w-full sm:w-auto ${
               showFilters ? 'bg-slate-100 border-slate-300 dark:bg-slate-800 dark:border-slate-700' : ''
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
             Filters
-            {(selectedSubDlpd !== 'ALL' || selectedRegu !== 'ALL' || selectedDlpd !== 'ALL' || selectedStatus !== 'ALL' || selectedDate !== '') && (
+            {(selectedSubDlpds !== null || selectedRegus !== null || selectedDlpds !== null || selectedStatuses !== null || selectedDate !== '') && (
               <span className="w-2 h-2 bg-brand-500 rounded-full" />
             )}
           </button>
@@ -413,7 +755,7 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
               setIsAddModalOpen(true);
               setAddMode('manual');
             }}
-            className="btn-primary py-2.5 px-3.5 flex gap-2 items-center text-xs sm:text-sm font-sans"
+            className="btn-primary py-2.5 px-3.5 flex gap-2 items-center justify-center text-xs sm:text-sm font-sans w-full sm:w-auto"
           >
             <Plus className="w-4.5 h-4.5" />
             Tambah Data
@@ -424,76 +766,44 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
       {/* Filter panel dropdown */}
       {showFilters && (
         <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 p-5 rounded-2xl grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 animate-fade-in shadow-sm">
-          {/* Sub DLPD */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Sub DLPD
-            </span>
-            <select 
-              value={selectedSubDlpd}
-              onChange={(e) => setSelectedSubDlpd(e.target.value)}
-              className="input-text py-1.5 px-2.5 text-xs bg-white dark:bg-slate-800 select-arrow"
-            >
-              <option value="ALL">Semua Sub DLPD</option>
-              {filterOptions.subDlpds.map(sub => (
-                <option key={sub} value={sub}>{sub}</option>
-              ))}
-            </select>
-          </div>
-
           {/* Regu Petugas */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Regu Petugas
-            </span>
-            <select 
-              value={selectedRegu}
-              onChange={(e) => setSelectedRegu(e.target.value)}
-              className="input-text py-1.5 px-2.5 text-xs bg-white dark:bg-slate-800 select-arrow"
-            >
-              <option value="ALL">Semua Regu</option>
-              {filterOptions.regus.map(regu => (
-                <option key={regu} value={regu}>{regu}</option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="Regu Petugas"
+            options={filterOptions.regus}
+            selectedValues={selectedRegus}
+            onChange={setSelectedRegus}
+            allLabel="Semua Regu"
+          />
 
           {/* DLPD */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              DLPD
-            </span>
-            <select 
-              value={selectedDlpd}
-              onChange={(e) => setSelectedDlpd(e.target.value)}
-              className="input-text py-1.5 px-2.5 text-xs bg-white dark:bg-slate-800 select-arrow"
-            >
-              <option value="ALL">Semua DLPD</option>
-              {filterOptions.dlpds.map(dlpd => (
-                <option key={dlpd} value={dlpd}>{dlpd}</option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="DLPD"
+            options={filterOptions.dlpds}
+            selectedValues={selectedDlpds}
+            onChange={setSelectedDlpds}
+            allLabel="Semua DLPD"
+          />
+
+          {/* Sub DLPD */}
+          <MultiSelectDropdown
+            label="Sub DLPD"
+            options={filterOptions.subDlpds}
+            selectedValues={selectedSubDlpds}
+            onChange={setSelectedSubDlpds}
+            allLabel="Semua Sub DLPD"
+          />
 
           {/* Status Progress */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Status Progress
-            </span>
-            <select 
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="input-text py-1.5 px-2.5 text-xs bg-white dark:bg-slate-800 select-arrow"
-            >
-              <option value="ALL">Semua Status</option>
-              <option value="sesuai">Sesuai (Normal)</option>
-              <option value="temuan">Temuan (Pelanggaran)</option>
-              <option value="pending">Pending</option>
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="Status Progress"
+            options={statusOptions}
+            selectedValues={selectedStatuses}
+            onChange={setSelectedStatuses}
+            allLabel="Semua Status"
+          />
 
           {/* Filter Tanggal */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 w-full">
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               Filter Tanggal
             </span>
@@ -501,19 +811,19 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
               type="date"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
-              className="input-text py-1 px-2.5 text-xs bg-white dark:bg-slate-800 cursor-pointer"
+              className="input-text py-2 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-205 dark:border-slate-800 rounded-xl outline-none text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
             />
           </div>
 
           {/* Jenis Tanggal */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 w-full">
             <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
               Jenis Tanggal
             </span>
             <select 
               value={selectedDateType}
               onChange={(e) => setSelectedDateType(e.target.value)}
-              className="input-text py-1.5 px-2.5 text-xs bg-white dark:bg-slate-800 select-arrow"
+              className="w-full py-2 px-3 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-700 dark:text-slate-300 transition-all cursor-pointer"
             >
               <option value="pelaksanaan">Tgl Pelaksanaan</option>
               <option value="order">Tgl Order</option>
@@ -533,22 +843,33 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
         )}
       </div>
 
-      {/* Empty State */}
-      {totalItems === 0 && (
+      {/* Initial empty state (when no data loaded at all) */}
+      {targets.length === 0 && (
         <div className="card text-center p-8 flex flex-col items-center justify-center min-h-[200px] border border-slate-100 dark:border-slate-800">
           <AlertCircle className="w-10 h-10 text-slate-400 dark:text-slate-600 mb-3" />
           <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-[280px]">
+          <p className="text-xs text-slate-400 dark:text-slate-550 mt-1 max-w-[280px]">
+            Silakan unggah data Excel atau tambahkan target manual baru.
+          </p>
+        </div>
+      )}
+
+      {/* Filter empty state for mobile (only when targets.length > 0 but filtered to 0) */}
+      {targets.length > 0 && totalItems === 0 && (
+        <div className="card text-center p-8 flex flex-col items-center justify-center min-h-[200px] border border-slate-100 dark:border-slate-800 md:hidden">
+          <AlertCircle className="w-10 h-10 text-slate-400 dark:text-slate-600 mb-3" />
+          <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
+          <p className="text-xs text-slate-400 dark:text-slate-555 mt-1 max-w-[280px]">
             Silakan sesuaikan kata kunci pencarian Anda atau reset filter panel.
           </p>
-          {(searchQuery || selectedSubDlpd !== 'ALL' || selectedRegu !== 'ALL' || selectedDlpd !== 'ALL' || selectedStatus !== 'ALL' || selectedDate !== '') && (
+          {(searchQuery || selectedSubDlpds !== null || selectedRegus !== null || selectedDlpds !== null || selectedStatuses !== null || selectedDate !== '') && (
             <button 
               onClick={() => {
                 setSearchQuery('');
-                setSelectedSubDlpd('ALL');
-                setSelectedRegu('ALL');
-                setSelectedDlpd('ALL');
-                setSelectedStatus('ALL');
+                setSelectedSubDlpds(null);
+                setSelectedRegus(null);
+                setSelectedDlpds(null);
+                setSelectedStatuses(null);
                 setSelectedDate('');
                 setSelectedDateType('pelaksanaan');
               }}
@@ -561,108 +882,194 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
       )}
 
       {/* Mobile-First Layout: Card Grid */}
-      <div className="grid grid-cols-1 gap-3 md:hidden">
-        {paginatedTargets.map((target) => (
-          <div 
-            key={target.No || target.IDPel}
-            onClick={() => onSelectRecord(target)}
-            className="bg-white border border-slate-100 dark:bg-slate-900 dark:border-slate-800/80 p-4.5 rounded-2xl hover:border-slate-200 active:scale-[0.99] transition-all cursor-pointer flex flex-col justify-between gap-3.5 shadow-sm"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex flex-col gap-0.5 flex-1 pr-2">
-                <span className="text-xs font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest leading-none">
-                  {target.IDPel}
-                </span>
-                <span className="text-[15px] font-bold text-slate-800 dark:text-slate-150 leading-tight mt-1 line-clamp-1 font-sans">
-                  {target.NamaPelanggan}
-                </span>
+      {totalItems > 0 && (
+        <div className="grid grid-cols-1 gap-3 md:hidden">
+        {paginatedTargets.map((target) => {
+          const isSelected = selectedIds.has(String(target.IDPel));
+          return (
+            <div 
+              key={target.No || target.IDPel}
+              onClick={() => onSelectRecord(target)}
+              className={`border p-4.5 rounded-2xl active:scale-[0.99] transition-all cursor-pointer flex flex-col justify-between gap-3.5 shadow-sm ${
+                isSelected 
+                  ? 'bg-blue-500/5 border-blue-250 dark:border-blue-900/50 shadow-sm shadow-blue-500/5'
+                  : 'bg-white border-slate-100 dark:bg-slate-900 dark:border-slate-800/80 hover:border-slate-200'
+              }`}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-2 flex-1 pr-2 min-w-0">
+                  <input type="checkbox" checked={isSelected}
+                    onChange={() => toggleSelect(target.IDPel)} 
+                    onClick={e => e.stopPropagation()}
+                    className="rounded border-slate-300 dark:border-slate-700 text-blue-650 focus:ring-blue-500 cursor-pointer w-4 h-4 shrink-0" 
+                  />
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-550 uppercase tracking-widest leading-none">
+                      {target.IDPel}
+                    </span>
+                    <span className="text-sm font-bold text-slate-800 dark:text-slate-150 leading-tight mt-1 truncate font-sans">
+                      {target.NamaPelanggan}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex-shrink-0">
+                  {getStatusBadge(target.StatusProgress)}
+                </div>
               </div>
-              <div className="flex-shrink-0">
-                {getStatusBadge(target.StatusProgress)}
-              </div>
-            </div>
 
-            <div className="flex justify-between items-center border-t border-slate-50 dark:border-slate-800/40 pt-3">
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                  Regu
-                </span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  {target.ReguPetugas || '-'}
-                </span>
+              {/* Specifications row */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-550 dark:text-slate-400 font-medium pt-1">
+                <span>{target.Tarif} / {target.Daya} VA</span>
+                <span className="text-slate-300 dark:text-slate-700">•</span>
+                <span>Gardu: {target.Gardu || target.GARDU || '-'}</span>
               </div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                  DLPD
-                </span>
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 max-w-[80px] truncate" title={target.DLPD || ''}>
-                  {target.DLPD || '-'}
-                </span>
-              </div>
-              <div className="text-[11px] font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1">
-                <Eye className="w-3.5 h-3.5" />
-                Detail
+
+              <div className="flex justify-between items-center border-t border-slate-50 dark:border-slate-800/40 pt-3">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                    Regu
+                  </span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                    {target.ReguPetugas || '-'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                    DLPD
+                  </span>
+                  <span className="text-xs font-bold text-slate-700 dark:text-slate-300 max-w-[80px] truncate" title={target.DLPD || ''}>
+                    {target.DLPD || '-'}
+                  </span>
+                </div>
+                <div className="text-[11px] font-bold text-brand-600 dark:text-brand-400 flex items-center gap-1">
+                  <Eye className="w-3.5 h-3.5" />
+                  Detail
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
+      )}
 
       {/* Desktop Layout: Dense Tabular Grid */}
-      {totalItems > 0 && (
+      {targets.length > 0 && (
         <div className="hidden md:block overflow-hidden bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 rounded-2xl shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/70 border-b border-slate-100 dark:bg-slate-800 dark:border-slate-800/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans">
-                  <th className="py-3.5 px-4">ID Pelanggan</th>
-                  <th className="py-3.5 px-4">Nama Pelanggan</th>
-                  <th className="py-3.5 px-4">Tarif/Daya</th>
-                  <th className="py-3.5 px-4">DLPD</th>
-                  <th className="py-3.5 px-4">Sub DLPD</th>
-                  <th className="py-3.5 px-4">Status Progress</th>
-                  <th className="py-3.5 px-4 text-center">Durasi (m)</th>
-                  <th className="py-3.5 px-4 text-center">Aksi</th>
+                <tr className="bg-slate-50/70 border-b border-slate-100 dark:bg-slate-800 dark:border-slate-800/80 text-[10px] font-bold text-slate-400 uppercase tracking-wider font-sans select-none">
+                  <th className="py-3.5 px-4 w-10">
+                    <input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll}
+                      className="rounded border-slate-300 dark:border-slate-700 text-blue-650 focus:ring-blue-500 cursor-pointer w-4 h-4" />
+                  </th>
+                  <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('IDPel')}>
+                    <div className="flex items-center gap-1">
+                      <span>ID Pelanggan</span>
+                      {getSortIcon('IDPel')}
+                    </div>
+                  </th>
+                  <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('NamaPelanggan')}>
+                    <div className="flex items-center gap-1">
+                      <span>Nama Pelanggan</span>
+                      {getSortIcon('NamaPelanggan')}
+                    </div>
+                  </th>
+                  <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('Daya')}>
+                    <div className="flex items-center gap-1">
+                      <span>Tarif/Daya</span>
+                      {getSortIcon('Daya')}
+                    </div>
+                  </th>
+                  <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('DLPD')}>
+                    <div className="flex items-center gap-1">
+                      <span>DLPD / Sub DLPD</span>
+                      {getSortIcon('DLPD')}
+                    </div>
+                  </th>
+                  <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('StatusProgress')}>
+                    <div className="flex items-center gap-1">
+                      <span>Status Progress</span>
+                      {getSortIcon('StatusProgress')}
+                    </div>
+                  </th>
+                  <th className="py-3.5 px-4 text-center cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('DurasiMenit')}>
+                    <div className="flex items-center justify-center gap-1">
+                      <span>Durasi (m)</span>
+                      {getSortIcon('DurasiMenit')}
+                    </div>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-xs text-slate-700 dark:text-slate-300">
-                {paginatedTargets.map((target) => (
-                  <tr 
-                    key={target.No || target.IDPel}
-                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors"
-                  >
-                    <td className="py-3 px-4 font-semibold font-mono tracking-tight text-slate-800 dark:text-slate-200">
-                      {target.IDPel}
-                    </td>
-                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-white max-w-[150px] truncate font-sans">
-                      {target.NamaPelanggan}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-slate-550 dark:text-slate-400">
-                      {target.Tarif} / {target.Daya} VA
-                    </td>
-                    <td className="py-3 px-4 max-w-[120px] truncate" title={target.DLPD || ''}>
-                      {target.DLPD || '-'}
-                    </td>
-                    <td className="py-3 px-4 truncate max-w-[150px]" title={target.SubDLPD || ''}>
-                      {target.SubDLPD || '-'}
-                    </td>
-                    <td className="py-3 px-4">
-                      {getStatusBadge(target.StatusProgress)}
-                    </td>
-                    <td className="py-3 px-4 text-center font-mono font-medium">
-                      {target.DurasiMenit || 0}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <button 
-                        onClick={() => onSelectRecord(target)}
-                        className="inline-flex items-center gap-1.5 py-1.5 px-3 bg-slate-50 hover:bg-slate-100 active:scale-95 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-lg text-brand-600 dark:text-brand-400 font-semibold cursor-pointer transition-all"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                        Detail
-                      </button>
+                {totalItems === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-16 px-4 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-3">
+                          <AlertCircle className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+                        </div>
+                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
+                        <p className="text-xs text-slate-400 mt-1.5 max-w-xs">Coba ubah kata kunci pencarian atau hapus filter kolom/tabel yang aktif.</p>
+                        {(searchQuery || selectedSubDlpds !== null || selectedRegus !== null || selectedDlpds !== null || selectedStatuses !== null || selectedDate !== '') && (
+                          <button onClick={() => {
+                            setSearchQuery('');
+                            setSelectedSubDlpds(null);
+                            setSelectedRegus(null);
+                            setSelectedDlpds(null);
+                            setSelectedStatuses(null);
+                            setSelectedDate('');
+                            setSelectedDateType('pelaksanaan');
+                          }}
+                            className="mt-4 px-4 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
+                            Reset Semua Filter
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  paginatedTargets.map((target) => {
+                    const isSelected = selectedIds.has(String(target.IDPel));
+                    return (
+                      <tr 
+                        key={target.No || target.IDPel}
+                        onClick={() => onSelectRecord(target)}
+                        className={`hover:bg-slate-50/50 dark:hover:bg-slate-800/50 cursor-pointer transition-colors ${
+                          isSelected ? 'bg-blue-500/5 dark:bg-blue-500/10' : ''
+                        }`}
+                      >
+                        <td className="py-3 px-4">
+                          <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(target.IDPel)} onClick={e => e.stopPropagation()}
+                            className="rounded border-slate-300 dark:border-slate-700 text-blue-650 focus:ring-blue-500 cursor-pointer w-4 h-4" />
+                        </td>
+                        <td className="py-3 px-4 font-semibold font-mono tracking-tight text-slate-800 dark:text-slate-200">
+                          {target.IDPel}
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-900 dark:text-white max-w-[150px] truncate font-sans">
+                          {target.NamaPelanggan}
+                        </td>
+                        <td className="py-3 px-4 font-medium text-slate-550 dark:text-slate-400">
+                          {target.Tarif} / {target.Daya} VA
+                        </td>
+                        <td className="py-3 px-4 max-w-[160px]">
+                          <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate" title={target.DLPD || ''}>
+                            {target.DLPD || '—'}
+                          </div>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate" title={target.SubDLPD || ''}>
+                            {target.SubDLPD || '—'}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          {getStatusBadge(target.StatusProgress)}
+                        </td>
+                        <td className="py-3 px-4 text-center font-mono font-medium">
+                          {target.DurasiMenit || 0}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -933,6 +1340,27 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
           </div>
         </div>,
         document.body
+      )}
+
+      {/* Sticky Mobile Multi-Select Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-4 right-4 z-40 md:hidden bg-slate-900/90 dark:bg-slate-950/95 backdrop-blur-md border border-slate-800 text-white rounded-2xl p-4 shadow-xl flex items-center justify-between animate-fade-in-up">
+          <div className="flex flex-col">
+            <span className="text-xs font-semibold">{selectedIds.size} terpilih</span>
+            <span className="text-[10px] text-slate-400">Aksi massal aktif</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleExportSelected}
+              className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer">
+              <Download className="w-3.5 h-3.5" /> Ekspor
+            </button>
+            <button onClick={() => setSelectedIds(new Set())}
+              className="p-2 hover:bg-slate-800 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer"
+              title="Batal seleksi">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
