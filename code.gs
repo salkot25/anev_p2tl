@@ -12,7 +12,7 @@ function setupTables() {
   bankToSheet.clear();
   var bankToHeaders = [
     "IDPEL", "NAMA", "ALAMAT", "TARIF", "DAYA", "GARDU", "TIANG", 
-    "UNIT", "JAM NYALA", "JENIS TO", "LATITUDE", "LONGITUDE", "SUBDLPD"
+    "UNIT", "JAM NYALA", "JENIS TO", "LATITUDE", "LONGITUDE", "SUBDLPD", "LAST UPDATED"
   ];
   bankToSheet.getRange(1, 1, 1, bankToHeaders.length).setValues([bankToHeaders]);
   bankToSheet.getRange(1, 1, 1, bankToHeaders.length).setFontWeight("bold").setBackground("#cfe2f3");
@@ -27,7 +27,7 @@ function setupTables() {
     "No", "IDPel", "Nama Pelanggan", "Tarif", "Daya", "Gardu", "Tiang", 
     "ULP", "UP3", "DLPD", "Sub DLPD", "Tanggal Upload", "Regu Petugas", 
     "Tanggal Order", "Tanggal Pelaksanaan", "Status Progress", "Durasi (Menit)", 
-    "Sumber", "bank_id"
+    "Sumber", "bank_id", "LAST UPDATED"
   ];
   dataToSheet.getRange(1, 1, 1, dataToHeaders.length).setValues([dataToHeaders]);
   dataToSheet.getRange(1, 1, 1, dataToHeaders.length).setFontWeight("bold").setBackground("#d9ead3");
@@ -721,7 +721,7 @@ function doPost(e) {
     if (!sheet) sheet = ss.insertSheet("bank to");
     writeSheetData(sheet, postData.data, [
       "IDPEL", "NAMA", "ALAMAT", "TARIF", "DAYA", "GARDU", "TIANG", 
-      "UNIT", "JAM NYALA", "JENIS TO", "LATITUDE", "LONGITUDE", "SUBDLPD"
+      "UNIT", "JAM NYALA", "JENIS TO", "LATITUDE", "LONGITUDE", "SUBDLPD", "LAST UPDATED"
     ]);
     return jsonResponse({ status: "success" });
   }
@@ -733,7 +733,7 @@ function doPost(e) {
       "No", "IDPel", "Nama Pelanggan", "Tarif", "Daya", "Gardu", "Tiang", 
       "ULP", "UP3", "DLPD", "Sub DLPD", "Tanggal Upload", "Regu Petugas", 
       "Tanggal Order", "Tanggal Pelaksanaan", "Status Progress", "Durasi (Menit)", 
-      "Sumber", "bank_id"
+      "Sumber", "bank_id", "LAST UPDATED"
     ]);
     return jsonResponse({ status: "success" });
   }

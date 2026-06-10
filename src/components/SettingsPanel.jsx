@@ -14,6 +14,8 @@ export default function SettingsPanel({
   const [testMessage, setTestMessage] = useState('');
   const [syncingTargets, setSyncingTargets] = useState(false);
   const [syncingBankTo, setSyncingBankTo] = useState(false);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   
   // Estimate local database size in bytes
   const localDatabaseSize = useMemo(() => {
@@ -170,6 +172,19 @@ export default function SettingsPanel({
     }
   };
 
+  const handleSyncAll = async () => {
+    if (!propBackendUrl || !onSyncAll) return;
+    setSyncingAll(true);
+    try {
+      await onSyncAll(propBackendUrl);
+      alert('Sinkronisasi dua arah (sesuai waktu terbaru) selesai dengan sukses!');
+    } catch (err) {
+      alert('Gagal menyelaraskan database: ' + err.message);
+    } finally {
+      setSyncingAll(false);
+    }
+  };
+
   return (
     <div className="w-full flex flex-col gap-6 animate-fade-in-up">
       
@@ -281,36 +296,62 @@ export default function SettingsPanel({
 
             {propBackendUrl ? (
               <>
-                {(targets.length > 0 || bankToTargets.length > 0) && (
-                  <div className="p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-400">
-                    <AlertTriangle className="w-4.5 h-4.5 text-amber-500 shrink-0 mt-0.5" />
-                    <div>
-                      <p className="font-bold">Perhatian Upload Overwrite</p>
-                      <p className="mt-0.5 leading-relaxed font-medium">Aksi di bawah ini akan mengirim seluruh database lokal yang tersimpan di browser Anda saat ini ke Google Spreadsheet dan **menimpa (overwrite)** baris yang ada di spreadsheet.</p>
-                    </div>
-                  </div>
-                )}
+                <div className="flex flex-col gap-2.5">
+                  <button 
+                    onClick={handleSyncAll}
+                    disabled={syncingAll}
+                    className="btn-primary w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${syncingAll ? 'animate-spin' : ''}`} />
+                    Mulai Sinkronisasi Dua Arah (Sesuai Waktu Terbaru)
+                  </button>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic -mt-1 text-center">
+                    *Merekomendasikan aksi ini untuk menghindari data tertimpa jika ada pembaruan dari perangkat lain.
+                  </p>
+                </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
-                  {targets.length > 0 && (
-                    <button 
-                      onClick={handleSyncTargets}
-                      disabled={syncingTargets}
-                      className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${syncingTargets ? 'animate-spin' : ''}`} />
-                      Upload Target ({targets.length} Baris)
-                    </button>
-                  )}
-                  {bankToTargets.length > 0 && (
-                    <button 
-                      onClick={handleSyncBankTo}
-                      disabled={syncingBankTo}
-                      className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
-                    >
-                      <RefreshCw className={`w-3.5 h-3.5 ${syncingBankTo ? 'animate-spin' : ''}`} />
-                      Upload Bank TO ({bankToTargets.length} Baris)
-                    </button>
+                <div className="mt-2 border-t border-slate-100 dark:border-slate-800/80 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 font-bold flex items-center gap-1 cursor-pointer transition-colors focus:outline-none select-none"
+                  >
+                    {showAdvanced ? '▼ Sembunyikan Opsi Overwrite Manual' : '► Tampilkan Opsi Overwrite Manual (Tindakan Bahaya)'}
+                  </button>
+
+                  {showAdvanced && (targets.length > 0 || bankToTargets.length > 0) && (
+                    <div className="flex flex-col gap-4 mt-3 animate-fade-in">
+                      <div className="p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-400">
+                        <AlertTriangle className="w-4.5 h-4.5 text-amber-500 shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold">Aksi Overwrite Cadangan (Upload Manual)</p>
+                          <p className="mt-0.5 leading-relaxed font-medium">Gunakan tombol di bawah ini jika Anda ingin memaksa database cloud diganti dengan seluruh baris lokal Anda saat ini.</p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {targets.length > 0 && (
+                          <button 
+                            onClick={handleSyncTargets}
+                            disabled={syncingTargets}
+                            className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${syncingTargets ? 'animate-spin' : ''}`} />
+                            Upload Target ({targets.length} Baris)
+                          </button>
+                        )}
+                        {bankToTargets.length > 0 && (
+                          <button 
+                            onClick={handleSyncBankTo}
+                            disabled={syncingBankTo}
+                            className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
+                          >
+                            <RefreshCw className={`w-3.5 h-3.5 ${syncingBankTo ? 'animate-spin' : ''}`} />
+                            Upload Bank TO ({bankToTargets.length} Baris)
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   )}
                 </div>
               </>
