@@ -1,0 +1,1 @@
+if('serviceWorker' in navigator) {window.addEventListener('load', () => {navigator.serviceWorker.register('/anev_p2tl/sw.js', { scope: '/anev_p2tl/' })})}
