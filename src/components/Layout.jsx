@@ -135,7 +135,7 @@ export default function Layout({
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 cursor-pointer ${
                 currentTab === tab.id
                   ? "bg-blue-600 text-white font-semibold shadow-lg shadow-blue-600/20"
-                  : "text-slate-450 hover:bg-white/5 hover:text-white"
+                  : "text-slate-400 hover:bg-white/5 hover:text-white"
               }`}
             >
               {tab.icon}
@@ -248,7 +248,7 @@ export default function Layout({
                   className={`p-1 mb-0.5 transition-transform duration-200 ${
                     isActive 
                       ? "scale-110 text-blue-600 dark:text-blue-400 font-bold" 
-                      : "text-slate-450 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                      : "text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                   }`}
                 >
                   {tab.icon}
