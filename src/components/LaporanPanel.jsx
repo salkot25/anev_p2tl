@@ -473,12 +473,12 @@ Terima kasih`;
       <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl px-5 py-4 shadow-sm">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
           {/* Report Type */}
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-1.5 w-full sm:w-64">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jenis Laporan</label>
-            <div className="flex gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl h-8">
+            <div className="flex w-full gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl h-8">
               {['rencana', 'realisasi'].map(t => (
                 <button key={t} type="button" onClick={() => setReportType(t)}
-                  className={`px-4 text-xs font-bold rounded-[10px] transition-all capitalize ${
+                  className={`flex-1 text-xs font-bold rounded-[10px] transition-all capitalize ${
                     reportType === t
                       ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
                       : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'

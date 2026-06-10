@@ -630,9 +630,9 @@ export default function App() {
 
   const menuTabs = [
     { id: 'dashboard', label: 'Dashboard' },
-    { id: 'bankto', label: 'Bank TO' },
     { id: 'laporan', label: 'Laporan' },
-    { id: 'list', label: 'Data Target' },
+    { id: 'bankto', label: 'Bank TO' },
+    { id: 'list', label: 'Daftar TO' },
     { id: 'pengaturan', label: 'Pengaturan' }
   ];
 

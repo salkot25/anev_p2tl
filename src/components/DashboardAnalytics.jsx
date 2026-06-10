@@ -539,9 +539,22 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                                     const container = e.currentTarget.closest('.relative');
                                     if (container) {
                                       const containerRect = container.getBoundingClientRect();
+                                      const x = (rect.left + rect.width / 2) - containerRect.left;
+                                      const y = rect.top - containerRect.top;
+                                      
+                                      // Determine boundary-aware alignment
+                                      let align = 'center';
+                                      if (x < 110) {
+                                        align = 'left';
+                                      } else if (containerRect.width - x < 110) {
+                                        align = 'right';
+                                      }
+
                                       setSegmentTooltipPos({
-                                        x: (rect.left + rect.width / 2) - containerRect.left,
-                                        y: rect.top - containerRect.top
+                                        x,
+                                        y,
+                                        align,
+                                        containerWidth: containerRect.width
                                       });
                                     }
                                     setHoveredSegment(seg);
@@ -581,8 +594,21 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
                       {hoveredSegment !== null && (
                         <div
-                          className="absolute bg-slate-900/95 dark:bg-slate-950/95 text-slate-50 border border-slate-700/50 backdrop-blur-md rounded-xl p-3 shadow-xl pointer-events-none text-[11px] font-semibold space-y-1.5 z-10 transition-all duration-150 -translate-x-1/2"
-                          style={{ left: segmentTooltipPos.x, top: segmentTooltipPos.y - 105 }}
+                          className={`absolute bg-slate-900/95 dark:bg-slate-950/95 text-slate-50 border border-slate-700/50 backdrop-blur-md rounded-xl p-3 shadow-xl pointer-events-none text-[11px] font-semibold space-y-1.5 z-20 transition-all duration-150 min-w-[190px] whitespace-nowrap ${
+                            segmentTooltipPos.align === 'left'
+                              ? 'translate-x-0'
+                              : segmentTooltipPos.align === 'right'
+                                ? '-translate-x-full'
+                                : '-translate-x-1/2'
+                          }`}
+                          style={{
+                            left: segmentTooltipPos.align === 'left'
+                              ? '16px'
+                              : segmentTooltipPos.align === 'right'
+                                ? `${segmentTooltipPos.containerWidth - 16}px`
+                                : `${segmentTooltipPos.x}px`,
+                            top: `${segmentTooltipPos.y - 120}px`
+                          }}
                         >
                           <div className="font-extrabold border-b border-slate-800 pb-1 mb-1 flex items-center gap-1.5">
                             <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: hoveredSegment.color }} />

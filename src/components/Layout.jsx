@@ -216,50 +216,59 @@ export default function Layout({
 
       {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-around items-end px-2 py-2.5 z-30 pb-safe mobile-bottom-nav transition-all duration-300 border-t border-slate-200/30 dark:border-slate-800/40 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] overflow-visible">
-        {tabs.map((tab) => {
-          const isActive = currentTab === tab.id;
-          const isLaporan = tab.id === 'laporan';
-
-          if (isLaporan) {
-            // Empty placeholder to maintain grid alignment (adjusted for larger floating button)
-            return (
-              <div
-                key={tab.id}
-                className="w-[72px] h-[44px] shrink-0"
-              />
-            );
+        {(() => {
+          // Keep 'laporan' in the exact center (index 2) of the mobile bottom nav for symmetry
+          const mobileTabs = [...tabs];
+          const laporanIdx = mobileTabs.findIndex(t => t.id === 'laporan');
+          if (laporanIdx !== -1 && mobileTabs.length === 5) {
+            const [laporanTab] = mobileTabs.splice(laporanIdx, 1);
+            mobileTabs.splice(2, 0, laporanTab);
           }
+          return mobileTabs.map((tab) => {
+            const isActive = currentTab === tab.id;
+            const isLaporan = tab.id === 'laporan';
 
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setCurrentTab(tab.id)}
-              className="flex flex-col items-center justify-end py-1.5 px-2 rounded-2xl min-w-[64px] transition-all duration-200 shrink-0 cursor-pointer outline-none active:scale-95"
-            >
-              <div
-                className={`p-1 mb-0.5 transition-transform duration-200 ${
-                  isActive 
-                    ? "scale-110 text-blue-600 dark:text-blue-400 font-bold" 
-                    : "text-slate-450 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                }`}
+            if (isLaporan) {
+              // Empty placeholder to maintain grid alignment (adjusted for larger floating button)
+              return (
+                <div
+                  key={tab.id}
+                  className="w-[72px] h-[44px] shrink-0"
+                />
+              );
+            }
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setCurrentTab(tab.id)}
+                className="flex flex-col items-center justify-end py-1.5 px-2 rounded-2xl min-w-[64px] transition-all duration-200 shrink-0 cursor-pointer outline-none active:scale-95"
               >
-                {tab.icon}
-              </div>
-              <span
-                className={`text-[9.5px] font-semibold transition-colors duration-200 ${
-                  isActive 
-                    ? "font-bold text-blue-600 dark:text-blue-400" 
-                    : "text-slate-500 dark:text-slate-400"
-                }`}
-              >
-                {tab.label}
-              </span>
-              {isActive && (
-                <div className="w-5 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full mt-1.5 animate-fade-in"></div>
-              )}
-            </button>
-          );
-        })}
+                <div
+                  className={`p-1 mb-0.5 transition-transform duration-200 ${
+                    isActive 
+                      ? "scale-110 text-blue-600 dark:text-blue-400 font-bold" 
+                      : "text-slate-450 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+                >
+                  {tab.icon}
+                </div>
+                <span
+                  className={`text-[9.5px] font-semibold transition-colors duration-200 ${
+                    isActive 
+                      ? "font-bold text-blue-600 dark:text-blue-400" 
+                      : "text-slate-500 dark:text-slate-400"
+                  }`}
+                >
+                  {tab.label}
+                </span>
+                {isActive && (
+                  <div className="w-5 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full mt-1.5 animate-fade-in"></div>
+                )}
+              </button>
+            );
+          });
+        })()}
       </div>
 
       {/* Floating Laporan Central Button (Sibling to avoid backdrop-filter clipping) */}
