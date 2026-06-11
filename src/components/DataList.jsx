@@ -425,12 +425,36 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
 
   // Helper to map and compute matches per target row
   const targetMatches = useMemo(() => {
+    // Parse search query to support multiple entries (separated by commas, semicolons, newlines, or spaces for numeric IDPel/IDPELs)
+    const trimmedQuery = searchQuery.trim();
+    let queryItems = [];
+    if (trimmedQuery) {
+      if (trimmedQuery.includes(',') || trimmedQuery.includes(';') || trimmedQuery.includes('\n')) {
+        queryItems = trimmedQuery.split(/[,;\n]+/).map(item => item.trim()).filter(Boolean);
+      } else {
+        const tokens = trimmedQuery.split(/\s+/).filter(Boolean);
+        const allNumeric = tokens.length > 0 && tokens.every(token => /^\d+$/.test(token));
+        if (allNumeric) {
+          queryItems = tokens;
+        } else {
+          queryItems = [trimmedQuery];
+        }
+      }
+    }
+
     return targets.map(t => {
-      const matchesSearch = 
-        String(t.IDPel || '').includes(searchQuery) ||
-        String(t.NamaPelanggan || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        String(t.Gardu || t.GARDU || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        String(t.Alamat || t.ALAMAT || '').toLowerCase().includes(searchQuery.toLowerCase());
+      let matchesSearch = true;
+      if (queryItems.length > 0) {
+        matchesSearch = queryItems.some(item => {
+          const lowerItem = item.toLowerCase();
+          return (
+            String(t.IDPel || '').includes(item) ||
+            String(t.NamaPelanggan || '').toLowerCase().includes(lowerItem) ||
+            String(t.Gardu || t.GARDU || '').toLowerCase().includes(lowerItem) ||
+            String(t.Alamat || t.ALAMAT || '').toLowerCase().includes(lowerItem)
+          );
+        });
+      }
       
       const subVal = t.SubDLPD ? String(t.SubDLPD).trim() : '';
       const matchesSubDlpd = selectedSubDlpds === null || selectedSubDlpds.includes(subVal);

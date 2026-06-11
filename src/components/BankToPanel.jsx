@@ -156,6 +156,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   const [selectedJenises, setSelectedJenises] = useState(null);
   const [selectedSubs, setSelectedSubs] = useState(null);
   const [selectedGardus, setSelectedGardus] = useState(null);
+  const [selectedInspectionStatus, setSelectedInspectionStatus] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
@@ -167,8 +168,8 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   
   const [itemsPerPage, setItemsPerPage] = useState(() => Number(localStorage.getItem('p2tl_bankto_items_per_page')) || 10);
 
-  const [sortField, setSortField] = useState(null);
-  const [sortDirection, setSortDirection] = useState('NONE');
+  const [sortField, setSortField] = useState('GARDU');
+  const [sortDirection, setSortDirection] = useState('ASC');
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -396,15 +397,39 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
       setCurrentPage(1);
     }, 0);
     return () => clearTimeout(timer);
-  }, [searchQuery, selectedUnits, selectedJenises, selectedSubs, selectedGardus]);
+  }, [searchQuery, selectedUnits, selectedJenises, selectedSubs, selectedGardus, selectedInspectionStatus]);
 
   const filteredTargets = useMemo(() => {
+    // Parse search query to support multiple entries (separated by commas, semicolons, newlines, or spaces for numeric IDPELs)
+    const trimmedQuery = searchQuery.trim();
+    let queryItems = [];
+    if (trimmedQuery) {
+      if (trimmedQuery.includes(',') || trimmedQuery.includes(';') || trimmedQuery.includes('\n')) {
+        queryItems = trimmedQuery.split(/[,;\n]+/).map(item => item.trim()).filter(Boolean);
+      } else {
+        const tokens = trimmedQuery.split(/\s+/).filter(Boolean);
+        const allNumeric = tokens.length > 0 && tokens.every(token => /^\d+$/.test(token));
+        if (allNumeric) {
+          queryItems = tokens;
+        } else {
+          queryItems = [trimmedQuery];
+        }
+      }
+    }
+
     return targets.filter(t => {
-      const matchesSearch = 
-        String(t.IDPEL || '').includes(searchQuery) ||
-        String(t.NAMA || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        String(t.ALAMAT || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        String(t.GARDU || '').toLowerCase().includes(searchQuery.toLowerCase());
+      let matchesSearch = true;
+      if (queryItems.length > 0) {
+        matchesSearch = queryItems.some(item => {
+          const lowerItem = item.toLowerCase();
+          return (
+            String(t.IDPEL || '').includes(item) ||
+            String(t.NAMA || '').toLowerCase().includes(lowerItem) ||
+            String(t.ALAMAT || '').toLowerCase().includes(lowerItem) ||
+            String(t.GARDU || '').toLowerCase().includes(lowerItem)
+          );
+        });
+      }
       
       const unitVal = t.UNIT ? String(t.UNIT).trim() : '';
       const matchesUnit = selectedUnits === null || selectedUnits.includes(unitVal);
@@ -417,10 +442,21 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
       
       const prefix = t.GARDU ? String(t.GARDU).trim().substring(0, 7) : '';
       const matchesGardu = selectedGardus === null || selectedGardus.includes(prefix);
+
+      // Check inspection status
+      const isInspected = !!getInspectionHistory(t.IDPEL);
+      let matchesInspection = true;
+      if (selectedInspectionStatus !== null) {
+        matchesInspection = selectedInspectionStatus.some(status => {
+          if (status === 'Sudah Diperiksa') return isInspected;
+          if (status === 'Belum Diperiksa') return !isInspected;
+          return true;
+        });
+      }
       
-      return matchesSearch && matchesUnit && matchesJenis && matchesSub && matchesGardu;
+      return matchesSearch && matchesUnit && matchesJenis && matchesSub && matchesGardu && matchesInspection;
     });
-  }, [targets, searchQuery, selectedUnits, selectedJenises, selectedSubs, selectedGardus]);
+  }, [targets, searchQuery, selectedUnits, selectedJenises, selectedSubs, selectedGardus, selectedInspectionStatus, getInspectionHistory]);
 
   // sortedTargets useMemo
   const sortedTargets = useMemo(() => {
@@ -652,7 +688,8 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     selectedUnits !== null,
     selectedJenises !== null,
     selectedSubs !== null,
-    selectedGardus !== null
+    selectedGardus !== null,
+    selectedInspectionStatus !== null
   ].filter(Boolean).length;
 
   return (
@@ -765,7 +802,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
 
           {/* Accordion Filter Panel */}
           {showFilters && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 animate-fade-in">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 animate-fade-in">
               <MultiSelectDropdown 
                 label="Unit Pelayanan" 
                 options={filterOptions.units} 
@@ -793,6 +830,13 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                 selectedValues={selectedGardus} 
                 onChange={setSelectedGardus} 
                 allLabel="Semua Gardu" 
+              />
+              <MultiSelectDropdown 
+                label="Status Periksa" 
+                options={['Sudah Diperiksa', 'Belum Diperiksa']} 
+                selectedValues={selectedInspectionStatus} 
+                onChange={setSelectedInspectionStatus} 
+                allLabel="Semua Status" 
               />
             </div>
           )}
@@ -842,6 +886,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                   setSelectedJenises(null);
                   setSelectedSubs(null);
                   setSelectedGardus(null);
+                  setSelectedInspectionStatus(null);
                 }}
                   className="mt-4 px-4 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
                   Reset Filter
@@ -930,7 +975,6 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                       <input type="checkbox" checked={isAllSelected} onChange={toggleSelectAll}
                         className="rounded border-slate-300 dark:border-slate-700 text-blue-650 focus:ring-blue-500 cursor-pointer w-4 h-4" />
                     </th>
-                    <th className="py-3.5 px-3 w-10 text-center">#</th>
                     <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('IDPEL')}>
                       <div className="flex items-center gap-1">
                         <span>IDPEL</span>
@@ -943,7 +987,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                         {getSortIcon('NAMA')}
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors" onClick={() => handleSort('ALAMAT')}>
+                    <th className="py-3.5 px-4 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300 transition-colors w-[260px]" onClick={() => handleSort('ALAMAT')}>
                       <div className="flex items-center gap-1">
                         <span>Alamat</span>
                         {getSortIcon('ALAMAT')}
@@ -967,16 +1011,15 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                         {getSortIcon('JENIS_TO')}
                       </div>
                     </th>
-                    <th className="py-3.5 px-4 text-center w-12">Peta</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-xs text-slate-750 dark:text-slate-300">
                   {totalItems === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-16 px-4 text-center">
+                      <td colSpan={7} className="py-16 px-4 text-center">
                         <div className="flex flex-col items-center justify-center">
                           <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-3">
-                            <AlertCircle className="w-6 h-6 text-slate-400 dark:text-slate-500" />
+                            <AlertCircle className="w-6 h-6 text-slate-400 dark:text-slate-550" />
                           </div>
                           <p className="text-sm font-bold text-slate-700 dark:text-slate-300">Data Tidak Ditemukan</p>
                           <p className="text-xs text-slate-400 mt-1.5 max-w-xs">Coba ubah kata kunci pencarian atau hapus filter kolom/tabel yang aktif.</p>
@@ -986,6 +1029,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                               setSelectedJenises(null);
                               setSelectedSubs(null);
                               setSelectedGardus(null);
+                              setSelectedInspectionStatus(null);
                             }}
                               className="mt-4 px-4 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/40 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-950/20 cursor-pointer transition-all">
                               Reset Semua Filter
@@ -995,7 +1039,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                       </td>
                     </tr>
                   ) : (
-                    paginatedTargets.map((item, idx) => {
+                    paginatedTargets.map((item) => {
                     const history = getInspectionHistory(item.IDPEL);
                     const isSelected = selectedIds.has(String(item.IDPEL));
                     const isHighPower = parseInt(item.DAYA, 10) >= 6600;
@@ -1006,9 +1050,6 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                         <td className="py-3 px-4">
                           <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(item.IDPEL)} onClick={e => e.stopPropagation()}
                             className="rounded border-slate-300 dark:border-slate-700 text-blue-650 focus:ring-blue-500 cursor-pointer w-4 h-4" />
-                        </td>
-                        <td className="py-3 px-3 text-center font-mono text-slate-300 dark:text-slate-600 text-[11px]">
-                          {idx + 1 + (currentPage - 1) * itemsPerPage}
                         </td>
                         <td className="py-3 px-4">
                           <span className="font-bold font-mono text-slate-700 dark:text-slate-300 text-[11px]">{item.IDPEL}</span>
@@ -1023,8 +1064,10 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                             )}
                           </div>
                         </td>
-                        <td className="py-3 px-4 max-w-[180px] truncate text-slate-400 dark:text-slate-500" title={item.ALAMAT || '-'}>
-                          {item.ALAMAT || <span className="text-slate-300 dark:text-slate-700">—</span>}
+                        <td className="py-3 px-4">
+                          <div className="max-w-[260px] line-clamp-2 whitespace-normal text-slate-400 dark:text-slate-500 leading-normal" title={item.ALAMAT || '-'}>
+                            {item.ALAMAT || <span className="text-slate-300 dark:text-slate-700">—</span>}
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex flex-col gap-0.5">
@@ -1037,24 +1080,13 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                           <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate" title={item.TIANG}>{item.TIANG || '—'}</div>
                         </td>
                         <td className="py-3 px-4 max-w-[160px]">
-                          <div className="mb-1">
-                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/10 dark:border-blue-900/30 uppercase whitespace-nowrap">
-                              {item.JENIS_TO || '—'}
-                            </span>
+                          <div className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate" title={item.JENIS_TO || ''}>
+                            {item.JENIS_TO || '—'}
                           </div>
-                          <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate" title={item.SUBDLPD || ''}>
+                          <div className="text-[10px] text-slate-400 dark:text-slate-555 truncate" title={item.SUBDLPD || ''}>
                             {item.SUBDLPD || '—'}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-center">
-                          <button onClick={e => openMap(item.LATITUDE, item.LONGITUDE, e)}
-                            className={`p-2 rounded-lg transition-colors ${item.LATITUDE && item.LONGITUDE ? 'text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/25' : 'text-slate-200 dark:text-slate-700 cursor-not-allowed'}`}
-                            title={item.LATITUDE && item.LONGITUDE ? 'Buka Google Maps' : 'Koordinat tidak tersedia'}
-                            disabled={!item.LATITUDE || !item.LONGITUDE}>
-                            <MapPin className="w-4 h-4" />
-                          </button>
-                        </td>
-
                       </tr>
                     );
                   }))}
