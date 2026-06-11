@@ -96,6 +96,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
       const dateParts = rawDate.split('-');
       const year = parseInt(dateParts[0], 10) || new Date().getFullYear();
       const month = parseInt(dateParts[1], 10) || (new Date().getMonth() + 1);
+      const day = parseInt(dateParts[2], 10) || new Date().getDate();
 
       // Read active working days checklist setting
       let activeWorkingDaysChecklist = { monFri: true, sat: true, sun: true };
@@ -135,7 +136,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
       }
 
       // Helper for local calculations when offline or fetch fails
-      const calculateTargetsLocally = (yr, mo, activeWD) => {
+      const calculateTargetsLocally = (yr, mo, dy, activeWD) => {
         let monthlyTargetsArray = Array(12).fill(0);
         const cachedTargets = localStorage.getItem(`p2tl_monthly_targets_cache_${yr}`);
         if (cachedTargets) {
@@ -168,15 +169,41 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
           }
         }
 
-        const totalTargetYear = monthlyTargetsArray.reduce((s, v) => s + v, 0);
-        const sisaTarget = Math.max(0, totalTargetYear - totalRealYear);
-        
+        let targetPeriod;
         let remainingWorkingDays = 0;
-        for (let m = mo; m < 12; m++) {
-          remainingWorkingDays += getWorkingDaysCount(yr, m, activeWD);
+
+        if (mo <= 6) {
+          // Semester 1 (Jan-Jun)
+          targetPeriod = monthlyTargetsArray.slice(0, 6).reduce((s, v) => s + v, 0);
+          
+          // Sisa Hari Kerja s.d. Juni
+          const totalDaysInCurrentMonth = new Date(yr, mo, 0).getDate();
+          for (let d = dy; d <= totalDaysInCurrentMonth; d++) {
+            if (isDateWorkingDay(yr, mo - 1, d, activeWD)) {
+              remainingWorkingDays++;
+            }
+          }
+          for (let m = mo; m < 6; m++) {
+            remainingWorkingDays += getWorkingDaysCount(yr, m, activeWD);
+          }
+        } else {
+          // Semester 2 (Jul-Des)
+          targetPeriod = monthlyTargetsArray.reduce((s, v) => s + v, 0);
+          
+          // Sisa Hari Kerja s.d. Desember
+          const totalDaysInCurrentMonth = new Date(yr, mo, 0).getDate();
+          for (let d = dy; d <= totalDaysInCurrentMonth; d++) {
+            if (isDateWorkingDay(yr, mo - 1, d, activeWD)) {
+              remainingWorkingDays++;
+            }
+          }
+          for (let m = mo; m < 12; m++) {
+            remainingWorkingDays += getWorkingDaysCount(yr, m, activeWD);
+          }
         }
+
         remainingWorkingDays = Math.max(1, remainingWorkingDays);
-        
+        const sisaTarget = Math.max(0, targetPeriod - totalRealYear);
         const calculatedTargetHarian = Math.round(sisaTarget / remainingWorkingDays);
         const calculatedTargetKumulatif = monthlyTargetsArray.slice(0, mo).reduce((sum, val) => sum + val, 0);
         
@@ -187,7 +214,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
       // 2. Fetch fresh data from backend
       const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
       if (!url) {
-        calculateTargetsLocally(year, month, activeWorkingDaysChecklist);
+        calculateTargetsLocally(year, month, day, activeWorkingDaysChecklist);
         return;
       }
 
@@ -233,16 +260,46 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
               setRealisasiKumulatifKwh(formatKwh(realData.realisasiKumulatifKwh));
             }
             
-            // Calculate targets exactly matching the dashboard projections logic
-            const totalTargetYear = monthlyTargetsArray.reduce((s, v) => s + v, 0);
-            const totalRealYear = execSummaryData.totalKwhYear || 0;
-            const sisaTarget = Math.max(0, totalTargetYear - totalRealYear);
-            
+            // Calculate targets matching semester / cumulative projections logic
+            let targetPeriod = 0;
             let remainingWorkingDays = 0;
-            for (let m = month; m < 12; m++) {
-              remainingWorkingDays += getWorkingDaysCount(year, m, activeWorkingDaysChecklist);
+
+            if (month <= 6) {
+              // Semester 1
+              targetPeriod = monthlyTargetsArray.slice(0, 6).reduce((s, v) => s + v, 0);
+              
+              // Count remaining working days in current month
+              const totalDaysInCurrentMonth = new Date(year, month, 0).getDate();
+              for (let d = day; d <= totalDaysInCurrentMonth; d++) {
+                if (isDateWorkingDay(year, month - 1, d, activeWorkingDaysChecklist)) {
+                  remainingWorkingDays++;
+                }
+              }
+              // Add full working days for subsequent months in Semester 1 (from month to index 5)
+              for (let m = month; m < 6; m++) {
+                remainingWorkingDays += getWorkingDaysCount(year, m, activeWorkingDaysChecklist);
+              }
+            } else {
+              // Semester 2
+              targetPeriod = monthlyTargetsArray.reduce((s, v) => s + v, 0);
+              
+              // Count remaining working days in current month
+              const totalDaysInCurrentMonth = new Date(year, month, 0).getDate();
+              for (let d = day; d <= totalDaysInCurrentMonth; d++) {
+                if (isDateWorkingDay(year, month - 1, d, activeWorkingDaysChecklist)) {
+                  remainingWorkingDays++;
+                }
+              }
+              // Add full working days for subsequent months in the year (from month to index 11)
+              for (let m = month; m < 12; m++) {
+                remainingWorkingDays += getWorkingDaysCount(year, m, activeWorkingDaysChecklist);
+              }
             }
+
             remainingWorkingDays = Math.max(1, remainingWorkingDays);
+            
+            const totalRealYear = execSummaryData.totalKwhYear || 0;
+            const sisaTarget = Math.max(0, targetPeriod - totalRealYear);
             
             const calculatedTargetHarian = Math.round(sisaTarget / remainingWorkingDays);
             const calculatedTargetKumulatif = monthlyTargetsArray.slice(0, month).reduce((sum, val) => sum + val, 0);
@@ -264,7 +321,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
         }
       } catch (err) {
         console.error('Error fetching dashboard data for report date:', err);
-        calculateTargetsLocally(year, month, activeWorkingDaysChecklist);
+        calculateTargetsLocally(year, month, day, activeWorkingDaysChecklist);
       } finally {
         setIsLoading(false);
       }

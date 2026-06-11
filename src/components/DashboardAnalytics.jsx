@@ -737,30 +737,54 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
       {/* ── TAB 3: RINGKASAN ─────────────────────────────────────────────────── */}
       {subTab === 'summary' && (() => {
+        const isSemester1 = month <= 6;
+        const periodSuffix = isSemester1 ? 'Semester I' : 'Akhir Tahun';
+        const periodSuffixLower = isSemester1 ? 'semester I' : 'akhir tahun';
+        const periodAdjective = isSemester1 ? 'semesteran' : 'tahunan';
+        const periodAdjectiveCap = isSemester1 ? 'Semesteran' : 'Tahunan';
+        const periodThis = isSemester1 ? 'semester ini' : 'tahun ini';
+
         const prevYear = year - 1;
         const prevMonthlyTrend = execSummary.prevMonthlyTrend ?? [];
         const totalTargetYear = monthlyTargets.reduce((s, v) => s + v, 0);
+        const targetPeriod = isSemester1
+          ? monthlyTargets.slice(0, 6).reduce((s, v) => s + v, 0)
+          : totalTargetYear;
+
         const totalRealYear = execSummary.totalKwhYear;
-        const sisaTarget = Math.max(0, totalTargetYear - totalRealYear);
-        const sisaBulan = Math.max(1, 12 - month);
+        const sisaTarget = Math.max(0, targetPeriod - totalRealYear);
+        const sisaBulan = isSemester1 ? Math.max(1, 6 - month) : Math.max(1, 12 - month);
         const rataRataDibutuhkan = Math.round(sisaTarget / sisaBulan);
         const prevTotalKwhYtd = prevMonthlyTrend.slice(0, month).reduce((sum, m) => sum + (m?.kwh ?? 0), 0);
         const diffKwhYtd = totalRealYear - prevTotalKwhYtd;
         const pctGrowthYtd = prevTotalKwhYtd > 0 ? (diffKwhYtd / prevTotalKwhYtd) * 100 : (totalRealYear > 0 ? 100 : 0);
-        const remainingMonths = Math.max(0, 12 - month);
+        const remainingMonths = isSemester1 ? Math.max(0, 6 - month) : Math.max(0, 12 - month);
         const avgRealKwh = month > 0 ? totalRealYear / month : 0;
+
         let remainingWorkingDays = 0;
-        for (let m = month; m < 12; m++) remainingWorkingDays += getWorkingDaysCount(year, m, activeWorkingDaysChecklist);
+        // Count remaining working days in current month
+        const totalDaysInCurrentMonth = new Date(year, month, 0).getDate();
+        for (let d = day; d <= totalDaysInCurrentMonth; d++) {
+          if (isDateWorkingDay(year, month - 1, d, activeWorkingDaysChecklist)) {
+            remainingWorkingDays++;
+          }
+        }
+        // Count full working days in subsequent months in the current period
+        const endMonthIndex = isSemester1 ? 6 : 12;
+        for (let m = month; m < endMonthIndex; m++) {
+          remainingWorkingDays += getWorkingDaysCount(year, m, activeWorkingDaysChecklist);
+        }
         remainingWorkingDays = Math.max(1, remainingWorkingDays);
+
         const projectedKwhCurrent = Math.round(totalRealYear + (avgRealKwh * remainingMonths));
-        const pctCurrent = totalTargetYear > 0 ? (projectedKwhCurrent / totalTargetYear) * 100 : 0;
-        const gapCurrent = totalTargetYear - projectedKwhCurrent;
+        const pctCurrent = targetPeriod > 0 ? (projectedKwhCurrent / targetPeriod) * 100 : 0;
+        const gapCurrent = targetPeriod - projectedKwhCurrent;
         const avgRequiredKwhCurrent = remainingMonths > 0 ? Math.round(sisaTarget / remainingMonths) : 0;
         const pctIncreaseRequiredCurrent = (avgRealKwh > 0 && sisaTarget > 0) ? Math.round(((avgRequiredKwhCurrent / avgRealKwh) - 1) * 100) : 0;
         const newTargetHarian = remainingWorkingDays > 0 ? Math.round(sisaTarget / remainingWorkingDays) : 0;
         const baselineTargetHarian = Math.round(targetMonth / Math.max(1, workingDaysInMonth));
         const pctDailyIncrease = (baselineTargetHarian > 0 && sisaTarget > 0) ? Math.round(((newTargetHarian / baselineTargetHarian) - 1) * 100) : 0;
-        const target110Year = totalTargetYear * 1.10;
+        const target110Year = targetPeriod * 1.10;
         const sisaTarget110 = Math.max(0, target110Year - totalRealYear);
         const avgRequiredKwh110 = remainingMonths > 0 ? Math.round(sisaTarget110 / remainingMonths) : 0;
         const pctEffortRequired110 = (avgRealKwh > 0 && sisaTarget110 > 0) ? Math.round(((avgRequiredKwh110 / avgRealKwh) - 1) * 100) : 0;
@@ -769,21 +793,19 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
         const yoyMaxVal = Math.max(...yoyChartData.map(d => Math.max(d.current, d.prev, d.target)), 1);
         const targetKumulatifYtd = monthlyTargets.slice(0, month).reduce((sum, val) => sum + val, 0);
         const pctYtd = targetKumulatifYtd > 0 ? (totalRealYear / targetKumulatifYtd) * 100 : 0;
-        const pctAnnual = totalTargetYear > 0 ? (totalRealYear / totalTargetYear) * 100 : 0;
+        const pctPeriod = targetPeriod > 0 ? (totalRealYear / targetPeriod) * 100 : 0;
 
         const getKpiStatus = (pYtd, currentMonth, real, targetYtd) => {
           const diff = real - targetYtd;
           const diffStr = diff >= 0 ? `surplus +${formatIndoNumber(diff)} kWh` : `defisit ${formatIndoNumber(Math.abs(diff))} kWh`;
           const monthsList = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
           const monthName = monthsList[currentMonth - 1] || '';
-          if (pYtd >= 100) return { label: 'SANGAT BAIK', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20', iconColor: 'text-emerald-500', description: `Kinerja luar biasa! Hingga bulan ${monthName}, realisasi kumulatif tahunan mencapai ${formatIndoNumber(real)} kWh. Angka ini mencatatkan ${diffStr} di atas target kumulatif (${formatIndoNumber(targetYtd)} kWh).` };
-          if (pYtd >= 90) return { label: 'BAIK (ON TRACK)', color: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20', iconColor: 'text-teal-500', description: `Kinerja aman dan terkendali. Realisasi kumulatif tahunan hingga ${monthName} sebesar ${formatIndoNumber(real)} kWh berjalan on-track dengan pencapaian ${Math.round(pYtd)}% dari target kumulatif.` };
+          if (pYtd >= 100) return { label: 'SANGAT BAIK', color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20', iconColor: 'text-emerald-500', description: `Kinerja luar biasa! Hingga bulan ${monthName}, realisasi kumulatif ${periodAdjective} mencapai ${formatIndoNumber(real)} kWh. Angka ini mencatatkan ${diffStr} di atas target kumulatif (${formatIndoNumber(targetYtd)} kWh).` };
+          if (pYtd >= 90) return { label: 'BAIK (ON TRACK)', color: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20', iconColor: 'text-teal-500', description: `Kinerja aman dan terkendali. Realisasi kumulatif ${periodAdjective} hingga ${monthName} sebesar ${formatIndoNumber(real)} kWh berjalan on-track dengan pencapaian ${Math.round(pYtd)}% dari target kumulatif.` };
           if (pYtd >= 75) return { label: 'CUKUP (PERLU PERHATIAN)', color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20', iconColor: 'text-amber-500', description: `Kinerja berada dalam zona kuning. Hingga bulan ${monthName}, pencapaian kumulatif berada di bawah target kumulatif dengan ${diffStr} (${Math.round(pYtd)}% dari target kumulatif).` };
-          return { label: 'KURANG (KRITIS)', color: 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20', iconColor: 'text-rose-500', description: `Status waspada/kritis! Target kWh kumulatif tahunan mengalami ${diffStr} yang signifikan dibandingkan target kumulatif.` };
+          return { label: 'KURANG (KRITIS)', color: 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border border-rose-500/20', iconColor: 'text-rose-500', description: `Status waspada/kritis! Target kWh kumulatif ${periodAdjective} mengalami ${diffStr} yang signifikan dibandingkan target kumulatif.` };
         };
         const statusInfo = getKpiStatus(pctYtd, month, totalRealYear, targetKumulatifYtd);
-
-        // YoY calculations removed as they are unused
 
         // Paginated display control for YoY comparison table (6 rows per page)
         const visibleYoYData = yoyPage === 1 ? yoyChartData.slice(0, 6) : yoyChartData.slice(6, 12);
@@ -799,7 +821,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wide ${statusInfo.color}`}>{statusInfo.label}</span>
                   </div>
                   <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-50 tracking-tight leading-tight">
-                    Analisis Pencapaian kWh Kumulatif Tahun {year}
+                    Analisis Pencapaian kWh Kumulatif {isSemester1 ? 'Semester I' : 'Tahun'} {year}
                   </h2>
                   <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed max-w-3xl sm:block hidden">{statusInfo.description}</p>
                 </div>
@@ -813,8 +835,8 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(targetKumulatifYtd)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
                   <div className="space-y-1 border-l border-slate-100 dark:border-slate-800/80 pl-4">
-                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Target Tahunan</div>
-                    <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(totalTargetYear)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
+                    <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{isSemester1 ? 'Target Semester I' : 'Target Tahunan'}</div>
+                    <div className="text-xs sm:text-base font-bold text-slate-900 dark:text-slate-50">{formatIndoNumber(isSemester1 ? targetPeriod : totalTargetYear)} <span className="text-[9px] text-slate-400 font-medium">kWh</span></div>
                   </div>
                 </div>
               </div>
@@ -836,11 +858,11 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 </div>
                 <div className="flex-1 lg:w-full space-y-1">
                   <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-wide">
-                    <span>Target Tahunan</span>
-                    <span className="text-slate-700 dark:text-slate-300">{Math.round(pctAnnual)}%</span>
+                    <span>{isSemester1 ? 'Target Semester I' : 'Target Tahunan'}</span>
+                    <span className="text-slate-700 dark:text-slate-300">{Math.round(pctPeriod)}%</span>
                   </div>
                   <div className="h-2 w-full bg-slate-200 dark:bg-slate-850 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all duration-1000 ease-out bg-emerald-500`} style={{ width: `${Math.min(100, pctAnnual)}%` }} />
+                    <div className={`h-full rounded-full transition-all duration-1000 ease-out bg-emerald-500`} style={{ width: `${Math.min(100, pctPeriod)}%` }} />
                   </div>
                 </div>
               </div>
@@ -1154,8 +1176,8 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800/80">
                 <div className="p-2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded border border-emerald-500/10"><TrendingUp className="w-4 h-4" /></div>
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">Skenario Proyeksi Pencapaian Target Tahunan</h3>
-                  <p className="text-[9px] text-slate-400 font-medium">Simulasi target kumulatif tahunan {year} ({formatIndoNumber(totalTargetYear)} kWh) berdasarkan 3 skenario taktis.</p>
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-100">Skenario Proyeksi Pencapaian Target {periodAdjectiveCap}</h3>
+                  <p className="text-[9px] text-slate-400 font-medium">Simulasi target kumulatif {periodAdjective} {year} ({formatIndoNumber(isSemester1 ? targetPeriod : totalTargetYear)} kWh) berdasarkan 3 skenario taktis.</p>
                 </div>
               </div>
 
@@ -1191,11 +1213,11 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                       </span>
                     </div>
                     <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(projectedKwhCurrent)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
-                    <div className="text-[9px] text-slate-400 font-medium">Proyeksi Akhir Tahun</div>
+                    <div className="text-[9px] text-slate-400 font-medium">Proyeksi {periodSuffix}</div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {gapCurrent > 0
-                        ? <>Dengan ritme saat ini, akhir tahun diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
-                        : <>Dengan ritme saat ini, akhir tahun diproyeksikan surplus <span className="font-bold text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif tahunan diproyeksikan dapat tercapai dengan sukses.</>}
+                        ? <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
+                        : <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan surplus <span className="font-bold text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif {periodAdjective} diproyeksikan dapat tercapai dengan sukses.</>}
                     </p>
                     <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
                       <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
@@ -1216,12 +1238,12 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Jika Target Harian Kumulatif Tercapai</span>
                       <span className="px-2 py-1 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">TERCAPAI</span>
                     </div>
-                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(totalTargetYear)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
-                    <div className="text-[9px] text-slate-400 font-medium">Disesuaikan untuk Target</div>
+                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(isSemester1 ? targetPeriod : totalTargetYear)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
+                    <div className="text-[9px] text-slate-400 font-medium">Disesuaikan untuk Target {isSemester1 ? 'Semester I' : 'Tahunan'}</div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {pctDailyIncrease > 0
-                        ? <>Agar target kumulatif tercapai, target harian sisa <span className="font-bold text-slate-700 dark:text-slate-300">{remainingWorkingDays} hari kerja</span> tahun ini harus disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (naik <span className="font-bold text-rose-500">{pctDailyIncrease}%</span> dari target harian awal).</>
-                        : <>Target kumulatif tahunan berjalan aman. Target harian disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (turun <span className="font-bold text-emerald-600">{Math.abs(pctDailyIncrease)}%</span> dari target harian awal).</>}
+                        ? <>Agar target kumulatif tercapai, target harian sisa <span className="font-bold text-slate-700 dark:text-slate-300">{remainingWorkingDays} hari kerja</span> {periodThis} harus disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (naik <span className="font-bold text-rose-500">{pctDailyIncrease}%</span> dari target harian awal).</>
+                        : <>Target kumulatif {periodAdjective} berjalan aman. Target harian disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (turun <span className="font-bold text-emerald-600">{Math.abs(pctDailyIncrease)}%</span> dari target harian awal).</>}
                     </p>
                     <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
                       <div className="flex justify-between"><span>Target Harian Awal:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(baselineTargetHarian)} kWh/hari</span></div>
@@ -1247,7 +1269,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {totalRealYear < target110Year
                         ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {remainingMonths} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
-                        : <>Target optimis 110% tahunan sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
+                        : <>Target optimis 110% {periodAdjective} sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
                     </p>
                     <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
                       <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-700 dark:text-slate-300 font-extrabold">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
@@ -1275,11 +1297,11 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                       </span>
                     </div>
                     <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(projectedKwhCurrent)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
-                    <div className="text-[9px] text-slate-400 font-medium">Proyeksi Akhir Tahun</div>
+                    <div className="text-[9px] text-slate-400 font-medium">Proyeksi {periodSuffix}</div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {gapCurrent > 0
-                        ? <>Dengan ritme saat ini, akhir tahun diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
-                        : <>Dengan ritme saat ini, akhir tahun diproyeksikan surplus <span className="font-bold text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif tahunan diproyeksikan dapat tercapai dengan sukses.</>}
+                        ? <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
+                        : <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan surplus <span className="font-bold text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif {periodAdjective} diproyeksikan dapat tercapai dengan sukses.</>}
                     </p>
                   </div>
                   <div>
@@ -1303,12 +1325,12 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                       <span className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Jika Target Harian Kumulatif Tercapai</span>
                       <span className="px-2 py-1 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">TERCAPAI</span>
                     </div>
-                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(totalTargetYear)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
-                    <div className="text-[9px] text-slate-400 font-medium">Disesuaikan untuk Target</div>
+                    <div className="text-base font-bold text-slate-900 dark:text-slate-100">{formatIndoNumber(isSemester1 ? targetPeriod : totalTargetYear)} <span className="text-[10px] text-slate-400 font-medium">kWh</span></div>
+                    <div className="text-[9px] text-slate-400 font-medium">Disesuaikan untuk Target {isSemester1 ? 'Semester I' : 'Tahunan'}</div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {pctDailyIncrease > 0
-                        ? <>Agar target kumulatif tercapai, target harian sisa <span className="font-bold text-slate-700 dark:text-slate-300">{remainingWorkingDays} hari kerja</span> tahun ini harus disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (naik <span className="font-bold text-rose-500">{pctDailyIncrease}%</span> dari target harian awal).</>
-                        : <>Target kumulatif tahunan berjalan aman. Target harian disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (turun <span className="font-bold text-emerald-600">{Math.abs(pctDailyIncrease)}%</span> dari target harian awal).</>}
+                        ? <>Agar target kumulatif tercapai, target harian sisa <span className="font-bold text-slate-700 dark:text-slate-300">{remainingWorkingDays} hari kerja</span> {periodThis} harus disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (naik <span className="font-bold text-rose-500">{pctDailyIncrease}%</span> dari target harian awal).</>
+                        : <>Target kumulatif {periodAdjective} berjalan aman. Target harian disesuaikan menjadi <span className="font-bold text-emerald-500">{formatIndoNumber(newTargetHarian)} kWh/hari</span> (turun <span className="font-bold text-emerald-600">{Math.abs(pctDailyIncrease)}%</span> dari target harian awal).</>}
                     </p>
                   </div>
                   <div>
@@ -1337,7 +1359,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {totalRealYear < target110Year
                         ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {remainingMonths} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
-                        : <>Target optimis 110% tahunan sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
+                        : <>Target optimis 110% {periodAdjective} sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
                     </p>
                   </div>
                   <div>
