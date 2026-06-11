@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Save, AlertTriangle, CheckCircle2, TrendingUp, Zap } from 'lucide-react';
+import { Save, AlertTriangle, CheckCircle2, TrendingUp, Zap, Target, BarChart3 } from 'lucide-react';
 
 // Design tokens (inlined from tokens.ts)
 const colors = {
@@ -183,9 +183,10 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
     localStorage.setItem(cacheKey, JSON.stringify(cachedData));
 
     try {
-      const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-      if (!url) throw new Error('No URL');
-      const response = await fetch(url, {
+      const baseUrl = localStorage.getItem('p2tl_backend_url') || backendUrl;
+      if (!baseUrl) throw new Error('No URL');
+      const postUrl = baseUrl.includes('?') ? `${baseUrl}&action=save_monthly_targets` : `${baseUrl}?action=save_monthly_targets`;
+      const response = await fetch(postUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ action: 'save_monthly_targets', year: selectedYear, targets: cachedData })
@@ -231,40 +232,57 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
         </div>
       )}
 
-      {/* Split Layout: Left for summary & control sidebar, Right for input table */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+       {/* Split Layout: Left for summary & control sidebar, Right for input table */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
         {/* Left Column: Sticky Summary & Controls Sidebar (Col Span 4) */}
-        <div className="lg:col-span-4 flex flex-col gap-6">
+        <div className="lg:col-span-4 flex flex-col gap-6 h-full">
           
           {/* Controls Card (Title, Subtitle, Year Selector, Save Button) */}
-          <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} space-y-4`}>
-            <div>
-              <h2 className="text-base font-black tracking-tight mb-1 text-slate-800 dark:text-slate-50">Manajemen Target Bulanan P2TL</h2>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
-                Kelola target kWh untuk setiap bulan untuk menghitung kumulatif tahunan.
-              </p>
+          <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} space-y-5 relative overflow-hidden animate-fade-in-up`}>
+            {/* Top accent gradient line */}
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400" />
+            
+            <div className="flex items-start gap-4">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex-shrink-0">
+                <Target className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <h2 className="text-sm font-black tracking-tight mb-1 text-slate-800 dark:text-slate-50">Target Bulanan</h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
+                  Kelola target kWh untuk setiap bulan untuk menghitung kumulatif tahunan.
+                </p>
+              </div>
             </div>
             
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 space-y-4">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Pilih Tahun:</span>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                  className="px-3 py-2 text-xs font-bold bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 rounded-lg outline-none text-slate-750 dark:text-slate-300 focus:border-emerald-500 transition-all"
-                >
-                  <option value="2024">2024</option>
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
-                </select>
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800/60 space-y-4">
+              <div className="space-y-2">
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Pilih Tahun</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {['2024', '2025', '2026', '2027'].map((yr) => {
+                    const isActive = selectedYear === yr;
+                    return (
+                      <button
+                        key={yr}
+                        type="button"
+                        onClick={() => setSelectedYear(yr)}
+                        className={`px-3.5 py-1.5 text-xs font-extrabold rounded-lg transition-all active:scale-[0.97] ${
+                          isActive
+                            ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 font-black shadow-[0_4px_12px_rgba(16,185,129,0.25)] border border-emerald-400/10'
+                            : 'bg-slate-50 dark:bg-slate-950 hover:bg-slate-100 dark:hover:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-650 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                        }`}
+                      >
+                        {yr}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <button
                 onClick={handleSaveTargets}
                 disabled={saving}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 text-xs font-bold tracking-wide rounded-lg bg-emerald-500 hover:bg-emerald-600 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.15)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold tracking-wide rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-slate-950 hover:text-black shadow-[0_4px_15px_rgba(16,185,129,0.15)] hover:shadow-[0_6px_20px_rgba(16,185,129,0.25)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed border border-emerald-400/20"
               >
                 {saving ? (
                   <svg className="animate-spin h-3.5 w-3.5 text-current" viewBox="0 0 24 24" fill="none">
@@ -272,82 +290,139 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                 ) : (
-                  <Save className="w-3.5 h-3.5 text-slate-950" />
+                  <Save className="w-3.5 h-3.5" />
                 )}
-                <span>Simpan Target</span>
+                <span>Simpan Target ke Sheets</span>
               </button>
             </div>
           </div>
 
           {/* Main Summary Card */}
-          <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} space-y-6`}>
+          <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} flex-1 flex flex-col justify-between relative overflow-hidden animate-fade-in-up delay-75`}>
+            {/* Top accent gradient line */}
+            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-teal-500 via-cyan-550 to-blue-500" />
             
             <div className="space-y-6">
-              <div className="pb-3 border-b border-slate-100 dark:border-slate-800/80">
-                <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Ringkasan Agregasi Target {selectedYear}</span>
-              </div>
-
-              {/* Hero Total Target */}
-              <div className="p-4 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-xl border border-emerald-500/10 dark:border-emerald-500/20 flex items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <span className="text-[9px] font-bold uppercase text-slate-455 tracking-wider">Total Target Setahun</span>
-                  <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">{formatIndoNumber(totalYearTarget)} <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">kWh</span></div>
+              <div className="flex items-start gap-4">
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex-shrink-0">
+                  <BarChart3 className="w-5 h-5 animate-pulse" />
                 </div>
-                <div className="p-2 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 rounded-lg">
-                  <TrendingUp className="w-5 h-5" />
+                <div>
+                  <h2 className="text-sm font-black tracking-tight mb-1 text-slate-800 dark:text-slate-50">Ringkasan Target</h2>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
+                    Distribusi target kWh tahun {selectedYear} berdasarkan semester dan rata-rata.
+                  </p>
                 </div>
               </div>
 
-              {/* Average Monthly Target */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-950/20 rounded-xl border border-slate-100 dark:border-slate-800/60 flex items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <span className="text-[9px] font-bold uppercase text-slate-455 tracking-wider">Rata-Rata Bulanan</span>
-                  <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">{formatIndoNumber(Math.round(totalYearTarget / 12))} <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">kWh</span></div>
-                </div>
-                <div className="p-2 bg-slate-100 dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800 rounded-lg">
-                  <Zap className="w-4 h-4 text-slate-500 dark:text-slate-400" />
-                </div>
-              </div>
-
-              {/* Semester Breakdown Section */}
-              <div className="space-y-4 pt-2">
-                <div className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">Distribusi Semester</div>
-
-                {/* Semester 1 */}
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center text-xs font-semibold">
-                    <span className="text-slate-650 dark:text-slate-350">Semester 1 (Jan - Jun)</span>
-                    <span className="font-extrabold text-slate-900 dark:text-slate-100">{formatIndoNumber(targetSemester1)} kWh</span>
+              <div className="pt-4 border-t border-slate-100 dark:border-slate-800/60 space-y-6">
+                {/* Hero Total Target */}
+                <div className="group p-4 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 dark:from-emerald-500/10 dark:to-teal-500/5 rounded-xl border border-emerald-500/10 dark:border-emerald-400/10 flex items-center justify-between gap-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-emerald-500/20 cursor-pointer">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Total Target Setahun</span>
+                    <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                      {formatIndoNumber(totalYearTarget)} <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">kWh</span>
+                    </div>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/60 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${totalYearTarget > 0 ? (targetSemester1 / totalYearTarget) * 100 : 0}%` }} />
+                  <div className="p-2.5 bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded-xl shadow-[0_0_15px_rgba(16,185,129,0.1)] group-hover:scale-110 group-hover:bg-emerald-500/20 transition-all duration-300">
+                    <TrendingUp className="w-5 h-5" />
                   </div>
-                  <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">Porsi: {totalYearTarget > 0 ? Math.round((targetSemester1 / totalYearTarget) * 100) : 0}% dari setahun</div>
                 </div>
 
-                {/* Semester 2 */}
-                <div className="space-y-2 pt-1">
-                  <div className="flex justify-between items-center text-xs font-semibold">
-                    <span className="text-slate-650 dark:text-slate-350">Semester 2 (Jul - Des)</span>
-                    <span className="font-extrabold text-slate-900 dark:text-slate-100">{formatIndoNumber(targetSemester2)} kWh</span>
+                {/* Average Monthly Target */}
+                <div className="group p-4 bg-gradient-to-br from-blue-500/5 to-indigo-500/5 dark:from-blue-500/10 dark:to-indigo-500/5 rounded-xl border border-blue-500/10 dark:border-blue-400/10 flex items-center justify-between gap-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-blue-500/20 cursor-pointer">
+                  <div className="space-y-1">
+                    <span className="text-[9px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Rata-Rata Bulanan</span>
+                    <div className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+                      {formatIndoNumber(Math.round(totalYearTarget / 12))} <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500">kWh</span>
+                    </div>
                   </div>
-                  <div className="h-2 w-full bg-slate-100 dark:bg-slate-950 border border-slate-200/60 dark:border-slate-800/60 rounded-full overflow-hidden">
-                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${totalYearTarget > 0 ? (targetSemester2 / totalYearTarget) * 100 : 0}%` }} />
+                  <div className="p-2.5 bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl shadow-[0_0_15px_rgba(59,130,246,0.1)] group-hover:scale-110 group-hover:bg-blue-500/20 transition-all duration-300">
+                    <Zap className="w-4.5 h-4.5" />
                   </div>
-                  <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">Porsi: {totalYearTarget > 0 ? Math.round((targetSemester2 / totalYearTarget) * 100) : 0}% dari setahun</div>
+                </div>
+
+                {/* Semester Breakdown Section */}
+                <div className="space-y-4 pt-2">
+                  <div className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Distribusi Semester</div>
+
+                  {/* Semester 1 */}
+                  {(() => {
+                    const s1Percent = totalYearTarget > 0 ? Math.round((targetSemester1 / totalYearTarget) * 100) : 0;
+                    return (
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center text-xs font-semibold">
+                          <span className="text-slate-600 dark:text-slate-300">Semester 1 (Jan - Jun)</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200">{formatIndoNumber(targetSemester1)} kWh</span>
+                        </div>
+                        <div className="h-5 w-full bg-slate-150/60 dark:bg-slate-950/60 border border-slate-200/50 dark:border-slate-850/80 rounded-lg overflow-hidden relative hover:scale-[1.01] hover:shadow-[0_0_12px_rgba(16,185,129,0.15)] transition-all duration-300 cursor-pointer">
+                          <div 
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000 ease-out flex items-center justify-end pr-2"
+                            style={{ width: `${s1Percent}%` }}
+                          >
+                            {s1Percent > 12 && (
+                              <span className="text-[9px] font-black text-slate-950 select-none animate-fade-in">
+                                {s1Percent}%
+                              </span>
+                            )}
+                          </div>
+                          {s1Percent <= 12 && (
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-500 dark:text-slate-400 select-none">
+                              {s1Percent}%
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">Porsi: {s1Percent}% dari setahun</div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Semester 2 */}
+                  {(() => {
+                    const s2Percent = totalYearTarget > 0 ? Math.round((targetSemester2 / totalYearTarget) * 100) : 0;
+                    return (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex justify-between items-center text-xs font-semibold">
+                          <span className="text-slate-600 dark:text-slate-300">Semester 2 (Jul - Des)</span>
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200">{formatIndoNumber(targetSemester2)} kWh</span>
+                        </div>
+                        <div className="h-5 w-full bg-slate-150/60 dark:bg-slate-950/60 border border-slate-200/50 dark:border-slate-850/80 rounded-lg overflow-hidden relative hover:scale-[1.01] hover:shadow-[0_0_12px_rgba(59,130,246,0.15)] transition-all duration-300 cursor-pointer">
+                          <div 
+                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 transition-all duration-1000 ease-out flex items-center justify-end pr-2"
+                            style={{ width: `${s2Percent}%` }}
+                          >
+                            {s2Percent > 12 && (
+                              <span className="text-[9px] font-black text-white select-none animate-fade-in">
+                                {s2Percent}%
+                              </span>
+                            )}
+                          </div>
+                          {s2Percent <= 12 && (
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[9px] font-bold text-slate-500 dark:text-slate-400 select-none">
+                              {s2Percent}%
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">Porsi: {s2Percent}% dari setahun</div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </div>
 
             {/* Subtle help note */}
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800/80 text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed font-medium">
-              * Perubahan target bulanan di sebelah kanan akan langsung memperbarui kalkulasi aggregasi semester dan rata-rata tahunan secara real-time. Tekan tombol **Simpan Target** untuk menyimpan ke Google Sheets.
+              * Perubahan target bulanan di sebelah kanan akan langsung memperbarui kalkulasi aggregasi semester dan rata-rata tahunan secara real-time. Tekan tombol **Simpan Target ke Sheets** untuk menyimpan.
             </div>
           </div>
         </div>
 
         {/* Right Column: Months Input Form (Col Span 8) */}
-        <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} lg:col-span-8 flex flex-col relative`}>
+        <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} lg:col-span-8 flex flex-col relative overflow-hidden`}>
+          {/* Top accent gradient line for right card */}
+          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-400" />
+          
           {loading && (
             <div className="absolute inset-0 bg-slate-100/60 dark:bg-slate-950/60 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-col gap-2 z-10">
               <svg className="animate-spin h-8 w-8 text-emerald-500" fill="none" viewBox="0 0 24 24">
@@ -362,10 +437,10 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-black">
-                  <th className="pb-3 pr-2 w-12">No</th>
-                  <th className="pb-3 pr-2 w-36">Bulan</th>
-                  <th className="pb-3 pr-2 w-28 text-right">Hari Kerja</th>
-                  <th className="pb-3 pl-4">Target Bulanan (kWh)</th>
+                  <th className="pb-3 pl-3 md:pl-4 w-8 md:w-12">No</th>
+                  <th className="pb-3 w-20 md:w-40">Bulan</th>
+                  <th className="pb-3 w-20 md:w-32 text-center">Hari Kerja</th>
+                  <th className="pb-3 pl-2 md:pl-8">Target Bulanan (kWh)</th>
                 </tr>
               </thead>
               <tbody>
@@ -374,26 +449,32 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
                   const dailyAvg = targets[idx] > 0 ? Math.round(targets[idx] / days) : 0;
                   return (
                     <tr key={idx} className="border-b border-slate-200 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-900/30 text-slate-700 dark:text-slate-300">
-                      <td className="py-3 pr-2 font-bold text-slate-400 dark:text-slate-500">{idx + 1}</td>
-                      <td className="py-3 pr-2 font-extrabold text-slate-800 dark:text-slate-200">{month}</td>
-                      <td className="py-3 pr-2 text-right font-bold text-slate-650 dark:text-slate-400">
+                      <td className="py-3 pl-3 md:pl-4 font-bold text-slate-400 dark:text-slate-500">{idx + 1}</td>
+                      <td className="py-3 font-extrabold text-slate-800 dark:text-slate-200">{month}</td>
+                      <td className="py-3 text-center font-bold text-slate-650 dark:text-slate-400">
                         {days} Hari
                       </td>
-                      <td className="py-3 pl-4">
-                        <div className="flex flex-col gap-1 max-w-[280px]">
-                          <div className="relative flex items-center">
+                      <td className="py-3 pl-2 md:pl-8">
+                        <div className="flex flex-col gap-1 w-full max-w-[200px] md:max-w-[240px]">
+                          <div className="flex items-center gap-1.5 w-full">
                             <input
                               type="number"
                               value={targets[idx] === 0 ? '' : targets[idx]}
                               onChange={(e) => handleTargetChange(idx, e.target.value)}
-                              placeholder="Masukkan target kWh"
-                              className="w-full px-3 py-2 text-xs font-bold bg-slate-100/60 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-emerald-500 rounded-lg outline-none text-slate-800 dark:text-slate-100 transition-all focus:ring-2 focus:ring-emerald-500/10"
+                              placeholder="0"
+                              className="w-full px-2.5 py-1.5 text-xs font-bold bg-slate-100/60 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 focus:border-emerald-500 rounded-lg outline-none text-slate-800 dark:text-slate-100 transition-all focus:ring-2 focus:ring-emerald-500/10"
                             />
-                            <span className="absolute right-3 text-[10px] font-bold text-slate-400 pointer-events-none">kWh</span>
+                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 flex-shrink-0">kWh</span>
                           </div>
-                          <div className="flex justify-between items-center text-[9px] font-semibold text-slate-455 dark:text-slate-500 px-1">
-                            <span>Target Kumulatif: <span className="font-extrabold text-emerald-600 dark:text-emerald-400">{formatIndoNumber(cumulativeTargets[idx])} kWh</span></span>
-                            <span>Rata-rata: <span className="font-extrabold text-slate-700 dark:text-slate-300">{formatIndoNumber(dailyAvg)}/hari</span></span>
+                          <div className="flex flex-col gap-0.5 text-[9px] font-semibold text-slate-500 dark:text-slate-400 px-0.5 mt-0.5">
+                            <div className="flex justify-between items-center gap-2">
+                              <span>Kumulatif:</span>
+                              <span className="font-extrabold text-emerald-600 dark:text-emerald-400">{formatIndoNumber(cumulativeTargets[idx])} kWh</span>
+                            </div>
+                            <div className="flex justify-between items-center gap-2">
+                              <span>Rata-rata:</span>
+                              <span className="font-extrabold text-slate-700 dark:text-slate-200">{formatIndoNumber(dailyAvg)}/hari</span>
+                            </div>
                           </div>
                         </div>
                       </td>

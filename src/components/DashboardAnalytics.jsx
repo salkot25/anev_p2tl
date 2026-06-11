@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   TrendingUp,
   Layers,
@@ -133,6 +133,43 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   const [yoyTooltipPos, setYoyTooltipPos] = useState({ x: 0, y: 0 });
   const [hoveredSegment, setHoveredSegment] = useState(null);
   const [segmentTooltipPos, setSegmentTooltipPos] = useState({ x: 0, y: 0 });
+  const [isMobile, setIsMobile] = useState(false);
+  const chartScrollRef = useRef(null);
+
+  const parts = targets?.date ? targets.date.split('-') : [String(new Date().getFullYear()), String(new Date().getMonth() + 1).padStart(2, '0'), String(new Date().getDate()).padStart(2, '0')];
+  const year = parseInt(parts[0], 10) || new Date().getFullYear();
+  const month = parseInt(parts[1], 10) || (new Date().getMonth() + 1);
+  const day = parseInt(parts[2], 10) || new Date().getDate();
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (chartScrollRef.current) {
+      const container = chartScrollRef.current;
+      const timer = setTimeout(() => {
+        if (granularity === 'bulan') {
+          const isSemester2 = month > 6;
+          if (isSemester2) {
+            container.scrollLeft = container.scrollWidth / 2;
+          } else {
+            container.scrollLeft = 0;
+          }
+        } else if (granularity === 'hari') {
+          const daysCount = getDaysInMonth(targets.date);
+          const scrollRatio = (day - 1.5) / daysCount;
+          container.scrollLeft = Math.max(0, scrollRatio * container.scrollWidth - container.clientWidth / 2);
+        } else {
+          container.scrollLeft = 0;
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [granularity, month, day, targets.date, isMobile, subTab]);
 
   useEffect(() => {
     if (targets?.date) {
@@ -258,15 +295,35 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
     );
   }
 
-  const parts = targets.date ? targets.date.split('-') : [String(new Date().getFullYear()), String(new Date().getMonth() + 1).padStart(2, '0'), String(new Date().getDate()).padStart(2, '0')];
-  const year = parseInt(parts[0], 10) || new Date().getFullYear();
-  const month = parseInt(parts[1], 10) || (new Date().getMonth() + 1);
-  const day = parseInt(parts[2], 10) || new Date().getDate();
-
   const workingDaysInMonth = getWorkingDaysCount(year, month - 1, activeWorkingDaysChecklist);
   const targetMonth = monthlyTargets[month - 1] ?? 0;
-  const isWorking = isDateWorkingDay(year, month - 1, day, activeWorkingDaysChecklist);
-  const targetHarianCalculated = isWorking ? Math.round(targetMonth / workingDaysInMonth) : 0;
+
+  // Dynamic adjusted daily target calculation (matching menu laporan & ringkasan)
+  const isSemester1Active = month <= 6;
+  const totalTargetYear = monthlyTargets.reduce((s, v) => s + v, 0);
+  const targetPeriod = isSemester1Active
+    ? monthlyTargets.slice(0, 6).reduce((s, v) => s + v, 0)
+    : totalTargetYear;
+  const totalRealYear = execSummary.totalKwhYear || 0;
+  const sisaTarget = Math.max(0, targetPeriod - totalRealYear);
+
+  let remainingWorkingDays = 0;
+  const totalDaysInCurrentMonth = new Date(year, month, 0).getDate();
+  for (let d = day; d <= totalDaysInCurrentMonth; d++) {
+    if (isDateWorkingDay(year, month - 1, d, activeWorkingDaysChecklist)) {
+      remainingWorkingDays++;
+    }
+  }
+  const endMonthIndex = isSemester1Active ? 6 : 12;
+  for (let m = month; m < endMonthIndex; m++) {
+    remainingWorkingDays += getWorkingDaysCount(year, m, activeWorkingDaysChecklist);
+  }
+  remainingWorkingDays = Math.max(1, remainingWorkingDays);
+
+  const dynamicTargetHarian = remainingWorkingDays > 0 ? Math.round(sisaTarget / remainingWorkingDays) : 0;
+
+  // Use targets.targetHarianKwh if it has a saved value, otherwise fall back to the dynamic adjusted target
+  const targetHarianCalculated = targets.targetHarianKwh > 0 ? targets.targetHarianKwh : dynamicTargetHarian;
   const targetKumulatifCalculated = monthlyTargets.slice(0, month).reduce((sum, val) => sum + val, 0);
 
   const relHarian = realization.realisasiHarianKwh === '' ? 0 : Number(realization.realisasiHarianKwh || 0);
@@ -432,7 +489,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
             {/* Donut Chart - Komposisi Temuan */}
             <div className={`lg:col-span-2 p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col justify-between relative`}>
               <div>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-5 pb-2 border-b border-slate-200 dark:border-slate-800">
+                <div className="flex items-center justify-between gap-2 mb-5 pb-2 border-b border-slate-200 dark:border-slate-800">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
                     <Layers className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                     <span>Komposisi Temuan</span>
@@ -440,11 +497,11 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   <select
                     value={compositionMetric}
                     onChange={(e) => setCompositionMetric(e.target.value)}
-                    className="px-2 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-700 dark:text-slate-300 focus:border-emerald-500 transition-all"
+                    className="px-2 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-750 dark:text-slate-350 focus:border-emerald-500 transition-all cursor-pointer shrink-0"
                   >
-                    <option value="tarif">Menurut Tarif</option>
-                    <option value="golongan">Menurut Golongan</option>
-                    <option value="daya">Menurut Daya</option>
+                    <option value="tarif">Tarif</option>
+                    <option value="golongan">Golongan</option>
+                    <option value="daya">Daya</option>
                   </select>
                 </div>
 
@@ -627,21 +684,22 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
 
             {/* Bar Chart - Trend kWh */}
             <div className={`lg:col-span-3 p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col relative`}>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                  <span>{granularity === 'hari' ? `Realisasi & Target kWh per Hari (${currentMonthName})` : granularity === 'minggu' ? `Realisasi & Target kWh per Minggu (${currentMonthName})` : 'Realisasi & Target kWh per Bulan'}</span>
+                  <TrendingUp className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
+                  <span className="hidden sm:inline">{granularity === 'hari' ? `Realisasi & Target kWh per Hari (${currentMonthName})` : granularity === 'minggu' ? `Realisasi & Target kWh per Minggu (${currentMonthName})` : 'Realisasi & Target kWh per Bulan'}</span>
+                  <span className="inline sm:hidden">{granularity === 'hari' ? `kWh per Hari` : granularity === 'minggu' ? `kWh per Minggu` : 'kWh per Bulan'}</span>
                 </h3>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Tampilkan:</span>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide hidden sm:inline">Tampilkan:</span>
                   <select
                     value={granularity}
                     onChange={(e) => { setGranularity(e.target.value); setHoveredMonth(null); }}
-                    className="px-2 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-700 dark:text-slate-300 focus:border-emerald-500 transition-all"
+                    className="px-2 py-1 text-[11px] font-bold bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-755 dark:text-slate-350 focus:border-emerald-500 transition-all cursor-pointer"
                   >
-                    <option value="hari">Per Hari</option>
-                    <option value="minggu">Per Minggu</option>
-                    <option value="bulan">Per Bulan</option>
+                    <option value="hari">Hari</option>
+                    <option value="minggu">Minggu</option>
+                    <option value="bulan">Bulan</option>
                   </select>
                 </div>
               </div>
@@ -657,74 +715,79 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 if (!hasTrendData) {
                   return <div className="flex-grow flex items-center justify-center min-h-[180px] text-xs text-slate-500 font-semibold">Tidak ada tren data yang terekam.</div>;
                 }
+                const minWidthClass = granularity === 'hari' ? 'min-w-[900px]' : granularity === 'minggu' ? 'min-w-[480px]' : 'min-w-[600px]';
                 return (
-                  <div className="flex-grow flex items-center justify-center min-h-[180px] pt-2">
-                    <svg viewBox="0 0 500 210" className="w-full h-auto">
-                      {Array.from({ length: 5 }).map((_, i) => {
-                        const yVal = 20 + i * 40;
-                        const gridKwh = maxKwh - (maxKwh * (i / 4));
-                        return (
-                          <g key={i}>
-                            <line x1="45" y1={yVal} x2="485" y2={yVal} className="stroke-slate-200 dark:stroke-slate-800" strokeDasharray="3 3" />
-                            <text x="38" y={yVal + 3} textAnchor="end" fontSize="8" className="fill-slate-400 dark:fill-slate-500 font-bold">
-                              {formatIndoNumber(Math.round(gridKwh))}
-                            </text>
-                          </g>
-                        );
-                      })}
-                      <line x1="45" y1="180" x2="485" y2="180" className="stroke-slate-300 dark:stroke-slate-700" strokeWidth="1" />
-                      {currentChartData.map((m, idx) => {
-                        const plotWidth = 440;
-                        const step = plotWidth / currentChartData.length;
-                        const center = 45 + idx * step + step / 2;
-                        const targetY = 180 - (m.target / maxKwh) * 160;
-                        const realHeight = (m.kwh / maxKwh) * 160;
-                        const realY = 180 - realHeight;
-                        const barWidth = Math.max(4, Math.floor(step * 0.5));
-                        const realX = center - barWidth / 2;
-                        const showLabel = granularity !== 'hari' || (idx + 1) === 1 || (idx + 1) % 5 === 0 || (idx + 1) === currentChartData.length;
-                        return (
-                          <g key={idx}>
-                            <line x1={center - barWidth * 0.75} y1={targetY} x2={center + barWidth * 0.75} y2={targetY} stroke="#f59e0b" strokeWidth="2" strokeDasharray="3 1.5" />
-                            <rect
-                              x={realX} y={realY} width={barWidth} height={Math.max(realHeight, 2)} rx="1.5"
-                              className={`${hoveredMonth === idx ? 'fill-emerald-500' : 'fill-emerald-500/80 dark:fill-emerald-500/70'} transition-all duration-200 cursor-pointer`}
-                              onMouseEnter={(e) => {
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                const containerRect = e.currentTarget.ownerSVGElement?.parentElement?.getBoundingClientRect();
-                                if (containerRect) setTooltipPos({ x: rect.left - containerRect.left, y: rect.top - containerRect.top });
-                                setHoveredMonth(idx);
-                              }}
-                              onMouseLeave={() => setHoveredMonth(null)}
-                            />
-                            {showLabel && (
-                              <text x={center} y="196" textAnchor="middle" fontSize="9" className="fill-slate-400 dark:fill-slate-500 font-extrabold">
-                                {m.label}
+                  <div 
+                    ref={chartScrollRef}
+                    className="flex-grow overflow-x-auto overflow-y-hidden w-full pt-2 scroll-smooth relative"
+                  >
+                    <div className={`${minWidthClass} w-full h-full flex items-center justify-center min-h-[180px] relative`}>
+                      <svg viewBox="0 0 500 210" className="w-full h-full min-h-[180px] max-h-full">
+                        {Array.from({ length: 5 }).map((_, i) => {
+                          const yVal = 20 + i * 40;
+                          const gridKwh = maxKwh - (maxKwh * (i / 4));
+                          return (
+                            <g key={i}>
+                              <line x1="45" y1={yVal} x2="485" y2={yVal} className="stroke-slate-200 dark:stroke-slate-800" strokeDasharray="3 3" />
+                              <text x="38" y={yVal + 3} textAnchor="end" fontSize="8" className="fill-slate-400 dark:fill-slate-500 font-bold">
+                                {formatIndoNumber(Math.round(gridKwh))}
                               </text>
-                            )}
-                          </g>
-                        );
-                      })}
-                    </svg>
+                            </g>
+                          );
+                        })}
+                        <line x1="45" y1="180" x2="485" y2="180" className="stroke-slate-300 dark:stroke-slate-700" strokeWidth="1" />
+                        {currentChartData.map((m, idx) => {
+                          const plotWidth = 440;
+                          const step = plotWidth / currentChartData.length;
+                          const center = 45 + idx * step + step / 2;
+                          const targetY = 180 - (m.target / maxKwh) * 160;
+                          const realHeight = (m.kwh / maxKwh) * 160;
+                          const realY = 180 - realHeight;
+                          const barWidth = Math.max(4, Math.floor(step * 0.5));
+                          const realX = center - barWidth / 2;
+                          const showLabel = granularity !== 'hari' || (idx + 1) === 1 || (idx + 1) % 5 === 0 || (idx + 1) === currentChartData.length;
+                          return (
+                            <g key={idx}>
+                              <line x1={center - barWidth * 0.75} y1={targetY} x2={center + barWidth * 0.75} y2={targetY} stroke="#f59e0b" strokeWidth="2" strokeDasharray="3 1.5" />
+                              <rect
+                                x={realX} y={realY} width={barWidth} height={Math.max(realHeight, 2)} rx="1.5"
+                                className={`${hoveredMonth === idx ? 'fill-emerald-500' : 'fill-emerald-500/80 dark:fill-emerald-500/70'} transition-all duration-200 cursor-pointer`}
+                                onMouseEnter={(e) => {
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  const containerRect = e.currentTarget.ownerSVGElement?.parentElement?.getBoundingClientRect();
+                                  if (containerRect) setTooltipPos({ x: rect.left - containerRect.left, y: rect.top - containerRect.top });
+                                  setHoveredMonth(idx);
+                                }}
+                                onMouseLeave={() => setHoveredMonth(null)}
+                              />
+                              {showLabel && (
+                                <text x={center} y="196" textAnchor="middle" fontSize="9" className="fill-slate-400 dark:fill-slate-500 font-extrabold">
+                                  {m.label}
+                                </text>
+                              )}
+                            </g>
+                          );
+                        })}
+                      </svg>
+                      {hoveredMonth !== null && currentChartData[hoveredMonth] && (
+                        <div
+                          className="absolute bg-slate-900/95 dark:bg-slate-950/95 text-slate-50 border border-slate-700/50 backdrop-blur-md rounded-xl p-3 shadow-xl pointer-events-none text-[11px] font-semibold space-y-1.5 z-20 transition-all duration-150"
+                          style={{ left: tooltipPos.x + 10, top: tooltipPos.y - 110 }}
+                        >
+                          <div className="font-extrabold text-emerald-400 border-b border-slate-800 pb-1 mb-1">
+                            {granularity === 'hari' ? `Tanggal ${currentChartData[hoveredMonth].label} ${currentMonthName}` :
+                              granularity === 'minggu' ? `Minggu ke-${currentChartData[hoveredMonth].label.slice(1)}` :
+                              currentChartData[hoveredMonth].label}
+                          </div>
+                          <div>Realisasi: <span className="font-black text-slate-100">{formatIndoNumber(currentChartData[hoveredMonth].kwh)} kWh</span></div>
+                          <div className="border-t border-slate-800/60 pt-1 mt-1">Target: <span className="font-black text-amber-400">{formatIndoNumber(currentChartData[hoveredMonth].target)} kWh</span></div>
+                          <div className="text-[10px] text-slate-400">Kasus: <span className="font-bold text-slate-200">{currentChartData[hoveredMonth].cases} Kasus</span></div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 );
               })()}
-
-              {hoveredMonth !== null && currentChartData[hoveredMonth] && (
-                <div
-                  className="absolute bg-slate-900/95 dark:bg-slate-950/95 text-slate-50 border border-slate-700/50 backdrop-blur-md rounded-xl p-3 shadow-xl pointer-events-none text-[11px] font-semibold space-y-1.5 z-10 transition-all duration-150"
-                  style={{ left: tooltipPos.x + 10, top: tooltipPos.y - 110 }}
-                >
-                  <div className="font-extrabold text-emerald-400 border-b border-slate-800 pb-1 mb-1">
-                    {granularity === 'hari' ? `Tanggal ${currentChartData[hoveredMonth].label} ${currentMonthName}` :
-                      granularity === 'minggu' ? `Minggu ke-${currentChartData[hoveredMonth].label.slice(1)}` :
-                      currentChartData[hoveredMonth].label}
-                  </div>
-                  <div>Realisasi: <span className="font-black text-slate-100">{formatIndoNumber(currentChartData[hoveredMonth].kwh)} kWh</span></div>
-                  <div className="border-t border-slate-800/60 pt-1 mt-1">Target: <span className="font-black text-amber-400">{formatIndoNumber(currentChartData[hoveredMonth].target)} kWh</span></div>
-                  <div className="text-[10px] text-slate-400">Kasus: <span className="font-bold text-slate-200">{currentChartData[hoveredMonth].cases} Kasus</span></div>
-                </div>
-              )}
             </div>
           </div>
         </>
@@ -779,14 +842,14 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
         const projectedKwhCurrent = Math.round(totalRealYear + (avgRealKwh * remainingMonths));
         const pctCurrent = targetPeriod > 0 ? (projectedKwhCurrent / targetPeriod) * 100 : 0;
         const gapCurrent = targetPeriod - projectedKwhCurrent;
-        const avgRequiredKwhCurrent = remainingMonths > 0 ? Math.round(sisaTarget / remainingMonths) : 0;
+        const avgRequiredKwhCurrent = Math.round(sisaTarget / sisaBulan);
         const pctIncreaseRequiredCurrent = (avgRealKwh > 0 && sisaTarget > 0) ? Math.round(((avgRequiredKwhCurrent / avgRealKwh) - 1) * 100) : 0;
         const newTargetHarian = remainingWorkingDays > 0 ? Math.round(sisaTarget / remainingWorkingDays) : 0;
         const baselineTargetHarian = Math.round(targetMonth / Math.max(1, workingDaysInMonth));
         const pctDailyIncrease = (baselineTargetHarian > 0 && sisaTarget > 0) ? Math.round(((newTargetHarian / baselineTargetHarian) - 1) * 100) : 0;
         const target110Year = targetPeriod * 1.10;
         const sisaTarget110 = Math.max(0, target110Year - totalRealYear);
-        const avgRequiredKwh110 = remainingMonths > 0 ? Math.round(sisaTarget110 / remainingMonths) : 0;
+        const avgRequiredKwh110 = Math.round(sisaTarget110 / sisaBulan);
         const pctEffortRequired110 = (avgRealKwh > 0 && sisaTarget110 > 0) ? Math.round(((avgRequiredKwh110 / avgRealKwh) - 1) * 100) : 0;
         const monthlyTrendData = execSummary.monthlyTrend || [];
         const yoyChartData = monthlyTrendData.map((m, idx) => ({ label: m.month, current: m.kwh, prev: prevMonthlyTrend[idx]?.kwh ?? 0, target: monthlyTargets[idx] ?? 0 }));
@@ -1216,7 +1279,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <div className="text-[9px] text-slate-400 font-medium">Proyeksi {periodSuffix}</div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {gapCurrent > 0
-                        ? <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
+                        ? <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {sisaBulan} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
                         : <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan surplus <span className="font-bold text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif {periodAdjective} diproyeksikan dapat tercapai dengan sukses.</>}
                     </p>
                     <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
@@ -1268,7 +1331,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <div className="text-[9px] text-slate-400 font-medium">Target Optimis (110%)</div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {totalRealYear < target110Year
-                        ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {remainingMonths} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
+                        ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {sisaBulan} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
                         : <>Target optimis 110% {periodAdjective} sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
                     </p>
                     <div className="pt-2 border-t border-slate-200/40 dark:border-slate-800/40 text-[9px] font-bold text-slate-400 space-y-1">
@@ -1300,7 +1363,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <div className="text-[9px] text-slate-400 font-medium">Proyeksi {periodSuffix}</div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {gapCurrent > 0
-                        ? <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {remainingMonths} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
+                        ? <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan defisit <span className="font-bold text-rose-500">{formatIndoNumber(gapCurrent)} kWh</span>. Agar target tercapai, sisa {sisaBulan} bulan membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwhCurrent)} kWh/bulan</span> (naik <span className="font-bold text-rose-500">{pctIncreaseRequiredCurrent}%</span> dari rata-rata saat ini).</>
                         : <>Dengan ritme saat ini, {periodSuffixLower} diproyeksikan surplus <span className="font-bold text-emerald-500">{formatIndoNumber(Math.abs(gapCurrent))} kWh</span>. Target kumulatif {periodAdjective} diproyeksikan dapat tercapai dengan sukses.</>}
                     </p>
                   </div>
@@ -1358,7 +1421,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <div className="text-[9px] text-slate-400 font-medium">Target Optimis (110%)</div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
                       {totalRealYear < target110Year
-                        ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {remainingMonths} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
+                        ? <>Agar target optimis 110% tercapai (<span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {sisaBulan} bulan harus ditingkatkan sebesar <span className="font-bold text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-bold text-slate-700 dark:text-slate-300">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
                         : <>Target optimis 110% {periodAdjective} sebesar <span className="font-bold text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
                     </p>
                   </div>
