@@ -10,7 +10,10 @@ export default function SettingsPanel({
   onClearLocalData,
   currentUser,
   users = [],
-  onUsersChanged
+  onUsersChanged,
+  ulp = '',
+  up3 = '',
+  onSaveMetadata
 }) {
   const [url, setUrl] = useState(propBackendUrl || '');
   const [testStatus, setTestStatus] = useState('idle'); // idle, testing, success, error
@@ -34,9 +37,17 @@ export default function SettingsPanel({
   }, [targets, bankToTargets]);
 
   // Local metadata parameters
-  const [defaultUlp, setDefaultUlp] = useState(() => localStorage.getItem('p2tl_default_ulp') || 'ULP SALATIGA KOTA');
-  const [defaultUp3, setDefaultUp3] = useState(() => localStorage.getItem('p2tl_default_up3') || 'UP3 SALATIGA');
+  const [defaultUlp, setDefaultUlp] = useState(ulp);
+  const [defaultUp3, setDefaultUp3] = useState(up3);
   const [saveMetadataStatus, setSaveMetadataStatus] = useState(false);
+
+  useEffect(() => {
+    setDefaultUlp(ulp);
+  }, [ulp]);
+
+  useEffect(() => {
+    setDefaultUp3(up3);
+  }, [up3]);
 
   // Working days checklist state
   const [workingDays, setWorkingDays] = useState(() => {
@@ -216,8 +227,9 @@ export default function SettingsPanel({
 
   // Save metadata overrides
   const handleSaveMetadata = () => {
-    localStorage.setItem('p2tl_default_ulp', defaultUlp.trim().toUpperCase());
-    localStorage.setItem('p2tl_default_up3', defaultUp3.trim().toUpperCase());
+    if (onSaveMetadata) {
+      onSaveMetadata(defaultUlp, defaultUp3);
+    }
     setSaveMetadataStatus(true);
     setTimeout(() => setSaveMetadataStatus(false), 2000);
   };

@@ -130,6 +130,18 @@ export default function App() {
     return localStorage.getItem('p2tl_backend_url') || '';
   });
 
+  const [ulp, setUlp] = useState(() => localStorage.getItem('p2tl_default_ulp') || 'ULP SALATIGA KOTA');
+  const [up3, setUp3] = useState(() => localStorage.getItem('p2tl_default_up3') || 'UP3 SALATIGA');
+
+  const handleSaveMetadata = (newUlp, newUp3) => {
+    const cleanedUlp = (newUlp || '').trim().toUpperCase();
+    const cleanedUp3 = (newUp3 || '').trim().toUpperCase();
+    setUlp(cleanedUlp);
+    setUp3(cleanedUp3);
+    localStorage.setItem('p2tl_default_ulp', cleanedUlp);
+    localStorage.setItem('p2tl_default_up3', cleanedUp3);
+  };
+
   // Authentication session state mockup
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('p2tl_auth_session') === 'true';
@@ -632,7 +644,7 @@ export default function App() {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'laporan', label: 'Laporan' },
     { id: 'bankto', label: 'Bank TO' },
-    { id: 'list', label: 'Daftar TO' },
+    { id: 'list', label: 'Pemeriksaan' },
     { id: 'pengaturan', label: 'Pengaturan' }
   ];
 
@@ -642,8 +654,8 @@ export default function App() {
         onLogin={handleLogin}
         users={users}
         title="Anev P2TL"
-        subtitle="PLN Unit Pelaksana Pelayanan Pelanggan Salatiga"
-        copyright="© 2026 PLN Salatiga. All rights reserved."
+        subtitle={ulp.trim() ? `PLN ${ulp.trim()}` : (up3.trim() ? `PLN ${up3.trim()}` : "PLN Unit Pelaksana Pelayanan Pelanggan Salatiga")}
+        copyright={ulp.trim() ? `© 2026 PLN ${ulp.trim()}. All rights reserved.` : (up3.trim() ? `© 2026 PLN ${up3.trim()}. All rights reserved.` : "© 2026 PLN Salatiga. All rights reserved.")}
       />
     );
   }
@@ -664,7 +676,7 @@ export default function App() {
       setTheme={handleThemeChange}
       tabsList={menuTabs}
       appName="Anev P2TL"
-      appSubtitle="PLN Salatiga"
+      appSubtitle={ulp.trim() ? ulp.trim() : (up3.trim() ? up3.trim() : 'PLN Salatiga')}
       userName={currentUser?.name || "Admin"}
       userRole={currentUser?.role || "Administrator"}
     >
@@ -698,6 +710,9 @@ export default function App() {
             currentUser={currentUser}
             users={users}
             onUsersChanged={handleUsersChanged}
+            ulp={ulp}
+            up3={up3}
+            onSaveMetadata={handleSaveMetadata}
           />
         </div>
       ) : (
