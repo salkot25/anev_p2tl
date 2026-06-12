@@ -124,7 +124,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   const [logs, setLogs] = useState([]);
   const [hoveredMonth, setHoveredMonth] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
-  const [compositionMetric, setCompositionMetric] = useState('tarif');
+  const [compositionMetric, setCompositionMetric] = useState('golongan');
   const [granularity, setGranularity] = useState('bulan');
   const [monthlyTargets, setMonthlyTargets] = useState(Array(12).fill(0));
   const [selectedTargetYear, setSelectedTargetYear] = useState(() => {
@@ -544,14 +544,14 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
             <div className={`lg:col-span-2 p-4 sm:p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col justify-between relative`}>
               <div>
                 <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-                  <h3 className="text-xs sm:text-base font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                  <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
                     <Layers className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                     <span>Komposisi Temuan</span>
                   </h3>
                   <select
                     value={compositionMetric}
                     onChange={(e) => setCompositionMetric(e.target.value)}
-                    className="px-2.5 py-1 text-xs font-extrabold bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-750 dark:text-slate-350 focus:border-emerald-500 transition-all cursor-pointer shrink-0"
+                    className="px-2.5 py-1.5 text-[11px] sm:text-xs font-bold bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-700 dark:text-slate-300 focus:border-emerald-500 transition-all cursor-pointer shrink-0 shadow-sm"
                   >
                     <option value="tarif">Tarif</option>
                     <option value="golongan">Golongan</option>
@@ -739,7 +739,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
             {/* Bar Chart - Trend kWh */}
             <div className={`lg:col-span-3 p-4 sm:p-6 ${colors.card} ${borderRadius.xxxl} border ${colors.border} ${shadows.md} flex flex-col relative`}>
               <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-                <h3 className="text-xs sm:text-base font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
                   <span className="hidden sm:inline">{granularity === 'hari' ? `Realisasi & Target kWh per Hari (${currentMonthName})` : granularity === 'minggu' ? `Realisasi & Target kWh per Minggu (${currentMonthName})` : 'Realisasi & Target kWh per Bulan'}</span>
                   <span className="inline sm:hidden">{granularity === 'hari' ? `kWh per Hari` : granularity === 'minggu' ? `kWh per Minggu` : 'kWh per Bulan'}</span>
@@ -749,7 +749,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   <select
                     value={granularity}
                     onChange={(e) => { setGranularity(e.target.value); setHoveredMonth(null); }}
-                    className="px-2.5 py-1 text-xs font-bold bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-755 dark:text-slate-355 focus:border-emerald-500 transition-all cursor-pointer"
+                    className="px-2.5 py-1.5 text-[11px] sm:text-xs font-bold bg-slate-100 dark:bg-slate-955 border border-slate-200 dark:border-slate-800 rounded-lg outline-none text-slate-700 dark:text-slate-300 focus:border-emerald-500 transition-all cursor-pointer shadow-sm"
                   >
                     <option value="hari">Hari</option>
                     <option value="minggu">Minggu</option>
