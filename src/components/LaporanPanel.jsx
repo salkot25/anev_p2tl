@@ -554,7 +554,7 @@ Terima kasih`;
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 h-8 w-fit">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <input type="date" value={rawDate} onChange={e => setRawDate(e.target.value)}
-                className="bg-transparent text-xs font-medium text-slate-700 dark:text-slate-300 outline-none cursor-pointer" />
+                className="bg-transparent text-xs font-medium text-slate-700 dark:text-slate-300 outline-none cursor-pointer w-[130px]" />
             </div>
           </div>
 

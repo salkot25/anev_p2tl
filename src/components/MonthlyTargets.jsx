@@ -40,7 +40,16 @@ function getWorkingDaysCount(monthIndex, yearStr, checklist) {
   return workingDays;
 }
 
-export default function MonthlyTargets({ workingDays, backendUrl }) {
+export default function MonthlyTargets({
+  workingDays,
+  backendUrl,
+  targets: propTargets,
+  setTargets: propSetTargets,
+  selectedYear: propSelectedYear,
+  setSelectedYear: propSetSelectedYear,
+  loading: propLoading,
+  setLoading: propSetLoading
+}) {
   const activeWorkingDaysChecklist = useMemo(() => {
     if (workingDays && typeof workingDays === 'object') {
       return workingDays;
@@ -63,9 +72,13 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
     if (oldSetting === '6') return { monFri: true, sat: true, sun: false };
     return { monFri: true, sat: true, sun: true };
   }, [workingDays]);
-  const [selectedYear, setSelectedYear] = useState(String(new Date().getFullYear()));
-  const [targets, setTargets] = useState(() => {
-    const initialYear = String(new Date().getFullYear());
+
+  const [localSelectedYear, setLocalSelectedYear] = useState(String(new Date().getFullYear()));
+  const selectedYear = propSelectedYear !== undefined ? propSelectedYear : localSelectedYear;
+  const setSelectedYear = propSetSelectedYear !== undefined ? propSetSelectedYear : setLocalSelectedYear;
+
+  const [localTargets, setLocalTargets] = useState(() => {
+    const initialYear = selectedYear;
     const cacheKey = `p2tl_monthly_targets_cache_${initialYear}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
@@ -83,7 +96,13 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
     }
     return Array(12).fill(0);
   });
-  const [loading, setLoading] = useState(false);
+  const targets = propTargets !== undefined ? propTargets : localTargets;
+  const setTargets = propSetTargets !== undefined ? propSetTargets : setLocalTargets;
+
+  const [localLoading, setLocalLoading] = useState(false);
+  const loading = propLoading !== undefined ? propLoading : localLoading;
+  const setLoading = propSetLoading !== undefined ? propSetLoading : setLocalLoading;
+
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(null);
 
@@ -91,6 +110,7 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
     'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
   useEffect(() => {
+    if (propTargets !== undefined) return;
     let active = true;
 
     // 1. Instantly load from cache for the selected year to prevent layout shifts or empty state
@@ -163,7 +183,7 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
     return () => {
       active = false;
     };
-  }, [selectedYear, backendUrl]);
+  }, [selectedYear, backendUrl, propTargets, setLoading, setTargets]);
 
   const handleTargetChange = (monthIdx, value) => {
     const newTargets = [...targets];
@@ -173,6 +193,11 @@ export default function MonthlyTargets({ workingDays, backendUrl }) {
       if (!isNaN(num)) newTargets[monthIdx] = num;
     }
     setTargets(newTargets);
+
+    // Save draft immediately to localStorage so calculations update in real-time
+    const cacheKey = `p2tl_monthly_targets_cache_${selectedYear}`;
+    const cachedData = newTargets.map((val, i) => ({ Month: i + 1, Target_kWh: val }));
+    localStorage.setItem(cacheKey, JSON.stringify(cachedData));
   };
 
   const handleSaveTargets = async () => {

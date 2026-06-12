@@ -64,6 +64,23 @@ function getYearFromDate(dateStr) {
   return dateStr.split('-')[0] || String(new Date().getFullYear());
 }
 
+function formatLastFetch(date) {
+  if (!date) return '';
+  const now = new Date();
+  const isToday = date.getDate() === now.getDate() &&
+                  date.getMonth() === now.getMonth() &&
+                  date.getFullYear() === now.getFullYear();
+  
+  const timeStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) {
+    return timeStr;
+  } else {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month} ${timeStr}`;
+  }
+}
+
 const SUB_TABS = [
   { id: 'kpi', label: 'Realisasi' },
   { id: 'targets', label: 'Target' },
@@ -81,7 +98,14 @@ export default function DashboardPanel({ backendUrl }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isOnline, setIsOnline] = useState(true);
-  const [lastFetch, setLastFetch] = useState(null);
+  const [lastFetch, setLastFetch] = useState(() => {
+    const cachedTime = localStorage.getItem('p2tl_last_fetch');
+    if (cachedTime) {
+      const parsed = new Date(cachedTime);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+    return null;
+  });
   const [subTab, setSubTab] = useState('kpi');
 
   const fetchDashboardData = useCallback(async (date) => {
@@ -161,10 +185,12 @@ export default function DashboardPanel({ backendUrl }) {
 
         setData(dashData);
         setIsOnline(true);
-        setLastFetch(new Date());
+        const now = new Date();
+        setLastFetch(now);
         // Cache the data
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(dashData));
+          localStorage.setItem('p2tl_last_fetch', now.toISOString());
         } catch {
           // Ignored
         }
@@ -211,16 +237,16 @@ export default function DashboardPanel({ backendUrl }) {
   return (
     <div className="space-y-4 animate-fade-in-up">
       {/* ── Unified Command Bar ─────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         {/* Row 1/Left: Sub-tab navigation pills */}
-        <div className="flex p-0.5 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800/60 w-full md:w-auto order-2 md:order-1">
+        <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800/60 w-full md:w-auto order-2 md:order-1">
           {SUB_TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setSubTab(tab.id)}
-              className={`flex-1 md:flex-none md:px-6 py-2 text-[11px] font-bold rounded-[10px] transition-all duration-200 text-center whitespace-nowrap min-w-[80px] md:min-w-[110px] ${
+              className={`flex-1 md:flex-none md:px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 text-center whitespace-nowrap min-w-[80px] md:min-w-[112px] ${
                 subTab === tab.id
-                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/80 dark:border-slate-700/80'
+                  ? 'bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-slate-200/85 dark:border-slate-700/80'
                   : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
               }`}
             >
@@ -229,49 +255,52 @@ export default function DashboardPanel({ backendUrl }) {
           ))}
         </div>
 
-        {/* Row 2/Right: Date + Status + Refresh */}
+        {/* Row 2/Right: Date + Status/Sync + Refresh */}
         <div className="flex items-center justify-between md:justify-end gap-2 w-full md:w-auto order-1 md:order-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="relative">
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="pl-8 pr-3 py-2 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-800 dark:text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all w-[148px]"
-              />
-              <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          {/* Date Picker */}
+          <div className="relative">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="pl-8 pr-3 py-2 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl outline-none text-slate-800 dark:text-slate-100 focus:border-emerald-500 dark:focus:border-emerald-400 focus:ring-2 focus:ring-emerald-500/10 transition-all w-[185px]"
+            />
+            <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Inline status indicator */}
+            <div className="flex items-center gap-2 bg-slate-100/50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
+              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-amber-500 shadow-sm shadow-amber-500/50'}`} />
+              <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider hidden sm:inline">
+                {isOnline ? 'Online' : 'Offline'}
+              </span>
+              {lastFetch && (
+                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
+                  <span className="hidden sm:inline">· </span>
+                  {formatLastFetch(lastFetch)}
+                </span>
+              )}
             </div>
 
+            {/* Refresh Button */}
             <button
               onClick={handleRefresh}
               disabled={loading}
-              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-blue-600 dark:hover:text-blue-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
               title="Refresh data"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
-          </div>
-
-          {/* Inline status indicator */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-amber-500 shadow-sm shadow-amber-500/50'}`} />
-            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 hidden sm:block">
-              {isOnline ? 'Online' : 'Offline'}
-            </span>
-            {lastFetch && (
-              <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium hidden sm:block">
-                · {lastFetch.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
           </div>
         </div>
       </div>
 
       {/* Error Banner */}
       {error && (
-        <div className="flex items-start gap-2.5 p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 rounded-xl text-amber-700 dark:text-amber-400">
+        <div className="flex items-start gap-3 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/30 rounded-xl text-amber-700 dark:text-amber-400">
           <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-          <p className="text-[11px] font-semibold leading-relaxed">{error}</p>
+          <p className="text-xs font-semibold leading-4">{error}</p>
         </div>
       )}
 
