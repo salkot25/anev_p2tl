@@ -322,7 +322,7 @@ export default function SettingsPanel({
             <Database className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Status Database</h3>
+            <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Status Database</h3>
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <span>
                 {propBackendUrl 
@@ -337,7 +337,7 @@ export default function SettingsPanel({
           </div>
         </div>
         
-        <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+        <span className={`px-3 py-1 rounded-full text-[8px] sm:text-xs font-black uppercase tracking-wider border ${
           propBackendUrl 
             ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20' 
             : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/20'
@@ -355,11 +355,11 @@ export default function SettingsPanel({
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
               <Database className="w-4.5 h-4.5 text-blue-500" />
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Google Spreadsheet Database</h3>
+              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Google Spreadsheet Database</h3>
             </div>
 
             <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Google Apps Script Web App URL</label>
+              <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Google Apps Script Web App URL</label>
               <div className="flex gap-2 items-stretch">
                 <input 
                   type="text" 
@@ -414,7 +414,7 @@ export default function SettingsPanel({
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
               <RefreshCw className="w-4.5 h-4.5 text-blue-500" />
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Penyelarasan Data Manual</h3>
+              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Penyelarasan Data Manual</h3>
             </div>
 
             {propBackendUrl ? (
@@ -428,7 +428,7 @@ export default function SettingsPanel({
                     <RefreshCw className={`w-3.5 h-3.5 ${syncingAll ? 'animate-spin' : ''}`} />
                     Mulai Sinkronisasi Dua Arah (Sesuai Waktu Terbaru)
                   </button>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium italic -mt-1 text-center">
+                  <p className="text-[8px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold italic -mt-1 text-center">
                     *Merekomendasikan aksi ini untuk menghindari data tertimpa jika ada pembaruan dari perangkat lain.
                   </p>
                 </div>
@@ -437,7 +437,7 @@ export default function SettingsPanel({
                   <button
                     type="button"
                     onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="text-[11px] text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 font-bold flex items-center gap-1 cursor-pointer transition-colors focus:outline-none select-none"
+                    className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 font-black flex items-center gap-1 cursor-pointer transition-colors focus:outline-none select-none"
                   >
                     {showAdvanced ? '▼ Sembunyikan Opsi Overwrite Manual' : '► Tampilkan Opsi Overwrite Manual (Tindakan Bahaya)'}
                   </button>
@@ -507,12 +507,12 @@ export default function SettingsPanel({
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
               <Building className="w-4.5 h-4.5 text-blue-500" />
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Unit Kerja PLN</h3>
+              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Unit Kerja PLN</h3>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Default Unit Layanan (ULP)</label>
+                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Default Unit Layanan (ULP)</label>
                 <input 
                   type="text" 
                   value={defaultUlp} 
@@ -522,7 +522,7 @@ export default function SettingsPanel({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Default Area (UP3)</label>
+                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Default Area (UP3)</label>
                 <input 
                   type="text" 
                   value={defaultUp3} 
@@ -556,7 +556,7 @@ export default function SettingsPanel({
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
               <RefreshCw className="w-4.5 h-4.5 text-blue-500 animate-spin-slow" />
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Hari Kerja</h3>
+              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Hari Kerja</h3>
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
@@ -621,7 +621,7 @@ export default function SettingsPanel({
         <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
           <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800/80">
             <HelpCircle className="w-4.5 h-4.5 text-blue-500" />
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Panduan Setup Backend</h3>
+            <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Panduan Setup Backend</h3>
           </div>
 
           <div className="text-xs text-slate-600 dark:text-slate-400 flex flex-col gap-3.5 leading-relaxed font-medium">
@@ -630,34 +630,34 @@ export default function SettingsPanel({
             <ol className="list-decimal list-inside flex flex-col gap-2.5">
               <li>
                 <span className="font-bold text-slate-800 dark:text-slate-200">Buka Spreadsheet Anda:</span>
-                <p className="pl-4 mt-0.5 text-[11px] text-slate-450">Buka file Google Sheet Anda di browser.</p>
+                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Buka file Google Sheet Anda di browser.</p>
               </li>
               <li>
                 <span className="font-bold text-slate-800 dark:text-slate-200">Akses Apps Script Editor:</span>
-                <p className="pl-4 mt-0.5 text-[11px] text-slate-450">Klik menu **Ekstensi (Extensions) -&gt; Apps Script** di bagian atas.</p>
+                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Klik menu **Ekstensi (Extensions) -&gt; Apps Script** di bagian atas.</p>
               </li>
               <li>
                 <span className="font-bold text-slate-800 dark:text-slate-200">Salin Kode Backend:</span>
-                <p className="pl-4 mt-0.5 text-[11px] text-slate-450">Salin kode script backend Google Apps Script yang tercantum di file `implementation_plan.md` proyek ini ke editor tersebut.</p>
+                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Salin kode script backend Google Apps Script yang tercantum di file `implementation_plan.md` proyek ini ke editor tersebut.</p>
               </li>
               <li>
                 <span className="font-bold text-slate-800 dark:text-slate-200">Jalankan Setup Tabel:</span>
-                <p className="pl-4 mt-0.5 text-[11px] text-slate-450">Pilih fungsi `setupTables` di bagian atas editor, lalu klik tombol **Jalankan (Run)**. Spreadsheet Anda otomatis akan membuat sheet **bank to** dan **data to** beserta kolom headernya.</p>
+                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Jalankan Setup Tabel: Pilih fungsi `setupTables` di bagian atas editor, lalu klik tombol **Jalankan (Run)**. Spreadsheet Anda otomatis akan membuat sheet **bank to** dan **data to** beserta kolom headernya.</p>
               </li>
               <li>
                 <span className="font-bold text-slate-800 dark:text-slate-200">Deploy sebagai Web App:</span>
                 <p className="pl-4 mt-0.5 text-[11px] text-slate-450">Klik **Terapkan (Deploy) -&gt; Penerapan Baru (New Deployment)**.</p>
-                <p className="pl-4 text-[11px] text-slate-450">- Pilih jenis: **Aplikasi Web (Web App)**.</p>
-                <p className="pl-4 text-[11px] text-slate-450">- Jalankan sebagai: **Saya sendiri (Me)**.</p>
-                <p className="pl-4 text-[11px] text-slate-450">- Siapa yang memiliki akses: **Siapa saja (Anyone)**.</p>
+                <p className="pl-4 text-[10px] sm:text-xs text-slate-450 font-semibold">- Pilih jenis: **Aplikasi Web (Web App)**.</p>
+                <p className="pl-4 text-[10px] sm:text-xs text-slate-450 font-semibold">- Jalankan sebagai: **Saya sendiri (Me)**.</p>
+                <p className="pl-4 text-[10px] sm:text-xs text-slate-450 font-semibold">- Siapa yang memiliki akses: **Siapa saja (Anyone)**.</p>
               </li>
               <li>
                 <span className="font-bold text-slate-800 dark:text-slate-200">Tempel URL di Sini:</span>
-                <p className="pl-4 mt-0.5 text-[11px] text-slate-450">Salin URL Web App yang dihasilkan setelah deploy, tempelkan ke kolom input di halaman ini, lalu klik **Simpan**.</p>
+                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Salin URL Web App yang dihasilkan setelah deploy, tempelkan ke kolom input di halaman ini, lalu klik **Simpan**.</p>
               </li>
             </ol>
 
-            <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100/50 dark:border-blue-900/20 rounded-2xl text-[11px] text-slate-500">
+            <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100/50 dark:border-blue-900/20 rounded-2xl text-[10px] sm:text-xs text-slate-500 font-bold">
               <span className="font-bold text-blue-600 dark:text-blue-400 block mb-0.5">Note:</span>
               Koneksi ini berjalan secara langsung di browser Anda via pemanggilan HTTP API aman ke infrastruktur Google Cloud tanpa perantara server luar.
             </div>
@@ -675,8 +675,8 @@ export default function SettingsPanel({
                 <User className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">Manajemen Pengguna</h3>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">Kelola akun akses, kata sandi, dan role petugas di database cloud.</p>
+                <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Manajemen Pengguna</h3>
+                <p className="text-[8px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 mt-0.5">Kelola akun akses, kata sandi, dan role petugas di database cloud.</p>
               </div>
             </div>
             <button 
@@ -702,7 +702,7 @@ export default function SettingsPanel({
                 placeholder="Cari user berdasarkan nama, role, unit..."
               />
             </div>
-            <div className="text-[11px] text-slate-500 dark:text-slate-450 font-bold bg-slate-50 dark:bg-slate-950/20 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
+            <div className="text-xs text-slate-500 dark:text-slate-455 font-black bg-slate-50 dark:bg-slate-950/20 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
               Total Terdaftar: <span className="text-blue-600 dark:text-blue-400">{users.length}</span> Pengguna
             </div>
           </div>
@@ -718,7 +718,7 @@ export default function SettingsPanel({
                   className="group bg-slate-50 dark:bg-slate-950/10 hover:bg-white dark:hover:bg-slate-900 border border-slate-150 dark:border-slate-800/40 hover:border-blue-500/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 rounded-2xl p-4 flex flex-col gap-4 relative overflow-hidden"
                 >
                   {isSelf && (
-                    <div className="absolute top-0 right-0 bg-blue-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-bl-lg uppercase tracking-wide">
+                    <div className="absolute top-0 right-0 bg-blue-500 text-white text-[8px] sm:text-[10px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-wide">
                       Anda
                     </div>
                   )}
@@ -734,7 +734,7 @@ export default function SettingsPanel({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">{user.username}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold border uppercase shrink-0 ${
+                        <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black border uppercase shrink-0 ${
                           isAdminUser 
                             ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/10' 
                             : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/10'
@@ -742,11 +742,11 @@ export default function SettingsPanel({
                           {user.role}
                         </span>
                       </div>
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">{user.unit}</p>
+                      <p className="text-[8px] sm:text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">{user.unit}</p>
                     </div>
                   </div>
 
-                  <div className="border-t border-slate-100 dark:border-slate-850 pt-3 flex flex-col gap-1.5 text-[11px] text-slate-600 dark:text-slate-400">
+                  <div className="border-t border-slate-100 dark:border-slate-850 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 dark:text-slate-400">
                     {user.whatsapp && (
                       <div className="flex items-center gap-2 font-medium">
                         <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
@@ -769,7 +769,7 @@ export default function SettingsPanel({
                   </div>
 
                   <div className="flex justify-between items-center mt-1 border-t border-slate-100 dark:border-slate-850 pt-2.5">
-                    <span className="text-[9px] text-slate-450 dark:text-slate-500 font-semibold">
+                    <span className="text-[8px] sm:text-xs text-slate-455 dark:text-slate-500 font-bold">
                       Updated: {new Date(user.lastUpdated).toLocaleDateString()}
                     </span>
                     
@@ -816,7 +816,7 @@ export default function SettingsPanel({
               <X className="w-4 h-4" />
             </button>
 
-            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-4">
+            <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-4">
               {editingUser ? `Edit User: ${editingUser.username}` : 'Tambah User Baru'}
             </h3>
 
@@ -829,7 +829,7 @@ export default function SettingsPanel({
               )}
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Nama Pengguna (Username)</label>
+                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Nama Pengguna (Username)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User className="w-4 h-4 text-slate-400" />
@@ -847,7 +847,7 @@ export default function SettingsPanel({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Kata Sandi (Password)</label>
+                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Kata Sandi (Password)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Key className="w-4 h-4 text-slate-400" />
@@ -864,7 +864,7 @@ export default function SettingsPanel({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Role Akses</label>
+                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Role Akses</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Shield className="w-4 h-4 text-slate-400" />
@@ -881,7 +881,7 @@ export default function SettingsPanel({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Nomor WhatsApp</label>
+                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Nomor WhatsApp</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Phone className="w-4 h-4 text-slate-400" />
@@ -897,7 +897,7 @@ export default function SettingsPanel({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Unit Kerja</label>
+                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Unit Kerja</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Building className="w-4 h-4 text-slate-400" />

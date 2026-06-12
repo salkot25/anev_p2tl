@@ -531,7 +531,7 @@ Terima kasih`;
         <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
           {/* Report Type */}
           <div className="flex flex-col gap-1.5 w-full sm:w-64">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Jenis Laporan</label>
+            <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Jenis Laporan</label>
             <div className="flex w-full gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl h-8">
               {['rencana', 'realisasi'].map(t => (
                 <button key={t} type="button" onClick={() => setReportType(t)}
@@ -550,7 +550,7 @@ Terima kasih`;
 
           {/* Date Picker */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tanggal Laporan</label>
+            <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tanggal Laporan</label>
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 h-8 w-fit">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <input type="date" value={rawDate} onChange={e => setRawDate(e.target.value)}
@@ -560,12 +560,12 @@ Terima kasih`;
 
           {/* Formatted date */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Periode</label>
-            <div className="text-sm font-semibold text-slate-700 dark:text-slate-200 h-8 flex items-center">{reportDate}</div>
+            <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Periode</label>
+            <div className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 h-8 flex items-center">{reportDate}</div>
           </div>
 
           {isLoading && (
-            <div className="ml-auto flex items-center gap-2 text-[11px] text-blue-500 font-semibold">
+            <div className="ml-auto flex items-center gap-2 text-xs text-blue-500 font-bold">
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               Memuat data…
             </div>
@@ -587,7 +587,7 @@ Terima kasih`;
           <div className="flex flex-col gap-3">
             <div className="flex items-center gap-2">
               <Zap className="w-3.5 h-3.5 text-amber-500" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parameter Energi kWh</span>
+              <span className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Parameter Energi kWh</span>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -598,10 +598,10 @@ Terima kasih`;
                 { label: 'Realisasi Kumulatif', val: realisasiKumulatifKwh, set: setRealisasiKumulatifKwh, disabled: !isRealisasi, numCls: 'text-emerald-600 dark:text-emerald-400', focusCls: 'focus:border-emerald-400 dark:focus:border-emerald-500' },
               ].map(kpi => (
                 <div key={kpi.label} className={`bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-4 shadow-sm transition-opacity ${kpi.disabled ? 'opacity-40 pointer-events-none' : ''}`}>
-                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2.5">{kpi.label}</div>
+                  <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">{kpi.label}</div>
                   <input type="text" value={kpi.val} onChange={e => kpi.set(e.target.value)} disabled={kpi.disabled}
-                    className={`w-full text-xl font-black font-mono bg-transparent outline-none border-b-2 border-dashed border-slate-200 dark:border-slate-700 pb-1 transition-colors disabled:cursor-not-allowed ${kpi.numCls} ${kpi.focusCls}`} />
-                  <div className="text-[10px] text-slate-400 mt-1.5">kWh</div>
+                    className={`w-full text-lg sm:text-xl font-black font-mono bg-transparent outline-none border-b-2 border-dashed border-slate-200 dark:border-slate-700 pb-1 transition-colors disabled:cursor-not-allowed ${kpi.numCls} ${kpi.focusCls}`} />
+                  <div className="text-[8px] sm:text-xs font-medium text-slate-400 mt-1">kWh</div>
                 </div>
               ))}
             </div>
@@ -609,20 +609,20 @@ Terima kasih`;
             {/* GAP Summary Dark Banner */}
             <div className="bg-slate-900 dark:bg-slate-800/90 border border-slate-800 dark:border-slate-700/60 rounded-2xl px-5 py-3.5 flex items-center gap-0">
               <div className="flex-1">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">GAP Kumulatif</div>
-                <div className="text-xl font-black font-mono text-white tracking-tight">
+                <div className="text-[8px] sm:text-xs font-black text-slate-500 uppercase tracking-widest mb-1">GAP Kumulatif</div>
+                <div className="text-lg sm:text-xl font-black font-mono text-white tracking-tight">
                   {isRealisasi ? calculatedKwh.gap : '438.403'}
-                  <span className="text-sm font-semibold text-slate-400 ml-1.5">kWh</span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">kWh</span>
                 </div>
               </div>
               <div className="w-px h-10 bg-slate-700 mx-5" />
               <div>
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Capaian</div>
-                <div className="text-xl font-black font-mono text-emerald-400 tracking-tight">
+                <div className="text-[8px] sm:text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Capaian</div>
+                <div className="text-lg sm:text-xl font-black font-mono text-emerald-400 tracking-tight">
                   {isRealisasi ? calculatedKwh.percent : '71,94%'}
                 </div>
               </div>
-              <span className="ml-auto text-[10px] bg-slate-800 border border-slate-700 text-slate-500 px-2 py-1 rounded-lg font-medium tracking-wide">AUTO</span>
+              <span className="ml-auto text-[8px] sm:text-xs bg-slate-800 border border-slate-700 text-slate-500 px-2 py-1 rounded-lg font-bold tracking-wide">AUTO</span>
             </div>
           </div>
 
@@ -637,27 +637,27 @@ Terima kasih`;
                   <BarChart2 className="w-4 h-4 text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200">Sasaran Operasi Pelanggan</h3>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Real-time · sinkron dari data target</p>
+                  <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200">Sasaran Operasi Pelanggan</h3>
+                  <p className="text-[8px] sm:text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">Real-time · sinkron dari data target</p>
                 </div>
               </div>
               <div className="text-right shrink-0 pl-4">
                 <div className="text-[28px] font-black font-mono leading-none text-blue-600 dark:text-blue-400">{metrics.totalTarget}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wide">Total Plg</div>
-                {metrics.totalTarget > 33 && <div className="text-[10px] font-bold text-amber-500 mt-1">+{metrics.totalTarget - 33} melebihi batas 33</div>}
-                {metrics.totalTarget === 33 && <div className="text-[10px] font-bold text-emerald-500 mt-1">✓ Tepat 33 target</div>}
-                {metrics.totalTarget < 33 && <div className="text-[10px] font-bold text-slate-400 mt-1">−{33 - metrics.totalTarget} dari batas 33</div>}
+                <div className="text-[8px] sm:text-xs font-bold text-slate-400 uppercase tracking-wide">Total Plg</div>
+                {metrics.totalTarget > 33 && <div className="text-[8px] sm:text-xs font-black text-amber-500 mt-1">+{metrics.totalTarget - 33} melebihi batas 33</div>}
+                {metrics.totalTarget === 33 && <div className="text-[8px] sm:text-xs font-black text-emerald-500 mt-1">✓ Tepat 33 target</div>}
+                {metrics.totalTarget < 33 && <div className="text-[8px] sm:text-xs font-black text-slate-400 mt-1">−{33 - metrics.totalTarget} dari batas 33</div>}
               </div>
             </div>
 
             {/* Column Headers */}
             <div className="grid px-5 py-2 bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-slate-800/40"
               style={{ gridTemplateColumns: colTpl }}>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">#</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Kategori Sasaran</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Target</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">Real.</div>
-              {isRealisasi && <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-center">%</div>}
+              <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">#</div>
+              <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kategori Sasaran</div>
+              <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Target</div>
+              <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Real.</div>
+              {isRealisasi && <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">%</div>}
             </div>
 
             {/* ─── Auto rows: 1, 2, 3 ─── */}
@@ -674,9 +674,9 @@ Terima kasih`;
                   style={{ gridTemplateColumns: colTpl }}>
                   <div className="text-xs font-bold text-slate-300 dark:text-slate-700">{row.num}</div>
                   <div className="pr-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: row.dot }} />
-                      <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300 leading-snug">{row.label}</span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-snug">{row.label}</span>
                     </div>
                     {isRealisasi && row.target > 0 && (
                       <div className="ml-3.5 mt-1.5 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
@@ -694,7 +694,7 @@ Terima kasih`;
                   {isRealisasi && (
                     <div className="text-center">
                       {s.pct !== null
-                        ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>
+                        ? <span className="text-[8px] sm:text-xs font-black px-1.5 py-0.5 rounded-md" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>
                         : <span className="text-slate-300 dark:text-slate-700">—</span>}
                     </div>
                   )}
@@ -718,11 +718,11 @@ Terima kasih`;
                   style={{ gridTemplateColumns: colTpl }}>
                   <div className="text-xs font-bold text-slate-300 dark:text-slate-700">{row.num}</div>
                   <div className="pr-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: row.dot }} />
-                      <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300 leading-snug">{row.label}</span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-snug">{row.label}</span>
                     </div>
-                    <div className="text-[10px] text-amber-500/90 font-semibold mt-0.5 ml-3.5">Override manual</div>
+                    <div className="text-[8px] sm:text-xs text-amber-500/90 font-black mt-0.5 ml-3.5">Override manual</div>
                     {isRealisasi && tNum > 0 && (
                       <div className="ml-3.5 mt-1.5 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-700"
@@ -743,7 +743,7 @@ Terima kasih`;
                   {isRealisasi && (
                     <div className="text-center">
                       {s.pct !== null
-                        ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>
+                        ? <span className="text-[8px] sm:text-xs font-black px-1.5 py-0.5 rounded-md" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>
                         : <span className="text-slate-300 dark:text-slate-700">—</span>}
                     </div>
                   )}
@@ -760,11 +760,11 @@ Terima kasih`;
                   style={{ gridTemplateColumns: colTpl }}>
                   <div className="text-xs font-bold text-slate-300 dark:text-slate-700">7</div>
                   <div className="pr-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5">
                       <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
-                      <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300 leading-snug">Lainnya (Sisir)</span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-snug">Lainnya (Sisir)</span>
                     </div>
-                    <div className="text-[10px] text-slate-400 font-medium mt-0.5 ml-3.5">Sisa dari total referensi 33</div>
+                    <div className="text-[8px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold mt-0.5 ml-3.5">Sisa dari total referensi 33</div>
                     {isRealisasi && metrics.lainTarget > 0 && (
                       <div className="ml-3.5 mt-1.5 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className="h-full rounded-full transition-all duration-700"
@@ -781,7 +781,7 @@ Terima kasih`;
                   {isRealisasi && (
                     <div className="text-center">
                       {s.pct !== null
-                        ? <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>
+                        ? <span className="text-[8px] sm:text-xs font-black px-1.5 py-0.5 rounded-md" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>
                         : <span className="text-slate-300 dark:text-slate-700">—</span>}
                     </div>
                   )}
@@ -793,8 +793,8 @@ Terima kasih`;
             <div className="grid items-center px-5 py-4 bg-gradient-to-r from-blue-50/70 to-transparent dark:from-blue-950/20 dark:to-transparent border-t-2 border-blue-100 dark:border-blue-900/50"
               style={{ gridTemplateColumns: colTpl }}>
               <div />
-              <div className="text-sm font-bold text-blue-700 dark:text-blue-400">Total Sasaran Operasi</div>
-              <div className="text-center font-mono font-black text-base text-blue-700 dark:text-blue-400">{metrics.totalTarget}</div>
+              <div className="text-xs sm:text-sm font-black text-blue-700 dark:text-blue-400">Total Sasaran Operasi</div>
+              <div className="text-center font-mono font-black text-sm sm:text-base text-blue-700 dark:text-blue-400">{metrics.totalTarget}</div>
               <div className="text-center font-mono font-black text-base">
                 {isRealisasi
                   ? <span className="text-emerald-600 dark:text-emerald-400">{metrics.totalReal}</span>
@@ -804,7 +804,7 @@ Terima kasih`;
                 <div className="text-center">
                   {metrics.totalTarget > 0 ? (() => {
                     const s = achStyle(metrics.totalTarget, metrics.totalReal);
-                    return <span className="text-xs font-black px-2 py-0.5 rounded-lg" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>;
+                    return <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-lg" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>;
                   })() : <span className="text-slate-300">—</span>}
                 </div>
               )}
@@ -820,9 +820,9 @@ Terima kasih`;
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Send className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pratinjau Pesan WhatsApp</span>
+              <span className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Pratinjau Pesan WhatsApp</span>
             </div>
-            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${
+            <span className={`text-[8px] sm:text-xs font-black px-2.5 py-1 rounded-full ${
               isRealisasi
                 ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
                 : 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400'
@@ -833,12 +833,12 @@ Terima kasih`;
           <div className="rounded-2xl overflow-hidden border border-slate-200/60 dark:border-slate-800 shadow-md">
             {/* WA Header */}
             <div className="bg-[#075E54] px-4 py-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-[10px] font-black shrink-0 border border-white/20">MUP</div>
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-[8px] sm:text-xs font-black shrink-0 border border-white/20">MUP</div>
               <div className="flex-1 min-w-0">
                 <div className="text-white text-xs font-semibold truncate">MUP3 Salatiga · Asman TEL</div>
-                <div className="text-green-200 text-[10px] font-medium">P2TL ULP Salatiga Kota</div>
+                <div className="text-green-200 text-[8px] sm:text-xs font-bold">P2TL ULP Salatiga Kota</div>
               </div>
-              <div className="text-[10px] text-green-200/60 font-medium hidden sm:block">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
+              <div className="text-[8px] sm:text-xs text-green-200/60 font-bold hidden sm:block">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
             </div>
 
             {/* Messages Area */}
@@ -852,10 +852,11 @@ Terima kasih`;
               {/* Message Bubble */}
               <div className="bg-white dark:bg-slate-800 rounded-2xl rounded-tl-sm max-w-[97%] shadow-sm overflow-hidden">
                 <div className="px-3.5 pt-3.5 pb-1">
-                  <pre className="font-mono text-[11px] whitespace-pre-wrap leading-relaxed break-words text-slate-800 dark:text-slate-200 tracking-tight select-text">{generatedText}</pre>
+                  <pre className="font-mono text-[10px] sm:text-xs whitespace-pre-wrap leading-relaxed break-words text-slate-800 dark:text-slate-200 tracking-tight select-text">{generatedText}</pre>
                 </div>
+                <div className="flex-1 min-h-0" />
                 <div className="flex items-center justify-end gap-1 px-3.5 pb-2.5 mt-0.5">
-                  <span className="text-[10px] text-slate-400">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-[8px] sm:text-xs font-bold text-slate-400">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                   <CheckCircle2 className="w-3 h-3 text-blue-400" />
                 </div>
               </div>
