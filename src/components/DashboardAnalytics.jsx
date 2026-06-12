@@ -1008,10 +1008,9 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 <div className="space-y-1">
                   <h3 className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
-                    <span>Perbandingan Bulanan kWh — {currentYear} vs {prevYear}</span>
+                    <span>Perbandingan Realisasi YoY</span>
                   </h3>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-                    <span>Realisasi Kumulatif:</span>
                     <span className="font-extrabold text-slate-800 dark:text-slate-205">{formatIndoNumber(totalRealYear)} kWh</span>
                     <span className="text-slate-450 font-normal">vs</span>
                     <span className="font-extrabold text-slate-800 dark:text-slate-205">{formatIndoNumber(prevTotalKwhYtd)} kWh ({prevYear})</span>
