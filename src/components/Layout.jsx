@@ -1,13 +1,14 @@
 import {
-  LayoutDashboard,
+  BarChart3,
   LogOut,
-  FileText,
+  ListChecks,
   Sun,
   Moon,
   Folder,
   Database,
-  Send,
-  Settings
+  ScrollText,
+  Sliders,
+  Send
 } from "lucide-react";
 
 // Fallback icon resolver for template customization
@@ -15,11 +16,11 @@ const resolveIcon = (id, customIcon) => {
   if (customIcon) return customIcon;
   
   const iconMap = {
-    dashboard: <LayoutDashboard size={20} />,
-    list: <FileText size={20} />,
+    dashboard: <BarChart3 size={20} />,
+    list: <ListChecks size={20} />,
     bankto: <Database size={20} />,
-    laporan: <Send size={20} className="-rotate-45 relative right-[0.5px] top-[0.5px]" />,
-    pengaturan: <Settings size={20} />
+    laporan: <ScrollText size={20} />,
+    pengaturan: <Sliders size={20} />
   };
 
   return iconMap[id.toLowerCase()] || <Folder size={20} />;
@@ -215,7 +216,7 @@ export default function Layout({
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-[calc(16px+env(safe-area-inset-bottom,0px))] left-4 right-4 h-16 z-30 pointer-events-none">
+      <div className="md:hidden fixed bottom-5 left-4 right-4 h-16 z-30 pointer-events-none">
         {/* Navigation Bar Backplate */}
         <div className="w-full h-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-around items-center px-2 rounded-2xl border border-slate-200/50 dark:border-slate-800/60 shadow-[0_8px_32px_rgba(15,23,42,0.08)] dark:shadow-[0_12px_32px_rgba(0,0,0,0.35)] transition-all duration-300 pointer-events-auto">
           {(() => {

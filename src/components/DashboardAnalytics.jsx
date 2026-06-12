@@ -974,8 +974,8 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   </div>
                 </div>
               </div>
-              <div className="w-full lg:w-72 flex flex-row lg:flex-col items-center justify-between lg:justify-center p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/60 rounded-xl z-10 shrink-0 gap-4 sm:gap-6">
-                <div className="flex items-center lg:justify-center gap-4 lg:flex-col">
+              <div className="w-full lg:w-72 flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-stretch justify-between p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/60 rounded-xl z-10 shrink-0 gap-4 sm:gap-6">
+                <div className="flex items-center lg:justify-center gap-4 lg:flex-col shrink-0">
                   <div className="relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20">
                     <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">
                       <circle cx="40" cy="40" r="32" className="stroke-slate-200 dark:stroke-slate-800" strokeWidth="6" fill="transparent" />
@@ -990,7 +990,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold sm:hidden block mt-1">{formatIndoNumber(totalRealYear)} / {formatIndoNumber(targetKumulatifYtd)} kWh</span>
                   </div>
                 </div>
-                <div className="flex-1 lg:w-full space-y-1">
+                <div className="w-full sm:flex-1 lg:w-full space-y-1">
                   <div className="flex justify-between items-center text-[10px] font-black text-slate-400 dark:text-slate-500 tracking-wider">
                     <span>{isSemester1 ? 'Target Semester I' : 'Target Tahunan'}</span>
                     <span className="text-slate-700 dark:text-slate-300 font-extrabold">{Math.round(pctPeriod)}%</span>
@@ -1195,15 +1195,15 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
               </div>
             </div>
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2 w-full">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-500/10"><Target className="w-3.5 h-3.5" /></div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Sisa Target</span>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              <div className={`p-3 sm:p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between min-w-0`}>
+                <div className="space-y-2 min-w-0">
+                  <div className="flex items-center justify-between gap-1 w-full min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="p-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-lg border border-amber-500/10 shrink-0"><Target className="w-3.5 h-3.5" /></div>
+                      <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider truncate">Sisa Target</span>
                     </div>
-                    <div className="group relative inline-block">
+                    <div className="group relative inline-block shrink-0">
                       <Info className="w-4 h-4 text-slate-400 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-help transition-colors" />
                       <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-3 bg-slate-950/95 dark:bg-slate-900 text-xs text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
                         <div className="font-black border-b border-slate-800 pb-1 mb-1 text-xs text-amber-500 uppercase">Sisa Target</div>
@@ -1226,14 +1226,14 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 </div>
               </div>
 
-              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2 w-full">
-                    <div className="flex items-center gap-2">
-                      <div className={`p-1 rounded-lg border ${rataRataDibutuhkan > (monthlyTargets[month - 1] ?? 0) * 1.2 ? 'bg-rose-500/10 text-rose-500 border-rose-500/10' : 'bg-sky-500/10 text-sky-600 border-sky-500/10'}`}><AlertTriangle className="w-3.5 h-3.5" /></div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Kebutuhan/Bulan</span>
+              <div className={`p-3 sm:p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between min-w-0`}>
+                <div className="space-y-2 min-w-0">
+                  <div className="flex items-center justify-between gap-1 w-full min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className={`p-1 rounded-lg border shrink-0 ${rataRataDibutuhkan > (monthlyTargets[month - 1] ?? 0) * 1.2 ? 'bg-rose-500/10 text-rose-500 border-rose-500/10' : 'bg-sky-500/10 text-sky-600 border-sky-500/10'}`}><AlertTriangle className="w-3.5 h-3.5" /></div>
+                      <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider truncate">Kebutuhan/Bulan</span>
                     </div>
-                    <div className="group relative inline-block">
+                    <div className="group relative inline-block shrink-0">
                       <Info className="w-4 h-4 text-slate-400 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-help transition-colors" />
                       <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-3 bg-slate-950/95 dark:bg-slate-900 text-xs text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
                         <div className="font-black border-b border-slate-800 pb-1 mb-1 text-xs text-sky-500 dark:text-sky-400 uppercase">Kebutuhan/Bulan</div>
@@ -1251,16 +1251,16 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider truncate font-bold">Untuk {sisaBulan} bulan tersisa</div>
               </div>
 
-              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2 w-full">
-                    <div className="flex items-center gap-2">
-                      <div className={`p-1 rounded-lg border ${pctGrowthYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/10' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/10'}`}>
+              <div className={`p-3 sm:p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between min-w-0`}>
+                <div className="space-y-2 min-w-0">
+                  <div className="flex items-center justify-between gap-1 w-full min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className={`p-1 rounded-lg border shrink-0 ${pctGrowthYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/10' : 'bg-rose-500/10 text-rose-500 dark:text-rose-455 border-rose-500/10'}`}>
                         {pctGrowthYtd >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                       </div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Pertumbuhan (YoY)</span>
+                      <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider truncate">Pertumbuhan (YoY)</span>
                     </div>
-                    <div className="group relative inline-block">
+                    <div className="group relative inline-block shrink-0">
                       <Info className="w-4 h-4 text-slate-400 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-help transition-colors" />
                       <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-3 bg-slate-950/95 dark:bg-slate-900 text-xs text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
                         <div className="font-black border-b border-slate-800 pb-1 mb-1 text-xs text-emerald-500 dark:text-emerald-400 uppercase">Pertumbuhan (YoY)</div>
@@ -1280,16 +1280,16 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 </div>
               </div>
 
-              <div className={`p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between`}>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2 w-full">
-                    <div className="flex items-center gap-2">
-                      <div className={`p-1 rounded-lg border ${(targetKumulatifYtd - totalRealYear) <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/10' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/10'}`}>
+              <div className={`p-3 sm:p-4 ${colors.card} ${borderRadius.xl} border ${colors.border} ${shadows.md} space-y-2 flex flex-col justify-between min-w-0`}>
+                <div className="space-y-2 min-w-0">
+                  <div className="flex items-center justify-between gap-1 w-full min-w-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className={`p-1 rounded-lg border shrink-0 ${(targetKumulatifYtd - totalRealYear) <= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/10' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/10'}`}>
                         {(targetKumulatifYtd - totalRealYear) <= 0 ? <Trophy className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
                       </div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Gap Kumulatif</span>
+                      <span className="text-[9px] sm:text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider truncate">Gap Kumulatif</span>
                     </div>
-                    <div className="group relative inline-block">
+                    <div className="group relative inline-block shrink-0">
                       <Info className="w-4 h-4 text-slate-400 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400 cursor-help transition-colors" />
                       <div className="pointer-events-none absolute bottom-full right-0 mb-2 w-52 p-3 bg-slate-950/95 dark:bg-slate-900 text-xs text-slate-200 dark:text-slate-100 rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-50 border border-slate-800 leading-relaxed font-normal normal-case">
                         <div className="font-black border-b border-slate-800 pb-1 mb-1 text-xs text-emerald-500 dark:text-emerald-400 uppercase">Gap Kumulatif</div>

@@ -622,7 +622,7 @@ Terima kasih`;
                   {isRealisasi ? calculatedKwh.percent : '71,94%'}
                 </div>
               </div>
-              <span className="ml-auto text-[8px] sm:text-xs bg-slate-800 border border-slate-700 text-slate-500 px-2 py-1 rounded-lg font-bold tracking-wide">AUTO</span>
+              <span className="ml-4 sm:ml-6 shrink-0 text-[8px] sm:text-xs bg-slate-800 border border-slate-700 text-slate-500 px-2 py-1 rounded-lg font-bold tracking-wide">AUTO</span>
             </div>
           </div>
 
