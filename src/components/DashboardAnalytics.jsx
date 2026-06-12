@@ -955,20 +955,20 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 </div>
                 <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-150 dark:border-slate-800/85">
                   <div className="space-y-1">
-                    <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Realisasi Kumulatif</div>
-                    <div className="text-xs sm:text-base font-black text-slate-900 dark:text-slate-50 leading-4">
+                    <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Realisasi Kumulatif</div>
+                    <div className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-50 leading-none">
                       {formatIndoNumber(totalRealYear)} <span className="text-[10px] font-bold text-slate-400">kWh</span>
                     </div>
                   </div>
                   <div className="space-y-1 border-l border-slate-150 dark:border-slate-800/85 pl-4">
-                    <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Target Kumulatif</div>
-                    <div className="text-xs sm:text-base font-black text-slate-900 dark:text-slate-50 leading-4">
+                    <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Target Kumulatif</div>
+                    <div className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-50 leading-none">
                       {formatIndoNumber(targetKumulatifYtd)} <span className="text-[10px] font-bold text-slate-400">kWh</span>
                     </div>
                   </div>
                   <div className="space-y-1 border-l border-slate-150 dark:border-slate-800/85 pl-4">
-                    <div className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">{isSemester1 ? 'Target Semester I' : 'Target Tahunan'}</div>
-                    <div className="text-xs sm:text-base font-black text-slate-900 dark:text-slate-50 leading-4">
+                    <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{isSemester1 ? 'Target Semester I' : 'Target Tahunan'}</div>
+                    <div className="text-sm sm:text-base font-black text-slate-900 dark:text-slate-50 leading-none">
                       {formatIndoNumber(isSemester1 ? targetPeriod : totalTargetYear)} <span className="text-[10px] font-bold text-slate-400">kWh</span>
                     </div>
                   </div>
@@ -1010,9 +1010,12 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <BarChart3 className="w-4 h-4 text-emerald-500 dark:text-emerald-400" />
                     <span>Perbandingan Bulanan kWh — {currentYear} vs {prevYear}</span>
                   </h3>
-                  <div className="text-xs text-slate-500 dark:text-slate-400 font-bold leading-4">
-                    Realisasi Kumulatif: <span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(totalRealYear)} kWh</span> vs <span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(prevTotalKwhYtd)} kWh ({prevYear})</span>
-                    <span className={`ml-2 inline-flex items-center gap-0.5 px-2 py-1 rounded-lg text-xs font-black ${diffKwhYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400'}`}>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                    <span>Realisasi Kumulatif:</span>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-205">{formatIndoNumber(totalRealYear)} kWh</span>
+                    <span className="text-slate-450 font-normal">vs</span>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-205">{formatIndoNumber(prevTotalKwhYtd)} kWh ({prevYear})</span>
+                    <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide ${diffKwhYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400'}`}>
                       {diffKwhYtd >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
                       {diffKwhYtd >= 0 ? '+' : ''}{Math.round(pctGrowthYtd)}% YoY
                     </span>

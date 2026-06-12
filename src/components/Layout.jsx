@@ -215,80 +215,74 @@ export default function Layout({
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-around items-end px-2 py-2.5 z-30 pb-safe mobile-bottom-nav transition-all duration-300 border-t border-slate-200/30 dark:border-slate-800/40 shadow-[0_-8px_30px_rgba(0,0,0,0.04)] overflow-visible">
-        {(() => {
-          // Keep 'laporan' in the exact center (index 2) of the mobile bottom nav for symmetry
-          const mobileTabs = [...tabs];
-          const laporanIdx = mobileTabs.findIndex(t => t.id === 'laporan');
-          if (laporanIdx !== -1 && mobileTabs.length === 5) {
-            const [laporanTab] = mobileTabs.splice(laporanIdx, 1);
-            mobileTabs.splice(2, 0, laporanTab);
-          }
-          return mobileTabs.map((tab) => {
-            const isActive = currentTab === tab.id;
-            const isLaporan = tab.id === 'laporan';
-
-            if (isLaporan) {
-              // Empty placeholder to maintain grid alignment (adjusted for larger floating button)
-              return (
-                <div
-                  key={tab.id}
-                  className="w-[72px] h-[44px] shrink-0"
-                />
-              );
+      <div className="md:hidden fixed bottom-[calc(16px+env(safe-area-inset-bottom,0px))] left-4 right-4 h-16 z-30 pointer-events-none">
+        {/* Navigation Bar Backplate */}
+        <div className="w-full h-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-md flex justify-around items-center px-2 rounded-2xl border border-slate-200/50 dark:border-slate-800/60 shadow-[0_8px_32px_rgba(15,23,42,0.08)] dark:shadow-[0_12px_32px_rgba(0,0,0,0.35)] transition-all duration-300 pointer-events-auto">
+          {(() => {
+            // Keep 'laporan' in the exact center (index 2) of the mobile bottom nav for symmetry
+            const mobileTabs = [...tabs];
+            const laporanIdx = mobileTabs.findIndex(t => t.id === 'laporan');
+            if (laporanIdx !== -1 && mobileTabs.length === 5) {
+              const [laporanTab] = mobileTabs.splice(laporanIdx, 1);
+              mobileTabs.splice(2, 0, laporanTab);
             }
+            return mobileTabs.map((tab) => {
+              const isActive = currentTab === tab.id;
+              const isLaporan = tab.id === 'laporan';
 
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setCurrentTab(tab.id)}
-                className="flex flex-col items-center justify-end py-1.5 px-2 rounded-2xl min-w-[64px] transition-all duration-200 shrink-0 cursor-pointer outline-none active:scale-95"
-              >
-                <div
-                  className={`p-1 mb-0.5 transition-transform duration-200 ${
-                    isActive 
-                      ? "scale-110 text-blue-600 dark:text-blue-400 font-bold" 
-                      : "text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                  }`}
-                >
-                  {tab.icon}
-                </div>
-                <span
-                  className={`text-[9.5px] font-semibold transition-colors duration-200 ${
-                    isActive 
-                      ? "font-bold text-blue-600 dark:text-blue-400" 
-                      : "text-slate-500 dark:text-slate-400"
-                  }`}
-                >
-                  {tab.label}
-                </span>
-                {isActive && (
-                  <div className="w-5 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full mt-1.5 animate-fade-in"></div>
-                )}
-              </button>
-            );
-          });
-        })()}
-      </div>
+              if (isLaporan) {
+                return (
+                  <div key={tab.id} className="w-16 h-12 flex items-center justify-center pointer-events-none" />
+                );
+              }
 
-      {/* Floating Laporan Central Button (Sibling to avoid backdrop-filter clipping) */}
-      <div className="md:hidden fixed bottom-[calc(22px+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 z-40 pointer-events-auto">
-        <button
-          onClick={() => setCurrentTab('laporan')}
-          className="flex flex-col items-center justify-center shrink-0 cursor-pointer outline-none transition-transform active:scale-95 duration-150"
-          aria-label="Laporan Menu Utama"
-        >
-          {/* Circular primary wrapper with a thick white/dark border to create the cutout frame effect */}
-          <div
-            className={`w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition-all duration-300 ${
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setCurrentTab(tab.id)}
+                  className="flex flex-col items-center justify-center py-1 px-2 rounded-xl min-w-[56px] transition-all duration-200 shrink-0 cursor-pointer outline-none active:scale-95"
+                >
+                  <div
+                    className={`p-1 transition-transform duration-200 ${
+                      isActive 
+                        ? "scale-110 text-blue-600 dark:text-blue-400 font-bold" 
+                        : "text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                    }`}
+                  >
+                    {tab.icon}
+                  </div>
+                  <span
+                    className={`text-[9.5px] font-semibold transition-colors duration-200 ${
+                      isActive 
+                        ? "font-bold text-blue-600 dark:text-blue-400" 
+                        : "text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    {tab.label}
+                  </span>
+                  {isActive && (
+                    <div className="w-1.5 h-1.5 bg-blue-600 dark:bg-blue-400 rounded-full mt-1 shadow-sm shadow-blue-500/50 animate-fade-in"></div>
+                  )}
+                </button>
+              );
+            });
+          })()}
+        </div>
+
+        {/* Floating Action Button (FAB) Laporan - Sibling of the backplate to prevent transparency / rendering issues */}
+        {tabs.some(t => t.id === 'laporan') && (
+          <button
+            onClick={() => setCurrentTab('laporan')}
+            className={`absolute bottom-3.5 left-1/2 -translate-x-1/2 w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 shadow-lg active:scale-90 cursor-pointer pointer-events-auto z-40 ${
               currentTab === 'laporan'
-                ? 'bg-gradient-to-br from-blue-600 to-indigo-650 text-white scale-110 shadow-blue-500/35 border-[5px] border-white dark:border-slate-900' 
-                : 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white border-[5px] border-white dark:border-slate-900 shadow-md shadow-slate-200/20 dark:shadow-none hover:scale-105'
+                ? 'bg-gradient-to-br from-blue-600 to-indigo-650 text-white scale-110 shadow-blue-500/35 border-4 border-white dark:border-slate-900' 
+                : 'bg-gradient-to-br from-blue-500 to-indigo-650 text-white border-4 border-white dark:border-slate-900 shadow-md shadow-blue-500/15 dark:shadow-none hover:scale-105'
             }`}
+            aria-label="Laporan Menu Utama"
           >
             <Send size={22} className="-rotate-45 relative right-[0.5px] top-[0.5px]" />
-          </div>
-        </button>
+          </button>
+        )}
       </div>
     </div>
   );

@@ -264,9 +264,7 @@ export default function MonthlyTargets({
         <div className="lg:col-span-4 flex flex-col gap-6 h-full">
           
           {/* Controls Card (Title, Subtitle, Year Selector, Save Button) */}
-          <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} space-y-5 relative overflow-hidden animate-fade-in-up`}>
-            {/* Top accent gradient line */}
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400" />
+          <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} space-y-5 animate-fade-in-up`}>
             
             <div className="flex items-start gap-4">
               <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex-shrink-0">
@@ -323,9 +321,7 @@ export default function MonthlyTargets({
           </div>
 
           {/* Main Summary Card */}
-          <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} flex-1 flex flex-col justify-between relative overflow-hidden animate-fade-in-up delay-75`}>
-            {/* Top accent gradient line */}
-            <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-teal-500 via-cyan-550 to-blue-500" />
+          <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} flex-1 flex flex-col justify-between animate-fade-in-up delay-75`}>
             
             <div className="space-y-6">
               <div className="flex items-start gap-4">
@@ -444,9 +440,7 @@ export default function MonthlyTargets({
         </div>
 
         {/* Right Column: Months Input Form (Col Span 8) */}
-        <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} lg:col-span-8 flex flex-col relative overflow-hidden`}>
-          {/* Top accent gradient line for right card */}
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-400" />
+        <div className={`p-6 ${colors.card} ${borderRadius.xxl} border ${colors.border} ${shadows.md} lg:col-span-8 flex flex-col`}>
           
           {loading && (
             <div className="absolute inset-0 bg-slate-100/60 dark:bg-slate-950/60 backdrop-blur-sm rounded-2xl flex items-center justify-center flex-col gap-2 z-10">
