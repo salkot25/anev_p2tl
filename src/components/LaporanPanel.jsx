@@ -251,7 +251,6 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
           if (result.status === 'success') {
             const targetData = result.target || {};
             const realData = result.realization || {};
-            const execSummaryData = result.execSummary || {};
             
             if (realData.realisasiHarianKwh !== undefined) {
               setRealisasiHarianKwh(formatKwh(realData.realisasiHarianKwh));

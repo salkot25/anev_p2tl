@@ -22,6 +22,47 @@ export default function SettingsPanel({
   const [syncingBankTo, setSyncingBankTo] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Custom Alert / Confirm Modal State
+  const [modalAlert, setModalAlert] = useState({
+    show: false,
+    title: '',
+    message: '',
+    type: 'info', // info, success, warning, error, confirm
+    onConfirm: null,
+    onCancel: null
+  });
+
+  const showAlert = (title, message, type = 'info', onConfirm = null) => {
+    setModalAlert({
+      show: true,
+      title,
+      message,
+      type,
+      onConfirm: () => {
+        setModalAlert(prev => ({ ...prev, show: false }));
+        if (onConfirm) onConfirm();
+      },
+      onCancel: null
+    });
+  };
+
+  const showConfirm = (title, message, onConfirm, onCancel = null) => {
+    setModalAlert({
+      show: true,
+      title,
+      message,
+      type: 'confirm',
+      onConfirm: () => {
+        setModalAlert(prev => ({ ...prev, show: false }));
+        if (onConfirm) onConfirm();
+      },
+      onCancel: () => {
+        setModalAlert(prev => ({ ...prev, show: false }));
+        if (onCancel) onCancel();
+      }
+    });
+  };
   
   // Estimate local database size in bytes
   const localDatabaseSize = useMemo(() => {
@@ -37,17 +78,20 @@ export default function SettingsPanel({
   }, [targets, bankToTargets]);
 
   // Local metadata parameters
+  const [prevUlp, setPrevUlp] = useState(ulp);
+  const [prevUp3, setPrevUp3] = useState(up3);
   const [defaultUlp, setDefaultUlp] = useState(ulp);
   const [defaultUp3, setDefaultUp3] = useState(up3);
   const [saveMetadataStatus, setSaveMetadataStatus] = useState(false);
 
-  useEffect(() => {
+  if (ulp !== prevUlp) {
+    setPrevUlp(ulp);
     setDefaultUlp(ulp);
-  }, [ulp]);
-
-  useEffect(() => {
+  }
+  if (up3 !== prevUp3) {
+    setPrevUp3(up3);
     setDefaultUp3(up3);
-  }, [up3]);
+  }
 
   // Working days checklist state
   const [workingDays, setWorkingDays] = useState(() => {
@@ -68,6 +112,8 @@ export default function SettingsPanel({
     unit: 'Salatiga Kota'
   });
   const [userFormError, setUserFormError] = useState('');
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
+
 
   // Filtered users list
   const filteredUsers = useMemo(() => {
@@ -109,19 +155,23 @@ export default function SettingsPanel({
 
   const handleDeleteUser = (usernameToDelete) => {
     if (usernameToDelete.toLowerCase() === currentUser?.name?.toLowerCase()) {
-      alert("Anda tidak dapat menghapus akun Anda sendiri.");
+      showAlert("Penghapusan Gagal", "Anda tidak dapat menghapus akun Anda sendiri.", "warning");
       return;
     }
     const adminCount = users.filter(u => u.role === 'Administrator').length;
     const targetUser = users.find(u => u.username.toLowerCase() === usernameToDelete.toLowerCase());
     if (targetUser?.role === 'Administrator' && adminCount <= 1) {
-      alert("Sistem membutuhkan setidaknya satu Administrator. Anda tidak dapat menghapus administrator terakhir.");
+      showAlert("Penghapusan Gagal", "Sistem membutuhkan setidaknya satu Administrator. Anda tidak dapat menghapus administrator terakhir.", "warning");
       return;
     }
-    if (window.confirm(`Apakah Anda yakin ingin menghapus user ${usernameToDelete}?`)) {
-      const updated = users.filter(u => u.username.toLowerCase() !== usernameToDelete.toLowerCase());
-      onUsersChanged(updated);
-    }
+    showConfirm(
+      "Hapus User",
+      `Apakah Anda yakin ingin menghapus user ${usernameToDelete}?`,
+      () => {
+        const updated = users.filter(u => u.username.toLowerCase() !== usernameToDelete.toLowerCase());
+        onUsersChanged(updated);
+      }
+    );
   };
 
   const handleSaveUser = (e) => {
@@ -273,12 +323,12 @@ export default function SettingsPanel({
       });
       const result = await response.json();
       if (result.status === 'success') {
-        alert('Data Target berhasil diunggah ke Google Sheet.');
+        showAlert('Sukses Sinkronisasi', 'Data Target berhasil diunggah ke Google Sheet.', 'success');
       } else {
-        alert('Gagal menyelaraskan: ' + result.message);
+        showAlert('Gagal Sinkronisasi', 'Gagal menyelaraskan: ' + result.message, 'error');
       }
     } catch (err) {
-      alert('Terjadi kesalahan koneksi: ' + err.message);
+      showAlert('Kesalahan Koneksi', 'Terjadi kesalahan koneksi: ' + err.message, 'error');
     } finally {
       setSyncingTargets(false);
     }
@@ -296,12 +346,12 @@ export default function SettingsPanel({
       });
       const result = await response.json();
       if (result.status === 'success') {
-        alert('Data Bank TO berhasil diunggah ke Google Sheet.');
+        showAlert('Sukses Sinkronisasi', 'Data Bank TO berhasil diunggah ke Google Sheet.', 'success');
       } else {
-        alert('Gagal menyelaraskan: ' + result.message);
+        showAlert('Gagal Sinkronisasi', 'Gagal menyelaraskan: ' + result.message, 'error');
       }
     } catch (err) {
-      alert('Terjadi kesalahan koneksi: ' + err.message);
+      showAlert('Kesalahan Koneksi', 'Terjadi kesalahan koneksi: ' + err.message, 'error');
     } finally {
       setSyncingBankTo(false);
     }
@@ -312,16 +362,27 @@ export default function SettingsPanel({
     setSyncingAll(true);
     try {
       await onSyncAll(propBackendUrl);
-      alert('Sinkronisasi dua arah (sesuai waktu terbaru) selesai dengan sukses!');
+      showAlert('Sinkronisasi Sukses', 'Sinkronisasi dua arah (sesuai waktu terbaru) selesai dengan sukses!', 'success');
     } catch (err) {
-      alert('Gagal menyelaraskan database: ' + err.message);
+      showAlert('Gagal Sinkronisasi', 'Gagal menyelaraskan database: ' + err.message, 'error');
     } finally {
       setSyncingAll(false);
     }
   };
 
+  const handleClearLocalDataClick = () => {
+    showConfirm(
+      "Hapus Database Lokal",
+      "Apakah Anda yakin ingin menghapus semua database lokal dari browser? Tindakan ini tidak dapat dibatalkan.",
+      () => {
+        onClearLocalData();
+      }
+    );
+  };
+
   return (
-    <div className="w-full flex flex-col gap-6 animate-fade-in-up">
+    <div className="w-full">
+      <div className="w-full flex flex-col gap-6 animate-fade-in-up">
       
       {/* --- Connection Status Banner --- */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm">
@@ -359,16 +420,26 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         
-        {/* --- Left Column: Form & Config (7 cols) --- */}
-        <div className="lg:col-span-7 flex flex-col gap-6">
+        {/* --- Left Column: Form & Config (7 cols if admin, 12 if not admin) --- */}
+        <div className={`${currentUser?.role === 'Administrator' ? 'lg:col-span-7' : 'lg:col-span-12'} flex flex-col gap-6`}>
           
           {/* Card 1: Google Sheets URL */}
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-              <Database className="w-4.5 h-4.5 text-blue-500" />
-              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Google Spreadsheet Database</h3>
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <div className="flex items-center gap-2.5">
+                <Database className="w-4.5 h-4.5 text-blue-500" />
+                <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Google Spreadsheet Database</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSetupGuide(true)}
+                className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-bold transition-colors focus:outline-none cursor-pointer"
+              >
+                <HelpCircle className="w-4 h-4 text-blue-550" />
+                <span>Panduan Setup</span>
+              </button>
             </div>
 
             <div className="flex flex-col gap-2">
@@ -507,7 +578,7 @@ export default function SettingsPanel({
               </div>
 
               <button 
-                onClick={onClearLocalData}
+                onClick={handleClearLocalDataClick}
                 className="btn-secondary border-rose-200 hover:border-rose-350 dark:border-rose-900/40 text-rose-600 dark:text-rose-455 hover:bg-rose-50 dark:hover:bg-rose-950/20 py-2.5 text-xs font-bold w-full flex justify-center items-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
@@ -630,210 +701,164 @@ export default function SettingsPanel({
 
         </div>
 
-        {/* --- Right Column: Instructions Guide (5 cols) --- */}
-        <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
-          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800/80">
-            <HelpCircle className="w-4.5 h-4.5 text-blue-500" />
-            <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Panduan Setup Backend</h3>
-          </div>
-
-          <div className="text-xs text-slate-600 dark:text-slate-400 flex flex-col gap-3.5 leading-relaxed font-medium">
-            <p>Untuk mengintegrasikan database spreadsheet ke aplikasi ini secara aman, ikuti langkah berikut:</p>
-            
-            <ol className="list-decimal list-inside flex flex-col gap-2.5">
-              <li>
-                <span className="font-bold text-slate-800 dark:text-slate-200">Buka Spreadsheet Anda:</span>
-                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Buka file Google Sheet Anda di browser.</p>
-              </li>
-              <li>
-                <span className="font-bold text-slate-800 dark:text-slate-200">Akses Apps Script Editor:</span>
-                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Klik menu **Ekstensi (Extensions) -&gt; Apps Script** di bagian atas.</p>
-              </li>
-              <li>
-                <span className="font-bold text-slate-800 dark:text-slate-200">Salin Kode Backend:</span>
-                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Salin kode script backend Google Apps Script yang tercantum di file `implementation_plan.md` proyek ini ke editor tersebut.</p>
-              </li>
-              <li>
-                <span className="font-bold text-slate-800 dark:text-slate-200">Jalankan Setup Tabel:</span>
-                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Jalankan Setup Tabel: Pilih fungsi `setupTables` di bagian atas editor, lalu klik tombol **Jalankan (Run)**. Spreadsheet Anda otomatis akan membuat sheet **bank to** dan **data to** beserta kolom headernya.</p>
-              </li>
-              <li>
-                <span className="font-bold text-slate-800 dark:text-slate-200">Deploy sebagai Web App:</span>
-                <p className="pl-4 mt-0.5 text-[11px] text-slate-450">Klik **Terapkan (Deploy) -&gt; Penerapan Baru (New Deployment)**.</p>
-                <p className="pl-4 text-[10px] sm:text-xs text-slate-450 font-semibold">- Pilih jenis: **Aplikasi Web (Web App)**.</p>
-                <p className="pl-4 text-[10px] sm:text-xs text-slate-450 font-semibold">- Jalankan sebagai: **Saya sendiri (Me)**.</p>
-                <p className="pl-4 text-[10px] sm:text-xs text-slate-450 font-semibold">- Siapa yang memiliki akses: **Siapa saja (Anyone)**.</p>
-              </li>
-              <li>
-                <span className="font-bold text-slate-800 dark:text-slate-200">Tempel URL di Sini:</span>
-                <p className="pl-4 mt-0.5 text-[10px] sm:text-xs text-slate-450 font-semibold">Salin URL Web App yang dihasilkan setelah deploy, tempelkan ke kolom input di halaman ini, lalu klik **Simpan**.</p>
-              </li>
-            </ol>
-
-            <div className="p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100/50 dark:border-blue-900/20 rounded-2xl text-[10px] sm:text-xs text-slate-500 font-bold">
-              <span className="font-bold text-blue-600 dark:text-blue-400 block mb-0.5">Note:</span>
-              Koneksi ini berjalan secara langsung di browser Anda via pemanggilan HTTP API aman ke infrastruktur Google Cloud tanpa perantara server luar.
-            </div>
-          </div>
-        </div>
-
-      </div>
-
-      {/* --- User Management Section (Admin Only) --- */}
-      {currentUser?.role === 'Administrator' && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col gap-6 mt-4">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-xl">
-                <User className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Manajemen Pengguna</h3>
-                <p className="text-[8px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 mt-0.5">Kelola akun akses, kata sandi, dan role petugas di database cloud.</p>
-              </div>
-            </div>
-            <button 
-              onClick={openAddUserModal}
-              className="btn-primary py-2 px-4 text-xs font-sans font-bold flex gap-2 items-center cursor-pointer shadow-lg shadow-blue-500/10"
-            >
-              <UserPlus className="w-4 h-4" />
-              Tambah User
-            </button>
-          </div>
-
-          {/* Search bar & statistics */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
-            <div className="relative flex-1 max-w-md">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className="w-4 h-4 text-slate-400" />
-              </div>
-              <input 
-                type="text" 
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                className="input-text text-xs pl-9 py-2"
-                placeholder="Cari user berdasarkan nama, role, unit..."
-              />
-            </div>
-            <div className="text-xs text-slate-500 dark:text-slate-455 font-black bg-slate-50 dark:bg-slate-950/20 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
-              Total Terdaftar: <span className="text-blue-600 dark:text-blue-400">{users.length}</span> Pengguna
-            </div>
-          </div>
-
-          {/* Users Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {filteredUsers.map((user) => {
-              const isAdminUser = user.role === 'Administrator';
-              const isSelf = user.username.toLowerCase() === currentUser?.name?.toLowerCase();
-              return (
-                <div 
-                  key={user.username}
-                  className="group bg-slate-50 dark:bg-slate-950/10 hover:bg-white dark:hover:bg-slate-900 border border-slate-150 dark:border-slate-800/40 hover:border-blue-500/30 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 rounded-2xl p-4 flex flex-col gap-4 relative overflow-hidden"
-                >
-                  {isSelf && (
-                    <div className="absolute top-0 right-0 bg-blue-500 text-white text-[8px] sm:text-[10px] font-black px-2 py-0.5 rounded-bl-lg uppercase tracking-wide">
-                      Anda
-                    </div>
-                  )}
-
-                  <div className="flex gap-3 items-center">
-                    {/* User Initials Avatar with Gradient */}
-                    <div className={`w-10 h-10 rounded-xl font-bold font-sans text-sm flex items-center justify-center text-white bg-gradient-to-br ${
-                      isAdminUser ? 'from-amber-400 to-orange-500' : 'from-blue-500 to-indigo-650'
-                    }`}>
-                      {user.username.substring(0, 2).toUpperCase()}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">{user.username}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black border uppercase shrink-0 ${
-                          isAdminUser 
-                            ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/10' 
-                            : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/10'
-                        }`}>
-                          {user.role}
-                        </span>
-                      </div>
-                      <p className="text-[8px] sm:text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">{user.unit}</p>
-                    </div>
+        {/* --- Right Column: User Management (5 cols) --- */}
+        {currentUser?.role === 'Administrator' && (
+          <div className="lg:col-span-5 flex flex-col h-full">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col gap-6 flex-1 h-full">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-xl">
+                    <User className="w-5 h-5" />
                   </div>
-
-                  <div className="border-t border-slate-100 dark:border-slate-850 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-                    {user.whatsapp && (
-                      <div className="flex items-center gap-2 font-medium">
-                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <a 
-                          href={`https://wa.me/${String(user.whatsapp).replace(/\D/g, '')}`} 
-                          target="_blank" 
-                          rel="noreferrer"
-                          className="hover:underline hover:text-emerald-500 font-semibold"
-                        >
-                          {user.whatsapp}
-                        </a>
-                      </div>
-                    )}
-                    <div className="flex items-center gap-2 font-medium">
-                      <Key className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="font-mono text-slate-500 dark:text-slate-550 truncate animate-pulse" title={user.password}>
-                        Password: {user.password}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-between items-center mt-1 border-t border-slate-100 dark:border-slate-850 pt-2.5">
-                    <span className="text-[8px] sm:text-xs text-slate-455 dark:text-slate-500 font-bold">
-                      Updated: {new Date(user.lastUpdated).toLocaleDateString()}
-                    </span>
-                    
-                    <div className="flex gap-2 shrink-0">
-                      <button 
-                        onClick={() => openEditUserModal(user)}
-                        className="p-1.5 bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950/40 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-lg transition-colors cursor-pointer focus:outline-none"
-                        title="Edit User"
-                      >
-                        <Edit className="w-3.5 h-3.5" />
-                      </button>
-                      {!isSelf && (
-                        <button 
-                          onClick={() => handleDeleteUser(user.username)}
-                          className="p-1.5 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-455 rounded-lg transition-colors cursor-pointer focus:outline-none"
-                          title="Hapus User"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
+                  <div>
+                    <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Manajemen Pengguna</h3>
+                    <p className="text-[8px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 mt-0.5">Kelola akun akses, kata sandi, dan role petugas di cloud.</p>
                   </div>
                 </div>
-              );
-            })}
-
-            {filteredUsers.length === 0 && (
-              <div className="col-span-full py-8 text-center text-xs text-slate-400 dark:text-slate-500 font-bold border border-dashed border-slate-200 dark:border-slate-805 rounded-2xl">
-                Tidak ada user ditemukan.
+                <button 
+                  onClick={openAddUserModal}
+                  className="btn-primary py-2 px-4 text-xs font-sans font-bold flex gap-2 items-center cursor-pointer shadow-lg shadow-blue-500/10"
+                >
+                  <UserPlus className="w-4 h-4" />
+                  Tambah User
+                </button>
               </div>
-            )}
+
+              {/* Search bar & statistics */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
+                <div className="relative flex-1 max-w-md">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="w-4 h-4 text-slate-400" />
+                  </div>
+                  <input 
+                    type="text" 
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    className="input-text text-xs pl-9 py-2"
+                    placeholder="Cari user berdasarkan nama, role, unit..."
+                  />
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-455 font-black bg-slate-50 dark:bg-slate-950/20 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
+                  Total: <span className="text-blue-600 dark:text-blue-400">{users.length}</span> User
+                </div>
+              </div>
+
+              {/* Users List */}
+              <div className="flex flex-col gap-4 flex-1 overflow-y-auto pr-1 max-h-[550px] lg:max-h-[calc(100vh-420px)] scrollbar-thin">
+                {filteredUsers.map((user) => {
+                  const isSelf = user.username.toLowerCase() === currentUser?.name?.toLowerCase();
+                  const isAdminUser = user.role === 'Administrator';
+                  return (
+                    <div 
+                      key={user.username}
+                      className="bg-slate-50 dark:bg-slate-950/40 border border-slate-150 dark:border-slate-850 p-4 rounded-2xl flex flex-col gap-3.5 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 uppercase">
+                          {user.username.substring(0, 2)}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">{user.username}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black border uppercase shrink-0 ${
+                              isAdminUser 
+                                ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/10' 
+                                : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/10'
+                            }`}>
+                              {user.role}
+                            </span>
+                          </div>
+                          <p className="text-[8px] sm:text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">{user.unit}</p>
+                        </div>
+                      </div>
+
+                      <div className="border-t border-slate-100 dark:border-slate-850 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                        {user.whatsapp && (
+                          <div className="flex items-center gap-2 font-medium">
+                            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <a 
+                              href={`https://wa.me/${String(user.whatsapp).replace(/\D/g, '')}`} 
+                              target="_blank" 
+                              rel="noreferrer"
+                              className="hover:underline hover:text-emerald-500 font-semibold"
+                            >
+                              {user.whatsapp}
+                            </a>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 font-medium">
+                          <Key className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="font-mono text-slate-500 dark:text-slate-555 truncate animate-pulse" title={user.password}>
+                            Password: {user.password}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-between items-center mt-1 border-t border-slate-100 dark:border-slate-850 pt-2.5">
+                        <span className="text-[8px] sm:text-xs text-slate-455 dark:text-slate-500 font-bold">
+                          Updated: {new Date(user.lastUpdated).toLocaleDateString()}
+                        </span>
+                        
+                        <div className="flex gap-2 shrink-0">
+                          <button 
+                            onClick={() => openEditUserModal(user)}
+                            className="p-1.5 bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950/40 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-lg transition-colors cursor-pointer focus:outline-none"
+                            title="Edit User"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                          {!isSelf && (
+                            <button 
+                              onClick={() => handleDeleteUser(user.username)}
+                              className="p-1.5 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-455 rounded-lg transition-colors cursor-pointer focus:outline-none"
+                              title="Hapus User"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {filteredUsers.length === 0 && (
+                  <div className="col-span-full py-8 text-center text-xs text-slate-400 dark:text-slate-500 font-bold border border-dashed border-slate-200 dark:border-slate-805 rounded-2xl">
+                    Tidak ada user ditemukan.
+                  </div>
+                )}
+            </div>
           </div>
         </div>
       )}
+      </div>
+      </div>
 
       {/* --- Add/Edit User Dialog Modal --- */}
       {isUserModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-3xl w-full max-w-md p-6 shadow-2xl animate-scale-up relative">
-            <button 
-              onClick={() => setIsUserModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-400 dark:text-slate-500 transition-colors focus:outline-none cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-fade-in" onClick={() => setIsUserModalOpen(false)} />
 
-            <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide pb-3 border-b border-slate-100 dark:border-slate-800/80 mb-4">
-              {editingUser ? `Edit User: ${editingUser.username}` : 'Tambah User Baru'}
-            </h3>
+          {/* Modal Card */}
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-3xl w-full max-w-lg shadow-2xl z-10 flex flex-col max-h-[90vh] overflow-hidden animate-scale-up">
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex justify-between items-center">
+              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                {editingUser ? `Edit User: ${editingUser.username}` : 'Tambah User Baru'}
+              </h3>
+              <button 
+                onClick={() => setIsUserModalOpen(false)}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 dark:text-slate-500 transition-colors focus:outline-none cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <form onSubmit={handleSaveUser} className="space-y-4">
+            {/* Form Body */}
+            <form onSubmit={handleSaveUser} className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
               {userFormError && (
                 <div className="p-3 bg-rose-50 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/30 text-xs text-rose-800 dark:text-rose-400 rounded-2xl flex items-center gap-2">
                   <AlertCircle className="w-4.5 h-4.5 text-rose-500 shrink-0" />
@@ -842,7 +867,7 @@ export default function SettingsPanel({
               )}
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Nama Pengguna (Username)</label>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nama Pengguna (Username)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <User className="w-4 h-4 text-slate-400" />
@@ -851,7 +876,7 @@ export default function SettingsPanel({
                     type="text" 
                     value={userForm.username}
                     onChange={(e) => setUserForm({...userForm, username: e.target.value})}
-                    className="input-text text-xs pl-9" 
+                    className="input-text text-sm pl-9" 
                     placeholder="Contoh: Petugas1"
                     disabled={!!editingUser}
                     required
@@ -860,7 +885,7 @@ export default function SettingsPanel({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Kata Sandi (Password)</label>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Kata Sandi (Password)</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Key className="w-4 h-4 text-slate-400" />
@@ -869,7 +894,7 @@ export default function SettingsPanel({
                     type="text" 
                     value={userForm.password}
                     onChange={(e) => setUserForm({...userForm, password: e.target.value})}
-                    className="input-text text-xs pl-9" 
+                    className="input-text text-sm pl-9" 
                     placeholder="Masukkan kata sandi"
                     required
                   />
@@ -877,7 +902,7 @@ export default function SettingsPanel({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Role Akses</label>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Role Akses</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Shield className="w-4 h-4 text-slate-400" />
@@ -885,7 +910,7 @@ export default function SettingsPanel({
                   <select 
                     value={userForm.role}
                     onChange={(e) => setUserForm({...userForm, role: e.target.value})}
-                    className="input-text text-xs pl-9 cursor-pointer"
+                    className="input-text text-sm pl-9 cursor-pointer bg-white dark:bg-slate-800"
                   >
                     <option value="Petugas">Petugas</option>
                     <option value="Administrator">Administrator</option>
@@ -894,7 +919,7 @@ export default function SettingsPanel({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Nomor WhatsApp</label>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Nomor WhatsApp</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Phone className="w-4 h-4 text-slate-400" />
@@ -903,14 +928,14 @@ export default function SettingsPanel({
                     type="text" 
                     value={userForm.whatsapp}
                     onChange={(e) => setUserForm({...userForm, whatsapp: e.target.value})}
-                    className="input-text text-xs pl-9" 
+                    className="input-text text-sm pl-9" 
                     placeholder="Contoh: 08123456789"
                   />
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Unit Kerja</label>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Unit Kerja</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Building className="w-4 h-4 text-slate-400" />
@@ -919,23 +944,24 @@ export default function SettingsPanel({
                     type="text" 
                     value={userForm.unit}
                     onChange={(e) => setUserForm({...userForm, unit: e.target.value})}
-                    className="input-text text-xs pl-9" 
+                    className="input-text text-sm pl-9" 
                     placeholder="Contoh: ULP Salatiga Kota"
                   />
                 </div>
               </div>
 
-              <div className="flex gap-3 justify-end pt-3 border-t border-slate-100 dark:border-slate-800/80">
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-3 mt-6 border-t border-slate-100 dark:border-slate-800/80 pt-4 pb-2">
                 <button 
                   type="button"
                   onClick={() => setIsUserModalOpen(false)}
-                  className="btn-secondary py-2 px-4 text-xs font-bold font-sans"
+                  className="btn-secondary py-2 px-4 text-xs font-bold font-sans cursor-pointer"
                 >
                   Batal
                 </button>
                 <button 
                   type="submit"
-                  className="btn-primary py-2 px-5 text-xs font-bold font-sans flex items-center gap-1.5"
+                  className="btn-primary py-2 px-5 text-xs font-bold font-sans flex items-center gap-1.5 cursor-pointer"
                 >
                   <Save className="w-4 h-4" />
                   Simpan User
@@ -946,6 +972,136 @@ export default function SettingsPanel({
         </div>
       )}
 
+      {/* --- Backend Setup Guide Modal --- */}
+      {showSetupGuide && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowSetupGuide(false)} />
+
+          {/* Modal Card */}
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-3xl w-full max-w-2xl shadow-2xl z-10 flex flex-col max-h-[90vh] overflow-hidden animate-scale-up">
+            
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex justify-between items-center">
+              <div className="flex items-center gap-2.5">
+                <HelpCircle className="w-5 h-5 text-blue-500" />
+                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wide">
+                  Panduan Setup Backend Google Sheets
+                </h3>
+              </div>
+              <button 
+                onClick={() => setShowSetupGuide(false)}
+                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400 dark:text-slate-500 transition-colors focus:outline-none cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-5 flex flex-col gap-4 text-xs text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+              <p>Untuk mengintegrasikan database spreadsheet ke aplikasi ini secara aman, ikuti langkah berikut:</p>
+              
+              <ol className="list-decimal list-inside flex flex-col gap-3.5">
+                <li>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">Buka/Buat Google Sheet Baru:</span>
+                  <p className="pl-4 mt-0.5 text-[11px] text-slate-450 font-semibold">Buat file spreadsheet baru atau buka file spreadsheet Anda di browser.</p>
+                </li>
+                <li>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">Akses Apps Script Editor:</span>
+                  <p className="pl-4 mt-0.5 text-[11px] text-slate-450 font-semibold">Di bagian atas file, klik menu **Ekstensi (Extensions) -&gt; Apps Script**.</p>
+                </li>
+                <li>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">Salin Kode Backend:</span>
+                  <p className="pl-4 mt-0.5 text-[11px] text-slate-450 font-semibold">Salin seluruh isi file kode script backend Google Apps Script (`code.gs` yang ada pada repositori ini) ke editor Apps Script tersebut, menggantikan kode default yang kosong.</p>
+                </li>
+                <li>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">Jalankan Setup Tabel:</span>
+                  <p className="pl-4 mt-0.5 text-[11px] text-slate-450 font-semibold">Pilih fungsi `setupTables` di dropdown bagian atas editor Apps Script, lalu klik tombol **Jalankan (Run)**. Berikan izin otorisasi jika diminta. Tindakan ini akan membuat sheet **bank to** dan **data to** beserta struktur kolom headernya secara otomatis.</p>
+                </li>
+                <li>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">Terapkan (Deploy) sebagai Aplikasi Web:</span>
+                  <p className="pl-4 mt-0.5 text-[11px] text-slate-455">Klik tombol **Terapkan (Deploy) -&gt; Penerapan Baru (New Deployment)** di kanan atas:</p>
+                  <p className="pl-4 text-[11px] text-slate-455 font-semibold">- Pilih jenis: **Aplikasi Web (Web App)**.</p>
+                  <p className="pl-4 text-[11px] text-slate-455 font-semibold">- Jalankan sebagai (Execute as): **Saya sendiri (Me / email Anda)**.</p>
+                  <p className="pl-4 text-[11px] text-slate-455 font-semibold">- Siapa yang memiliki akses (Who has access): **Siapa saja (Anyone)**.</p>
+                  <p className="pl-4 mt-0.5 text-[11px] text-slate-455">Klik **Terapkan** dan salin **URL Aplikasi Web** yang diberikan.</p>
+                </li>
+                <li>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">Masukkan URL di Kolom Pengaturan:</span>
+                  <p className="pl-4 mt-0.5 text-[11px] text-slate-455 font-semibold">Tempelkan URL tersebut ke kolom input "Google Apps Script Web App URL" di halaman ini, lalu klik tombol **Simpan**.</p>
+                </li>
+              </ol>
+
+              <div className="p-4 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100/50 dark:border-blue-900/20 rounded-2xl text-[11px] text-slate-500 font-bold mt-2">
+                <span className="font-bold text-blue-600 dark:text-blue-400 block mb-0.5">Note Penting CORS & Keamanan:</span>
+                Koneksi berjalan langsung dari browser Anda via HTTP API aman ke Google Apps Script Anda secara terenkripsi (HTTPS). Aplikasi ini tidak menyimpan data Anda ke server eksternal selain Google Spreadsheet Anda sendiri.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800/80 flex justify-end">
+              <button 
+                type="button"
+                onClick={() => setShowSetupGuide(false)}
+                className="btn-primary py-2 px-6 text-xs font-bold font-sans cursor-pointer"
+              >
+                Selesai Membaca
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- Custom Modal Alert/Confirm --- */}
+      {modalAlert.show && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-3xl p-6 shadow-2xl max-w-sm w-full animate-scale-up flex flex-col gap-4 relative">
+            <div className="flex gap-3.5 items-start">
+              <div className={`p-2.5 rounded-2xl shrink-0 ${
+                modalAlert.type === 'success' 
+                  ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-450' 
+                  : modalAlert.type === 'error'
+                  ? 'bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-450'
+                  : modalAlert.type === 'warning' || modalAlert.type === 'confirm'
+                  ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450'
+                  : 'bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-450'
+              }`}>
+                {modalAlert.type === 'success' && <CheckCircle className="w-6 h-6" />}
+                {modalAlert.type === 'error' && <AlertCircle className="w-6 h-6" />}
+                {(modalAlert.type === 'warning' || modalAlert.type === 'confirm') && <AlertTriangle className="w-6 h-6" />}
+                {modalAlert.type === 'info' && <HelpCircle className="w-6 h-6" />}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">{modalAlert.title}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed font-medium">{modalAlert.message}</p>
+              </div>
+            </div>
+            
+            <div className="flex gap-2.5 justify-end pt-3 border-t border-slate-100 dark:border-slate-800/80">
+              {modalAlert.onCancel && (
+                <button 
+                  onClick={modalAlert.onCancel}
+                  className="btn-secondary py-1.5 px-4 text-xs font-bold font-sans cursor-pointer select-none"
+                >
+                  Batal
+                </button>
+              )}
+              <button 
+                onClick={modalAlert.onConfirm}
+                className={`py-1.5 px-5 text-xs font-bold font-sans text-white rounded-xl shadow-md transition-all cursor-pointer select-none ${
+                  modalAlert.type === 'error' || modalAlert.type === 'confirm'
+                    ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-600/10'
+                    : 'bg-blue-650 hover:bg-blue-700 shadow-blue-650/10'
+                }`}
+              >
+                {modalAlert.type === 'confirm' ? 'Hapus' : 'OK'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
+

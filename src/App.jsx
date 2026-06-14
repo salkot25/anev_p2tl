@@ -626,13 +626,11 @@ export default function App() {
   };
 
   const handleClearLocalData = () => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus semua database lokal dari browser? Tindakan ini tidak dapat dibatalkan.")) {
-      localStorage.removeItem('p2tl_targets');
-      localStorage.removeItem('p2tl_bank_to');
-      setTargets([]);
-      setBankToTargets([]);
-      showToast("Seluruh database lokal berhasil dihapus.", "success");
-    }
+    localStorage.removeItem('p2tl_targets');
+    localStorage.removeItem('p2tl_bank_to');
+    setTargets([]);
+    setBankToTargets([]);
+    showToast("Seluruh database lokal berhasil dihapus.", "success");
   };
 
   const handleSelectRecord = (record) => {
@@ -682,48 +680,38 @@ export default function App() {
     >
       {/* Switch content based on activeTab */}
       {activeTab === 'dashboard' ? (
-        <div className="animate-fade-in-up">
-          <DashboardPanel backendUrl={backendUrl} />
-        </div>
+        <DashboardPanel backendUrl={backendUrl} />
       ) : activeTab === 'bankto' ? (
-        <div className="animate-fade-in-up">
-          <BankToPanel 
-            targets={bankToTargets}
-            realizedTargets={targets}
-            onDataLoaded={handleBankToDataLoaded}
-            onAddRecord={handleBankToAddRecord}
-          />
-        </div>
+        <BankToPanel 
+          targets={bankToTargets}
+          realizedTargets={targets}
+          onDataLoaded={handleBankToDataLoaded}
+          onAddRecord={handleBankToAddRecord}
+        />
       ) : activeTab === 'laporan' ? (
-        <div className="animate-fade-in-up">
-          <LaporanPanel targets={targets} backendUrl={backendUrl} />
-        </div>
+        <LaporanPanel targets={targets} backendUrl={backendUrl} />
       ) : activeTab === 'pengaturan' ? (
-        <div className="animate-fade-in-up">
-          <SettingsPanel 
-            backendUrl={backendUrl}
-            onSaveBackendUrl={handleSaveBackendUrl}
-            onSyncAll={syncDatabase}
-            targets={targets}
-            bankToTargets={bankToTargets}
-            onClearLocalData={handleClearLocalData}
-            currentUser={currentUser}
-            users={users}
-            onUsersChanged={handleUsersChanged}
-            ulp={ulp}
-            up3={up3}
-            onSaveMetadata={handleSaveMetadata}
-          />
-        </div>
+        <SettingsPanel 
+          backendUrl={backendUrl}
+          onSaveBackendUrl={handleSaveBackendUrl}
+          onSyncAll={syncDatabase}
+          targets={targets}
+          bankToTargets={bankToTargets}
+          onClearLocalData={handleClearLocalData}
+          currentUser={currentUser}
+          users={users}
+          onUsersChanged={handleUsersChanged}
+          ulp={ulp}
+          up3={up3}
+          onSaveMetadata={handleSaveMetadata}
+        />
       ) : (
-        <div className="animate-fade-in-up">
-          <DataList 
-            targets={targets} 
-            onSelectRecord={handleSelectRecord}
-            onAddRecord={handleAddRecord}
-            onDataLoaded={handleDataLoaded}
-          />
-        </div>
+        <DataList 
+          targets={targets} 
+          onSelectRecord={handleSelectRecord}
+          onAddRecord={handleAddRecord}
+          onDataLoaded={handleDataLoaded}
+        />
       )}
 
       {/* Floating toast notification */}
