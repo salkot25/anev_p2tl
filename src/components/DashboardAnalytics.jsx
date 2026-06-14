@@ -941,8 +941,8 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
             {/* Hero Status Card (Mobile-First) */}
             <div className={`p-4 sm:p-6 ${borderRadius.xxl} border-l-4 ${
               pctYtd >= 100 ? 'border-l-emerald-500' : pctYtd >= 90 ? 'border-l-teal-500' : pctYtd >= 75 ? 'border-l-amber-500' : 'border-l-rose-500'
-            } border-y border-r border-slate-200 dark:border-slate-800/85 ${shadows.md} bg-white dark:bg-slate-900 flex flex-col lg:flex-row justify-between items-stretch gap-6 relative overflow-hidden`}>
-              <div className="flex-1 space-y-4 z-10 flex flex-col justify-between">
+            } border-y border-r border-slate-200 dark:border-slate-800/85 ${shadows.md} bg-white dark:bg-slate-900 grid grid-cols-1 lg:grid-cols-12 gap-6 relative overflow-hidden`}>
+              <div className="lg:col-span-8 space-y-4 z-10 flex flex-col justify-between">
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Status Pencapaian Kumulatif</span>
@@ -974,7 +974,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                   </div>
                 </div>
               </div>
-              <div className="w-full lg:w-72 flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-stretch justify-between p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/60 rounded-xl z-10 shrink-0 gap-4 sm:gap-6">
+              <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col items-stretch sm:items-center lg:items-stretch justify-between p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/60 rounded-xl z-10 gap-4 sm:gap-6">
                 <div className="flex items-center lg:justify-center gap-4 lg:flex-col shrink-0">
                   <div className="relative flex items-center justify-center w-16 h-16 sm:w-20 sm:h-20">
                     <svg viewBox="0 0 80 80" className="w-full h-full transform -rotate-90">

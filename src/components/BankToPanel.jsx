@@ -202,6 +202,8 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   const fileInputRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef({});
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapSearchQuery, setMapSearchQuery] = useState('');
 
   const handleCloseAddModal = () => {
     setIsAddModalOpen(false);
@@ -607,8 +609,18 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     const list = mapMode === 'all_mapped'
       ? filteredTargets.filter(t => t.LATITUDE && t.LONGITUDE)
       : targets.filter(t => selectedIds.has(String(t.IDPEL)));
-    return list;
-  }, [targets, filteredTargets, selectedIds, mapMode]);
+      
+    if (!mapSearchQuery.trim()) return list;
+    
+    const q = mapSearchQuery.toLowerCase().trim();
+    return list.filter(t => 
+      String(t.IDPEL).toLowerCase().includes(q) ||
+      String(t.NAMA || '').toLowerCase().includes(q) ||
+      String(t.ALAMAT || '').toLowerCase().includes(q) ||
+      String(t.TARIF || '').toLowerCase().includes(q) ||
+      String(t.GARDU || '').toLowerCase().includes(q)
+    );
+  }, [targets, filteredTargets, selectedIds, mapMode, mapSearchQuery]);
 
   const slicedSidebarTargets = useMemo(() => {
     return activeSidebarTargets.slice(0, 250);
@@ -616,13 +628,6 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
 
   const initMap = useCallback(() => {
     if (!window.L || mapRef.current || !document.getElementById('selected-map-container')) return;
-    
-    const activeTargets = mapMode === 'all_mapped'
-      ? filteredTargets.filter(t => t.LATITUDE && t.LONGITUDE)
-      : targets.filter(t => selectedIds.has(String(t.IDPEL)));
-    const validCoords = activeTargets.filter(t => t.LATITUDE && t.LONGITUDE);
-    
-    if (validCoords.length === 0) return;
     
     // Create map instance
     const map = window.L.map('selected-map-container');
@@ -639,9 +644,25 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
       maxClusterRadius: 50
     });
     clusterGroupRef.current = markerGroup;
-    markersRef.current = {};
-    const markersArray = [];
+    map.addLayer(markerGroup);
     
+    setMapLoaded(true);
+  }, []);
+
+  // Dynamically update map markers when active sidebar targets change
+  useEffect(() => {
+    if (!mapLoaded || !mapRef.current || !clusterGroupRef.current || !window.L) return;
+    
+    const markerGroup = clusterGroupRef.current;
+    
+    // Clear old layers
+    markerGroup.clearLayers();
+    markersRef.current = {};
+    
+    const validCoords = activeSidebarTargets.filter(t => t.LATITUDE && t.LONGITUDE);
+    if (validCoords.length === 0) return;
+    
+    const markersArray = [];
     validCoords.forEach(t => {
       const marker = window.L.marker([t.LATITUDE, t.LONGITUDE])
         .bindPopup(`
@@ -657,11 +678,15 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     });
     
     markerGroup.addLayers(markersArray);
-    map.addLayer(markerGroup);
     
-    // Fit map bounds to show all markers
-    map.fitBounds(markerGroup.getBounds(), { padding: [40, 40] });
-  }, [targets, filteredTargets, selectedIds, mapMode]);
+    if (markersArray.length > 0) {
+      try {
+        mapRef.current.fitBounds(markerGroup.getBounds(), { padding: [40, 40] });
+      } catch (e) {
+        console.warn('Gagal memposisikan peta:', e);
+      }
+    }
+  }, [activeSidebarTargets, mapLoaded]);
 
   const focusCustomerOnMap = (t) => {
     if (!t.LATITUDE || !t.LONGITUDE || !mapRef.current) return;
@@ -745,6 +770,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
       }
       markersRef.current = {};
       clusterGroupRef.current = null;
+      setMapLoaded(false);
     };
   }, [isMapOpen, initMap]);
 
@@ -783,6 +809,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               barColor: 'bg-emerald-500 dark:bg-emerald-600',
               onClick: () => {
                 if (withCoords > 0) {
+                  setMapSearchQuery('');
                   setMapMode('all_mapped');
                   setIsMapOpen(true);
                 }
@@ -864,7 +891,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               {/* Desktop-Only Action Buttons (Peta, Ekspor) */}
               {selectedIds.size > 0 && (
                 <>
-                  <button onClick={() => { setMapMode('selected'); setIsMapOpen(true); }}
+                  <button onClick={() => { setMapSearchQuery(''); setMapMode('selected'); setIsMapOpen(true); }}
                     className="hidden md:inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer shrink-0 w-full md:w-auto">
                     <Map className="w-3.5 h-3.5 text-blue-500" />
                     <span>Peta ({selectedIds.size})</span>
@@ -1231,7 +1258,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               <span className="text-[10px] text-slate-400">Aksi massal aktif</span>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setIsMapOpen(true)}
+              <button onClick={() => { setMapSearchQuery(''); setIsMapOpen(true); }}
                 className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer">
                 <Map className="w-3.5 h-3.5" /> Peta
               </button>
@@ -1615,7 +1642,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                   </p>
                 </div>
               </div>
-              <button onClick={() => setIsMapOpen(false)}
+              <button onClick={() => { setMapSearchQuery(''); setIsMapOpen(false); }}
                 className="p-2 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-xl text-slate-500 dark:text-slate-450 transition-colors cursor-pointer shrink-0">
                 <X className="w-4 h-4" />
               </button>
@@ -1648,6 +1675,28 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                   <span className="bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-mono font-bold text-slate-750 dark:text-slate-300">
                     {activeSidebarTargets.length}
                   </span>
+                </div>
+
+                {/* Search Filter Input inside map sidebar */}
+                <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800/60 bg-white dark:bg-slate-900 shrink-0">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={mapSearchQuery}
+                      onChange={(e) => setMapSearchQuery(e.target.value)}
+                      placeholder="Cari nama, IDPEL, tarif, dll..."
+                      className="w-full pl-8 pr-8 py-2 text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-250 dark:border-slate-700 focus:border-blue-500 dark:focus:border-blue-600 rounded-xl outline-none text-slate-850 dark:text-slate-100 transition-all placeholder-slate-400"
+                    />
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                    {mapSearchQuery && (
+                      <button 
+                        onClick={() => setMapSearchQuery('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2.5 scrollbar-none">
                   {slicedSidebarTargets.map(t => {
