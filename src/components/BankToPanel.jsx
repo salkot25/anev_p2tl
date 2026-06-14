@@ -204,6 +204,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   const markersRef = useRef({});
   const [mapLoaded, setMapLoaded] = useState(false);
   const [mapSearchQuery, setMapSearchQuery] = useState('');
+  const [showMapFilters, setShowMapFilters] = useState(false);
 
   const handleCloseAddModal = () => {
     setIsAddModalOpen(false);
@@ -779,6 +780,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   const withCoords   = targets.filter(t => t.LATITUDE && t.LONGITUDE).length;
   const inspected    = targets.filter(t => getInspectionHistory(t.IDPEL)).length;
   const notInspected = totalCount - inspected;
+
   const activeFilters = [
     selectedUnits !== null,
     selectedJenises !== null,
@@ -799,7 +801,11 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               value: totalCount, 
               sub: 'Pelanggan terdaftar', 
               percent: 100,
-              barColor: 'bg-blue-500 dark:bg-blue-600'
+              barColor: 'bg-blue-500 dark:bg-blue-600',
+              hoverColor: 'hover:border-blue-500/35 dark:hover:border-blue-500/25',
+              onClick: totalCount > 0 ? () => {
+                setSelectedInspectionStatus(null);
+              } : undefined
             },
             { 
               label: 'Punya Koordinat', 
@@ -807,6 +813,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               sub: `Target: ${totalCount.toLocaleString('id-ID')} plg`, 
               percent: totalCount > 0 ? (withCoords / totalCount) * 100 : 0,
               barColor: 'bg-emerald-500 dark:bg-emerald-600',
+              hoverColor: 'hover:border-emerald-500/35 dark:hover:border-emerald-500/25',
               onClick: () => {
                 if (withCoords > 0) {
                   setMapSearchQuery('');
@@ -820,14 +827,22 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               value: inspected, 
               sub: `Target: ${totalCount.toLocaleString('id-ID')} plg`, 
               percent: totalCount > 0 ? (inspected / totalCount) * 100 : 0,
-              barColor: 'bg-violet-500 dark:bg-violet-600'
+              barColor: 'bg-violet-500 dark:bg-violet-600',
+              hoverColor: 'hover:border-violet-500/35 dark:hover:border-violet-500/25',
+              onClick: inspected > 0 ? () => {
+                setSelectedInspectionStatus(['Sudah Diperiksa']);
+              } : undefined
             },
             { 
               label: 'Belum Diperiksa', 
               value: notInspected, 
               sub: `Target: ${totalCount.toLocaleString('id-ID')} plg`, 
               percent: totalCount > 0 ? (notInspected / totalCount) * 100 : 0,
-              barColor: 'bg-amber-500 dark:bg-amber-600'
+              barColor: 'bg-amber-500 dark:bg-amber-600',
+              hoverColor: 'hover:border-amber-500/35 dark:hover:border-amber-500/25',
+              onClick: notInspected > 0 ? () => {
+                setSelectedInspectionStatus(['Belum Diperiksa']);
+              } : undefined
             },
           ].map((s, idx) => {
             const isClickable = !!s.onClick;
@@ -837,7 +852,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                 onClick={s.onClick}
                 className={`bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/85 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-sm transition-all duration-200 ${
                   isClickable 
-                    ? 'cursor-pointer hover:border-emerald-500/35 dark:hover:border-emerald-500/25 hover:shadow-md active:scale-98 hover:-translate-y-0.5' 
+                    ? `cursor-pointer ${s.hoverColor} hover:shadow-md active:scale-98 hover:-translate-y-0.5` 
                     : 'hover:shadow-md'
                 }`}
               >
@@ -1642,11 +1657,68 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                   </p>
                 </div>
               </div>
-              <button onClick={() => { setMapSearchQuery(''); setIsMapOpen(false); }}
-                className="p-2 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-xl text-slate-500 dark:text-slate-450 transition-colors cursor-pointer shrink-0">
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                {mapMode === 'all_mapped' && (
+                  <button onClick={() => setShowMapFilters(!showMapFilters)}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-colors cursor-pointer shrink-0 ${
+                      showMapFilters
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/20 text-blue-650 dark:text-blue-405'
+                        : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-650 dark:text-slate-400'
+                    }`}>
+                    <SlidersHorizontal className="w-3.5 h-3.5" />
+                    <span>Filter</span>
+                    {activeFilters > 0 && (
+                      <span className="bg-blue-600 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center leading-none">{activeFilters}</span>
+                    )}
+                  </button>
+                )}
+                <button onClick={() => { setMapSearchQuery(''); setShowMapFilters(false); setIsMapOpen(false); }}
+                  className="p-2 bg-slate-100 hover:bg-slate-200/80 dark:bg-slate-800 dark:hover:bg-slate-700/80 rounded-xl text-slate-500 dark:text-slate-450 transition-colors cursor-pointer shrink-0">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+
+            {/* Collapsible Map Filter Panel */}
+            {mapMode === 'all_mapped' && showMapFilters && (
+              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 shrink-0 bg-slate-50/40 dark:bg-slate-950/25 animate-fade-in z-20">
+                <MultiSelectDropdown 
+                  label="Unit Pelayanan" 
+                  options={filterOptions.units} 
+                  selectedValues={selectedUnits} 
+                  onChange={setSelectedUnits} 
+                  allLabel="Semua Unit" 
+                />
+                <MultiSelectDropdown 
+                  label="Jenis TO" 
+                  options={filterOptions.jenises} 
+                  selectedValues={selectedJenises} 
+                  onChange={setSelectedJenises} 
+                  allLabel="Semua Jenis" 
+                />
+                <MultiSelectDropdown 
+                  label="Sub-DLPD" 
+                  options={filterOptions.subs} 
+                  selectedValues={selectedSubs} 
+                  onChange={setSelectedSubs} 
+                  allLabel="Semua Sub-DLPD" 
+                />
+                <MultiSelectDropdown 
+                  label="Gardu (7 Karakter)" 
+                  options={filterOptions.gardus} 
+                  selectedValues={selectedGardus} 
+                  onChange={setSelectedGardus} 
+                  allLabel="Semua Gardu" 
+                />
+                <MultiSelectDropdown 
+                  label="Status Periksa" 
+                  options={['Sudah Diperiksa', 'Belum Diperiksa']} 
+                  selectedValues={selectedInspectionStatus} 
+                  onChange={setSelectedInspectionStatus} 
+                  allLabel="Semua Status" 
+                />
+              </div>
+            )}
 
             {/* Distance Analysis Bar */}
             {mapMode === 'selected' && (
