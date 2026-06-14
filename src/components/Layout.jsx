@@ -26,6 +26,17 @@ const resolveIcon = (id, customIcon) => {
   return iconMap[id.toLowerCase()] || <Folder size={20} />;
 };
 
+const resolveSubtitle = (tabId) => {
+  const subtitleMap = {
+    dashboard: "Analisis performa, visualisasi target bulanan, dan statistik realisasi P2TL secara real-time.",
+    laporan: "Rekapitulasi target harian, capaian kWh, dan progres temuan P2TL secara periodik.",
+    bankto: "Kelola daftar Target Operasi (TO) pelanggan dan plot lokasi koordinat P2TL.",
+    list: "Daftar detail pemeriksaan target P2TL, status progres lapangan, dan input realisasi.",
+    pengaturan: "Konfigurasi database Google Spreadsheet, manajemen akses pengguna, dan parameter unit kerja."
+  };
+  return subtitleMap[tabId.toLowerCase()] || "Menu analisis, monitoring target, dan pengunggahan berkas P2TL.";
+};
+
 export default function Layout({
   children,
   currentTab,
@@ -180,7 +191,7 @@ export default function Layout({
               {activeTabLabel}
             </h2>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-              Menu analisis, monitoring target, dan pengunggahan berkas P2TL.
+              {resolveSubtitle(currentTab)}
             </p>
           </div>
           <div className="flex items-center gap-3">
