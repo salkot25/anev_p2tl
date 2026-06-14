@@ -19,8 +19,6 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
-  FileText,
-  Zap,
   MapPin
 } from 'lucide-react';
 import { parseExcel } from '../utils/excelParser';
@@ -699,7 +697,7 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
   const totalCount = targets.length;
   const inspectedCount = targets.filter(t => t.StatusProgress && t.StatusProgress !== 'Target Operasi').length;
   const temuanCount = targets.filter(t => t.StatusProgress && String(t.StatusProgress).toLowerCase().includes('temuan')).length;
-  const highPowerCount = targets.filter(t => parseInt(t.Daya, 10) >= 6600).length;
+  const pendingCount = totalCount - inspectedCount;
 
   return (
     <div className="w-full flex flex-col gap-5">
@@ -710,41 +708,46 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
             label: 'Total Target TO', 
             value: totalCount, 
             sub: 'Pelanggan terdaftar', 
-            color: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/10 dark:border-blue-500/10',
-            icon: FileText
+            percent: 100,
+            barColor: 'bg-blue-500 dark:bg-blue-600'
           },
           { 
             label: 'Selesai Diperiksa', 
             value: inspectedCount, 
-            sub: `${totalCount > 0 ? ((inspectedCount / totalCount) * 100).toFixed(0) : 0}% terealisasi`, 
-            color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/10 dark:border-emerald-500/10',
-            icon: CheckCircle
+            sub: `Target: ${totalCount.toLocaleString('id-ID')} plg`, 
+            percent: totalCount > 0 ? (inspectedCount / totalCount) * 100 : 0,
+            barColor: 'bg-emerald-500 dark:bg-emerald-600'
           },
           { 
             label: 'Temuan Pelanggaran', 
             value: temuanCount, 
-            sub: `${inspectedCount > 0 ? ((temuanCount / inspectedCount) * 100).toFixed(0) : 0}% rasio temuan`, 
-            color: 'text-rose-600 dark:text-rose-455 bg-rose-500/10 dark:bg-rose-500/20 border-rose-500/10 dark:border-rose-500/10',
-            icon: AlertTriangle
+            sub: `Dari ${inspectedCount.toLocaleString('id-ID')} diperiksa`, 
+            percent: inspectedCount > 0 ? (temuanCount / inspectedCount) * 100 : 0,
+            barColor: 'bg-rose-500 dark:bg-rose-600'
           },
           { 
-            label: 'Daya ≥ 6,6 kVA', 
-            value: highPowerCount, 
-            sub: 'Pelanggan 3 phasa', 
-            color: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/10 dark:border-amber-500/10',
-            icon: Zap
+            label: 'Belum Diperiksa', 
+            value: pendingCount, 
+            sub: `Target: ${totalCount.toLocaleString('id-ID')} plg`, 
+            percent: totalCount > 0 ? (pendingCount / totalCount) * 100 : 0,
+            barColor: 'bg-amber-500 dark:bg-amber-600'
           },
         ].map((s, idx) => {
-          const Icon = s.icon;
           return (
-            <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/85 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all duration-200 hover:shadow-md">
+            <div 
+              key={idx} 
+              className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/85 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-sm transition-all duration-200 hover:shadow-md"
+            >
               <div className="space-y-1">
                 <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">{s.label}</span>
-                <span className="text-2xl font-black font-mono leading-none text-slate-900 dark:text-white block">{s.value.toLocaleString('id-ID')}</span>
+                <span className="text-2xl sm:text-3xl font-black font-mono leading-none text-slate-900 dark:text-white block">{s.value.toLocaleString('id-ID')}</span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">{s.sub}</span>
               </div>
-              <div className={`p-3 rounded-xl border ${s.color} shrink-0`}>
-                <Icon className="w-5 h-5" />
+              <div className="flex items-center gap-2 mt-4">
+                <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all duration-500 ${s.barColor}`} style={{ width: `${Math.min(100, s.percent)}%` }} />
+                </div>
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">{Math.round(s.percent)}%</span>
               </div>
             </div>
           );

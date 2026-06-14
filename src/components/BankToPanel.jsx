@@ -1,8 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { 
-  FileText, 
-  Zap, 
   MapPin, 
   Activity, 
   Search, 
@@ -164,6 +162,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [addMode, setAddMode] = useState('manual'); // 'manual' or 'excel'
   const [isMapOpen, setIsMapOpen] = useState(false);
+  const [mapMode, setMapMode] = useState('selected'); // 'selected' | 'all_mapped'
   const [selectedIds, setSelectedIds] = useState(new Set());
   
   const [itemsPerPage, setItemsPerPage] = useState(() => Number(localStorage.getItem('p2tl_bankto_items_per_page')) || 10);
@@ -290,85 +289,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     };
   }, [targets, selectedIds]);
 
-  const initMap = useCallback(() => {
-    if (!window.L || mapRef.current || !document.getElementById('selected-map-container')) return;
-    
-    const selectedTargets = targets.filter(t => selectedIds.has(String(t.IDPEL)));
-    const validCoords = selectedTargets.filter(t => t.LATITUDE && t.LONGITUDE);
-    
-    if (validCoords.length === 0) return;
-    
-    // Create map instance
-    const map = window.L.map('selected-map-container');
-    mapRef.current = map;
-    
-    // Add OpenStreetMap tiles
-    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-    
-    const markerGroup = window.L.featureGroup();
-    markersRef.current = {};
-    
-    validCoords.forEach(t => {
-      const marker = window.L.marker([t.LATITUDE, t.LONGITUDE])
-        .bindPopup(`
-          <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; min-width: 140px;">
-            <strong style="color: #1e293b; display: block; margin-bottom: 3px;">${t.NAMA}</strong>
-            <span style="color: #64748b; font-family: monospace; font-size: 11px;">IDPEL: ${t.IDPEL}</span><br/>
-            <span style="color: #64748b; font-size: 11px;">Gardu: ${t.GARDU || '-'} / ${t.TIANG || '-'}</span><br/>
-            <span style="color: #2563eb; font-weight: bold; font-size: 11px; display: block; margin-top: 3px;">${t.TARIF} / ${t.DAYA} VA</span>
-          </div>
-        `);
-      marker.addTo(markerGroup);
-      markersRef.current[String(t.IDPEL)] = marker;
-    });
-    
-    markerGroup.addTo(map);
-    
-    // Fit map bounds to show all markers
-    map.fitBounds(markerGroup.getBounds(), { padding: [40, 40] });
-  }, [targets, selectedIds]);
 
-  const focusCustomerOnMap = (t) => {
-    if (!t.LATITUDE || !t.LONGITUDE || !mapRef.current) return;
-    mapRef.current.setView([t.LATITUDE, t.LONGITUDE], 16, { animate: true });
-    const marker = markersRef.current[String(t.IDPEL)];
-    if (marker) {
-      marker.openPopup();
-    }
-  };
-
-  // Load Leaflet dynamically
-  useEffect(() => {
-    if (!isMapOpen) return;
-    
-    if (!document.getElementById('leaflet-css')) {
-      const link = document.createElement('link');
-      link.id = 'leaflet-css';
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-    }
-    
-    if (!window.L) {
-      const script = document.createElement('script');
-      script.id = 'leaflet-js';
-      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      script.onload = initMap;
-      document.head.appendChild(script);
-    } else {
-      setTimeout(initMap, 100);
-    }
-    
-    return () => {
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
-      markersRef.current = {};
-    };
-  }, [isMapOpen, initMap]);
 
   // --- 1. Filtering and Paging logic ---
   const filterOptions = useMemo(() => {
@@ -679,11 +600,159 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
     setManualErrors({});
   };
 
+  // --- Map and Clustering Logic ---
+  const clusterGroupRef = useRef(null);
+
+  const activeSidebarTargets = useMemo(() => {
+    const list = mapMode === 'all_mapped'
+      ? filteredTargets.filter(t => t.LATITUDE && t.LONGITUDE)
+      : targets.filter(t => selectedIds.has(String(t.IDPEL)));
+    return list;
+  }, [targets, filteredTargets, selectedIds, mapMode]);
+
+  const slicedSidebarTargets = useMemo(() => {
+    return activeSidebarTargets.slice(0, 250);
+  }, [activeSidebarTargets]);
+
+  const initMap = useCallback(() => {
+    if (!window.L || mapRef.current || !document.getElementById('selected-map-container')) return;
+    
+    const activeTargets = mapMode === 'all_mapped'
+      ? filteredTargets.filter(t => t.LATITUDE && t.LONGITUDE)
+      : targets.filter(t => selectedIds.has(String(t.IDPEL)));
+    const validCoords = activeTargets.filter(t => t.LATITUDE && t.LONGITUDE);
+    
+    if (validCoords.length === 0) return;
+    
+    // Create map instance
+    const map = window.L.map('selected-map-container');
+    mapRef.current = map;
+    
+    // Add OpenStreetMap tiles
+    window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Create marker cluster group with chunked loading for fast rendering
+    const markerGroup = window.L.markerClusterGroup({
+      chunkedLoading: true,
+      maxClusterRadius: 50
+    });
+    clusterGroupRef.current = markerGroup;
+    markersRef.current = {};
+    const markersArray = [];
+    
+    validCoords.forEach(t => {
+      const marker = window.L.marker([t.LATITUDE, t.LONGITUDE])
+        .bindPopup(`
+          <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4; min-width: 140px;">
+            <strong style="color: #1e293b; display: block; margin-bottom: 3px;">${t.NAMA}</strong>
+            <span style="color: #64748b; font-family: monospace; font-size: 11px;">IDPEL: ${t.IDPEL}</span><br/>
+            <span style="color: #64748b; font-size: 11px;">Gardu: ${t.GARDU || '-'} / ${t.TIANG || '-'}</span><br/>
+            <span style="color: #2563eb; font-weight: bold; font-size: 11px; display: block; margin-top: 3px;">${t.TARIF} / ${t.DAYA} VA</span>
+          </div>
+        `);
+      markersArray.push(marker);
+      markersRef.current[String(t.IDPEL)] = marker;
+    });
+    
+    markerGroup.addLayers(markersArray);
+    map.addLayer(markerGroup);
+    
+    // Fit map bounds to show all markers
+    map.fitBounds(markerGroup.getBounds(), { padding: [40, 40] });
+  }, [targets, filteredTargets, selectedIds, mapMode]);
+
+  const focusCustomerOnMap = (t) => {
+    if (!t.LATITUDE || !t.LONGITUDE || !mapRef.current) return;
+    const marker = markersRef.current[String(t.IDPEL)];
+    if (marker) {
+      if (clusterGroupRef.current) {
+        clusterGroupRef.current.zoomToShowLayer(marker, () => {
+          marker.openPopup();
+        });
+      } else {
+        mapRef.current.setView([t.LATITUDE, t.LONGITUDE], 16, { animate: true });
+        marker.openPopup();
+      }
+    }
+  };
+
+  // Load Leaflet dynamically along with MarkerCluster scripts/styles
+  useEffect(() => {
+    if (!isMapOpen) return;
+    
+    // Load Leaflet Core CSS
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+    
+    // Load Leaflet MarkerCluster CSS
+    if (!document.getElementById('leaflet-cluster-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-cluster-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css';
+      document.head.appendChild(link);
+    }
+    
+    // Load Leaflet MarkerCluster Default Theme CSS
+    if (!document.getElementById('leaflet-cluster-default-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-cluster-default-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css';
+      document.head.appendChild(link);
+    }
+    
+    const loadMarkerCluster = () => {
+      if (!window.L.markerClusterGroup) {
+        if (!document.getElementById('leaflet-cluster-js')) {
+          const script = document.createElement('script');
+          script.id = 'leaflet-cluster-js';
+          script.src = 'https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js';
+          script.onload = () => {
+            setTimeout(initMap, 50);
+          };
+          document.head.appendChild(script);
+        }
+      } else {
+        setTimeout(initMap, 50);
+      }
+    };
+
+    // Load Leaflet Core JS then load MarkerCluster JS
+    if (!window.L) {
+      if (!document.getElementById('leaflet-js')) {
+        const script = document.createElement('script');
+        script.id = 'leaflet-js';
+        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        script.onload = loadMarkerCluster;
+        document.head.appendChild(script);
+      }
+    } else {
+      loadMarkerCluster();
+    }
+    
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      markersRef.current = {};
+      clusterGroupRef.current = null;
+    };
+  }, [isMapOpen, initMap]);
+
   // --- Summary stats ---
   const totalCount   = targets.length;
   const withCoords   = targets.filter(t => t.LATITUDE && t.LONGITUDE).length;
   const inspected    = targets.filter(t => getInspectionHistory(t.IDPEL)).length;
-  const highPower    = targets.filter(t => parseInt(t.DAYA, 10) >= 6600).length;
+  const notInspected = totalCount - inspected;
   const activeFilters = [
     selectedUnits !== null,
     selectedJenises !== null,
@@ -703,41 +772,58 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               label: 'Total Bank TO', 
               value: totalCount, 
               sub: 'Pelanggan terdaftar', 
-              color: 'text-blue-600 dark:text-blue-400 bg-blue-500/10 dark:bg-blue-500/20 border-blue-500/10 dark:border-blue-500/10',
-              icon: FileText
+              percent: 100,
+              barColor: 'bg-blue-500 dark:bg-blue-600'
             },
             { 
               label: 'Punya Koordinat', 
               value: withCoords, 
-              sub: `${totalCount > 0 ? ((withCoords / totalCount) * 100).toFixed(0) : 0}% titik dipetakan`, 
-              color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-500/10 dark:border-emerald-500/10',
-              icon: MapPin
+              sub: `Target: ${totalCount.toLocaleString('id-ID')} plg`, 
+              percent: totalCount > 0 ? (withCoords / totalCount) * 100 : 0,
+              barColor: 'bg-emerald-500 dark:bg-emerald-600',
+              onClick: () => {
+                if (withCoords > 0) {
+                  setMapMode('all_mapped');
+                  setIsMapOpen(true);
+                }
+              }
             },
             { 
               label: 'Pernah Diperiksa', 
               value: inspected, 
-              sub: `${totalCount > 0 ? ((inspected / totalCount) * 100).toFixed(0) : 0}% ada riwayat`, 
-              color: 'text-violet-600 dark:text-violet-400 bg-violet-500/10 dark:bg-violet-500/20 border-violet-500/10 dark:border-violet-500/10',
-              icon: CheckCircle
+              sub: `Target: ${totalCount.toLocaleString('id-ID')} plg`, 
+              percent: totalCount > 0 ? (inspected / totalCount) * 100 : 0,
+              barColor: 'bg-violet-500 dark:bg-violet-600'
             },
             { 
-              label: 'Daya ≥ 6,6 kVA', 
-              value: highPower, 
-              sub: 'Pelanggan 3 phasa', 
-              color: 'text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/20 border-amber-500/10 dark:border-amber-500/10',
-              icon: Zap
+              label: 'Belum Diperiksa', 
+              value: notInspected, 
+              sub: `Target: ${totalCount.toLocaleString('id-ID')} plg`, 
+              percent: totalCount > 0 ? (notInspected / totalCount) * 100 : 0,
+              barColor: 'bg-amber-500 dark:bg-amber-600'
             },
           ].map((s, idx) => {
-            const Icon = s.icon;
+            const isClickable = !!s.onClick;
             return (
-              <div key={idx} className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/85 rounded-2xl p-4 flex items-center justify-between shadow-sm transition-all duration-200 hover:shadow-md">
+              <div 
+                key={idx} 
+                onClick={s.onClick}
+                className={`bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/85 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-sm transition-all duration-200 ${
+                  isClickable 
+                    ? 'cursor-pointer hover:border-emerald-500/35 dark:hover:border-emerald-500/25 hover:shadow-md active:scale-98 hover:-translate-y-0.5' 
+                    : 'hover:shadow-md'
+                }`}
+              >
                 <div className="space-y-1">
                   <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">{s.label}</span>
-                  <span className="text-2xl font-black font-mono leading-none text-slate-900 dark:text-white block">{s.value.toLocaleString('id-ID')}</span>
+                  <span className="text-2xl sm:text-3xl font-black font-mono leading-none text-slate-900 dark:text-white block">{s.value.toLocaleString('id-ID')}</span>
                   <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">{s.sub}</span>
                 </div>
-                <div className={`p-3 rounded-xl border ${s.color} shrink-0`}>
-                  <Icon className="w-5 h-5" />
+                <div className="flex items-center gap-2 mt-4">
+                  <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-full overflow-hidden">
+                    <div className={`h-full rounded-full transition-all duration-500 ${s.barColor}`} style={{ width: `${Math.min(100, s.percent)}%` }} />
+                  </div>
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">{Math.round(s.percent)}%</span>
                 </div>
               </div>
             );
@@ -778,7 +864,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
               {/* Desktop-Only Action Buttons (Peta, Ekspor) */}
               {selectedIds.size > 0 && (
                 <>
-                  <button onClick={() => setIsMapOpen(true)}
+                  <button onClick={() => { setMapMode('selected'); setIsMapOpen(true); }}
                     className="hidden md:inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold border-2 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all cursor-pointer shrink-0 w-full md:w-auto">
                     <Map className="w-3.5 h-3.5 text-blue-500" />
                     <span>Peta ({selectedIds.size})</span>
@@ -1518,9 +1604,14 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                   <Map className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Peta Sebaran Lokasi Target</h3>
-                  <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">
-                    {targets.filter(t => selectedIds.has(String(t.IDPEL)) && t.LATITUDE && t.LONGITUDE).length} dari {selectedIds.size} target terpeta
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                    {mapMode === 'all_mapped' ? 'Peta Semua Koordinat Pelanggan' : 'Peta Sebaran Lokasi Target'}
+                  </h3>
+                  <p className="text-[11px] font-medium text-slate-400 dark:text-slate-505 mt-0.5">
+                    {mapMode === 'all_mapped'
+                      ? `${targets.filter(t => t.LATITUDE && t.LONGITUDE).length} pelanggan dengan koordinat`
+                      : `${targets.filter(t => selectedIds.has(String(t.IDPEL)) && t.LATITUDE && t.LONGITUDE).length} dari ${selectedIds.size} target terpeta`
+                    }
                   </p>
                 </div>
               </div>
@@ -1531,29 +1622,35 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
             </div>
 
             {/* Distance Analysis Bar */}
-            <div className="px-6 py-3.5 border-b border-slate-100 dark:border-slate-800/60 flex flex-wrap items-center gap-3 shrink-0 bg-slate-50/40 dark:bg-slate-950/20 text-xs">
-              <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Analisis Rute:</span>
-              <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${distanceAnalysis.badgeClass}`}>
-                {distanceAnalysis.status}
-              </span>
-              {parseFloat(distanceAnalysis.maxDistance) > 0 && (
-                <span className="font-bold font-mono text-slate-700 dark:text-slate-350">
-                  Rentang Maks: {distanceAnalysis.maxDistance} km
+            {mapMode === 'selected' && (
+              <div className="px-6 py-3.5 border-b border-slate-100 dark:border-slate-800/60 flex flex-wrap items-center gap-3 shrink-0 bg-slate-50/40 dark:bg-slate-950/20 text-xs">
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-555 uppercase tracking-wider">Analisis Rute:</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${distanceAnalysis.badgeClass}`}>
+                  {distanceAnalysis.status}
                 </span>
-              )}
-              <span className="text-[11px] text-slate-500 dark:text-slate-455 ml-auto font-medium">{distanceAnalysis.desc}</span>
-            </div>
+                {parseFloat(distanceAnalysis.maxDistance) > 0 && (
+                  <span className="font-bold font-mono text-slate-700 dark:text-slate-350">
+                    Rentang Maks: {distanceAnalysis.maxDistance} km
+                  </span>
+                )}
+                <span className="text-[11px] text-slate-500 dark:text-slate-455 ml-auto font-medium">{distanceAnalysis.desc}</span>
+              </div>
+            )}
 
             {/* Map Body */}
             <div className="flex-1 flex overflow-hidden min-h-0">
               {/* Sidebar list */}
-              <div className="hidden md:flex flex-col w-80 border-r border-slate-100 dark:border-slate-800/60 bg-slate-50/20 dark:bg-slate-950/10 overflow-hidden shrink-0">
+              <div className="hidden md:flex flex-col w-80 border-r border-slate-100 dark:border-slate-800/60 bg-slate-50/20 dark:bg-slate-955/10 overflow-hidden shrink-0">
                 <div className="p-4 border-b border-slate-100 dark:border-slate-800/60 flex items-center justify-between shrink-0">
-                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Daftar Rute Pelanggan</span>
-                  <span className="bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-mono font-bold text-slate-750 dark:text-slate-300">{selectedIds.size}</span>
+                  <span className="text-[10px] font-bold text-slate-400 dark:text-slate-505 uppercase tracking-wider">
+                    {mapMode === 'all_mapped' ? 'Daftar Koordinat Pelanggan' : 'Daftar Rute Pelanggan'}
+                  </span>
+                  <span className="bg-slate-200/60 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-mono font-bold text-slate-750 dark:text-slate-300">
+                    {activeSidebarTargets.length}
+                  </span>
                 </div>
                 <div className="flex-1 overflow-y-auto p-4 space-y-2.5 scrollbar-none">
-                  {targets.filter(t => selectedIds.has(String(t.IDPEL))).map(t => {
+                  {slicedSidebarTargets.map(t => {
                     const hasCoords = t.LATITUDE && t.LONGITUDE;
                     return (
                       <div key={t.IDPEL} 
@@ -1564,7 +1661,7 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                             : 'opacity-65 cursor-not-allowed border-slate-100 dark:border-slate-900'
                         }`}>
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-bold font-mono text-slate-400 dark:text-slate-505">{t.IDPEL}</span>
+                          <span className="text-[10px] font-bold font-mono text-slate-400 dark:text-slate-555">{t.IDPEL}</span>
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 uppercase">
                             {t.TARIF}
                           </span>
@@ -1584,13 +1681,18 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                       </div>
                     );
                   })}
+                  {activeSidebarTargets.length > slicedSidebarTargets.length && (
+                    <div className="p-3 text-center text-[11px] font-semibold text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl">
+                      Menampilkan 250 data pertama. Gunakan filter pencarian untuk mempersempit daftar.
+                    </div>
+                  )}
                 </div>
               </div>
 
               {/* Map canvas */}
               <div className="flex-1 relative bg-slate-50 dark:bg-slate-955 flex items-center justify-center min-h-0">
                 <div id="selected-map-container" className="absolute inset-0 z-0 h-full w-full" />
-                {targets.filter(t => selectedIds.has(String(t.IDPEL)) && t.LATITUDE && t.LONGITUDE).length === 0 && (
+                {activeSidebarTargets.filter(t => t.LATITUDE && t.LONGITUDE).length === 0 && (
                   <div className="relative z-10 text-center p-8 bg-white dark:bg-slate-900 border border-slate-150 dark:border-slate-800 rounded-3xl shadow-xl max-w-sm flex flex-col items-center gap-3.5 animate-fade-in mx-4">
                     <div className="w-14 h-14 bg-rose-500/10 dark:bg-rose-500/20 border border-rose-500/10 dark:border-rose-900/30 rounded-2xl flex items-center justify-center text-rose-600 dark:text-rose-400 animate-pulse">
                       <AlertCircle className="w-6 h-6" />
@@ -1598,7 +1700,10 @@ export default function BankToPanel({ targets, realizedTargets = [], onDataLoade
                     <div>
                       <h4 className="text-sm font-bold text-slate-800 dark:text-slate-200">Koordinat Tidak Tersedia</h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                        Seluruh target yang Anda pilih tidak memiliki data koordinat (Latitude &amp; Longitude). Harap perbarui koordinat pada data target.
+                        {mapMode === 'all_mapped' 
+                          ? 'Tidak ada target dengan data koordinat (Latitude & Longitude) di dalam sistem.'
+                          : 'Seluruh target yang Anda pilih tidak memiliki data koordinat (Latitude & Longitude). Harap perbarui koordinat pada data target.'
+                        }
                       </p>
                     </div>
                   </div>

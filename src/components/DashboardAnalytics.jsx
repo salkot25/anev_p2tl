@@ -1011,7 +1011,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                     <span>Perbandingan Realisasi YoY</span>
                   </h3>
                   <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
-                    <span className="font-extrabold text-slate-800 dark:text-slate-205">{formatIndoNumber(totalRealYear)} kWh</span>
+                    <span className="font-extrabold text-slate-800 dark:text-slate-205">{formatIndoNumber(totalRealYear)} kWh ({currentYear})</span>
                     <span className="text-slate-450 font-normal">vs</span>
                     <span className="font-extrabold text-slate-800 dark:text-slate-205">{formatIndoNumber(prevTotalKwhYtd)} kWh ({prevYear})</span>
                     <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wide ${diffKwhYtd >= 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-500 dark:text-rose-400'}`}>
