@@ -153,15 +153,15 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
           }
         }
 
-        // Read totalRealYear from logs cache
-        let totalRealYear = 0;
+        // Read totalRealPrev from logs cache (realization up to yesterday)
+        let totalRealPrev = 0;
         if (cachedLogs) {
           try {
             const logsList = JSON.parse(cachedLogs);
             logsList.forEach(log => {
               const logDate = log.Date || log.date || '';
-              if (logDate.startsWith(String(yr))) {
-                totalRealYear += Number(log.Realisasi_Harian_kWh || log.realisasiHarianKwh || 0);
+              if (logDate.startsWith(String(yr)) && logDate < rawDate) {
+                totalRealPrev += Number(log.Realisasi_Harian_kWh || log.realisasiHarianKwh || 0);
               }
             });
           } catch {
@@ -203,7 +203,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
         }
 
         remainingWorkingDays = Math.max(1, remainingWorkingDays);
-        const sisaTarget = Math.max(0, targetPeriod - totalRealYear);
+        const sisaTarget = Math.max(0, targetPeriod - totalRealPrev);
         const calculatedTargetHarian = Math.round(sisaTarget / remainingWorkingDays);
         const calculatedTargetKumulatif = monthlyTargetsArray.slice(0, mo).reduce((sum, val) => sum + val, 0);
         
@@ -298,8 +298,10 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
 
             remainingWorkingDays = Math.max(1, remainingWorkingDays);
             
-            const totalRealYear = execSummaryData.totalKwhYear || 0;
-            const sisaTarget = Math.max(0, targetPeriod - totalRealYear);
+            const realKumulatif = realData.realisasiKumulatifKwh || 0;
+            const realHarian = realData.realisasiHarianKwh || 0;
+            const totalRealPrev = realKumulatif - realHarian;
+            const sisaTarget = Math.max(0, targetPeriod - totalRealPrev);
             
             const calculatedTargetHarian = Math.round(sisaTarget / remainingWorkingDays);
             const calculatedTargetKumulatif = monthlyTargetsArray.slice(0, month).reduce((sum, val) => sum + val, 0);

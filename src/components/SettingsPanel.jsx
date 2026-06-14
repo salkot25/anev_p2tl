@@ -324,7 +324,7 @@ export default function SettingsPanel({
     <div className="w-full flex flex-col gap-6 animate-fade-in-up">
       
       {/* --- Connection Status Banner --- */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm">
         <div className="flex gap-4 items-center">
           <div className={`p-3 rounded-2xl shrink-0 ${
             propBackendUrl 
@@ -333,8 +333,17 @@ export default function SettingsPanel({
           }`}>
             <Database className="w-6 h-6" />
           </div>
-          <div>
-            <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Status Database</h3>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Status Database</h3>
+              <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-wider border ${
+                propBackendUrl 
+                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20' 
+                  : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/20'
+              }`}>
+                {propBackendUrl ? 'Google Sheets' : 'Local Storage'}
+              </span>
+            </div>
             <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
               <span>
                 {propBackendUrl 
@@ -348,14 +357,6 @@ export default function SettingsPanel({
             </div>
           </div>
         </div>
-        
-        <span className={`px-3 py-1 rounded-full text-[8px] sm:text-xs font-black uppercase tracking-wider border ${
-          propBackendUrl 
-            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20' 
-            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/20'
-        }`}>
-          {propBackendUrl ? 'Google Sheets' : 'Local Storage'}
-        </span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
