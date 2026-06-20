@@ -605,19 +605,22 @@ Terima kasih`;
             <div className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 h-8 flex items-center">{reportDate}</div>
           </div>
 
-          {isLoading ? (
-            <div className="ml-auto flex items-center gap-2 text-xs text-blue-500 font-bold">
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-              Memuat data…
-            </div>
-          ) : (
-            lastFetch && (
-              <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-bold">
-                <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
-                <span>Diperbarui: {formatLastFetch(lastFetch)}</span>
+          <div className="ml-auto flex flex-col gap-1.5 self-end">
+            <div className="text-[8px] sm:text-xs font-black invisible uppercase select-none tracking-widest leading-none">Spacer</div>
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-xs text-blue-500 font-bold h-8">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                <span>Memuat data…</span>
               </div>
-            )
-          )}
+            ) : (
+              lastFetch && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-bold h-8">
+                  <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Diperbarui: {formatLastFetch(lastFetch)}</span>
+                </div>
+              )
+            )}
+          </div>
         </div>
       </div>
 
