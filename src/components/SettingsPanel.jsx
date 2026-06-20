@@ -83,6 +83,10 @@ export default function SettingsPanel({
   const [defaultUlp, setDefaultUlp] = useState(ulp);
   const [defaultUp3, setDefaultUp3] = useState(up3);
   const [saveMetadataStatus, setSaveMetadataStatus] = useState(false);
+  const [targetOptimisPercent, setTargetOptimisPercent] = useState(() => {
+    const saved = localStorage.getItem('p2tl_target_multiplier_percent');
+    return saved ? Number(saved) : 110;
+  });
 
   if (ulp !== prevUlp) {
     setPrevUlp(ulp);
@@ -280,6 +284,7 @@ export default function SettingsPanel({
     if (onSaveMetadata) {
       onSaveMetadata(defaultUlp, defaultUp3);
     }
+    localStorage.setItem('p2tl_target_multiplier_percent', targetOptimisPercent.toString());
     setSaveMetadataStatus(true);
     setTimeout(() => setSaveMetadataStatus(false), 2000);
   };
@@ -591,10 +596,10 @@ export default function SettingsPanel({
           <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
             <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
               <Building className="w-4.5 h-4.5 text-blue-500" />
-              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Unit Kerja PLN</h3>
+              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Unit & Target Analisis</h3>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Default Unit Layanan (ULP)</label>
                 <input 
@@ -612,6 +617,18 @@ export default function SettingsPanel({
                   value={defaultUp3} 
                   onChange={(e) => setDefaultUp3(e.target.value)}
                   className="input-text text-xs" 
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Target Optimis (%)</label>
+                <input 
+                  type="number" 
+                  min="1"
+                  max="500"
+                  value={targetOptimisPercent} 
+                  onChange={(e) => setTargetOptimisPercent(Math.max(1, Number(e.target.value)))}
+                  className="input-text text-xs font-semibold" 
                 />
               </div>
             </div>

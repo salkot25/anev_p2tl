@@ -121,6 +121,9 @@ function ProgressRing({ percentage, size = 60, strokeWidth = 5, colorClass = 'te
 
 // ─── Main DashboardAnalytics Component ───────────────────────────────────────
 export default function DashboardAnalytics({ targets, realization, execSummary, workingDays, backendUrl, subTab = 'kpi' }) {
+  const targetPercent = Number(localStorage.getItem('p2tl_target_multiplier_percent')) || 110;
+  const targetMultiplier = targetPercent / 100;
+
   const [logs, setLogs] = useState([]);
   const [hoveredMonth, setHoveredMonth] = useState(null);
   const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
@@ -350,14 +353,14 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   }
 
   const workingDaysInMonth = getWorkingDaysCount(year, month - 1, activeWorkingDaysChecklist);
-  const targetMonth = monthlyTargets[month - 1] ?? 0;
+  const targetMonth = (monthlyTargets[month - 1] ?? 0) * targetMultiplier;
 
   // Dynamic adjusted daily target calculation (matching menu laporan & ringkasan)
   const isSemester1Active = month <= 6;
   const totalTargetYear = monthlyTargets.reduce((s, v) => s + v, 0);
-  const targetPeriod = isSemester1Active
+  const targetPeriod = (isSemester1Active
     ? monthlyTargets.slice(0, 6).reduce((s, v) => s + v, 0)
-    : totalTargetYear;
+    : totalTargetYear) * targetMultiplier;
   const totalRealYear = execSummary.totalKwhYear || 0;
   const sisaTarget = Math.max(0, targetPeriod - totalRealYear);
 
@@ -377,8 +380,8 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
   const dynamicTargetHarian = remainingWorkingDays > 0 ? Math.round(sisaTarget / remainingWorkingDays) : 0;
 
   // Use targets.targetHarianKwh if it has a saved value, otherwise fall back to the dynamic adjusted target
-  const targetHarianCalculated = targets.targetHarianKwh > 0 ? targets.targetHarianKwh : dynamicTargetHarian;
-  const targetKumulatifCalculated = monthlyTargets.slice(0, month).reduce((sum, val) => sum + val, 0);
+  const targetHarianCalculated = targets.targetHarianKwh > 0 ? Math.round(targets.targetHarianKwh * targetMultiplier) : dynamicTargetHarian;
+  const targetKumulatifCalculated = Math.round(monthlyTargets.slice(0, month).reduce((sum, val) => sum + val, 0) * targetMultiplier);
 
   const relHarian = realization.realisasiHarianKwh === '' ? 0 : Number(realization.realisasiHarianKwh || 0);
   const relKumulatif = realization.realisasiKumulatifKwh === '' ? 0 : Number(realization.realisasiKumulatifKwh || 0);
@@ -910,12 +913,12 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
         const newTargetHarian = remainingWorkingDays > 0 ? Math.round(sisaTarget / remainingWorkingDays) : 0;
         const baselineTargetHarian = Math.round(targetMonth / Math.max(1, workingDaysInMonth));
         const pctDailyIncrease = (baselineTargetHarian > 0 && sisaTarget > 0) ? Math.round(((newTargetHarian / baselineTargetHarian) - 1) * 100) : 0;
-        const target110Year = targetPeriod * 1.10;
+        const target110Year = targetPeriod * targetMultiplier;
         const sisaTarget110 = Math.max(0, target110Year - totalRealYear);
         const avgRequiredKwh110 = Math.round(sisaTarget110 / sisaBulan);
         const pctEffortRequired110 = (avgRealKwh > 0 && sisaTarget110 > 0) ? Math.round(((avgRequiredKwh110 / avgRealKwh) - 1) * 100) : 0;
         const monthlyTrendData = execSummary.monthlyTrend || [];
-        const yoyChartData = monthlyTrendData.map((m, idx) => ({ label: m.month, current: m.kwh, prev: prevMonthlyTrend[idx]?.kwh ?? 0, target: monthlyTargets[idx] ?? 0 }));
+        const yoyChartData = monthlyTrendData.map((m, idx) => ({ label: m.month, current: m.kwh, prev: prevMonthlyTrend[idx]?.kwh ?? 0, target: (monthlyTargets[idx] ?? 0) * targetMultiplier }));
         const yoyMaxVal = Math.max(...yoyChartData.map(d => Math.max(d.current, d.prev, d.target)), 1);
         const targetKumulatifYtd = monthlyTargets.slice(0, month).reduce((sum, val) => sum + val, 0);
         const pctYtd = targetKumulatifYtd > 0 ? (totalRealYear / targetKumulatifYtd) * 100 : 0;
@@ -1324,7 +1327,7 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 {[
                   { id: 'current', label: 'Rutin/Tren Kini' },
                   { id: 'adjusted', label: 'Disesuaikan' },
-                  { id: 'optimistic', label: 'Optimis (110%)' }
+                  { id: 'optimistic', label: `Optimis (${targetPercent}%)` }
                 ].map(scen => (
                   <button
                     key={scen.id}
@@ -1397,24 +1400,24 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 {activeScenario === 'optimistic' && (
                   <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/85 rounded-xl space-y-3">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cara Mencapai Target 110%</span>
+                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cara Mencapai Target {targetPercent}%</span>
                       <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${totalRealYear >= target110Year ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                         {totalRealYear >= target110Year ? 'TERCAPAI' : `PERLU EFFORT +${pctEffortRequired110}%`}
                       </span>
                     </div>
                     <div className="text-base font-black text-slate-900 dark:text-slate-100">{formatIndoNumber(Math.round(target110Year))} <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">kWh</span></div>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider">Target Optimis (110%)</div>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider">Target Optimis ({targetPercent}%)</div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-4 font-bold">
                       {totalRealYear < target110Year
-                        ? <>Agar target optimis 110% tercapai (<span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {sisaBulan} bulan harus ditingkatkan sebesar <span className="font-black text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
-                        : <>Target optimis 110% {periodAdjective} sebesar <span className="font-black text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
+                        ? <>Agar target optimis {targetPercent}% tercapai (<span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {sisaBulan} bulan harus ditingkatkan sebesar <span className="font-black text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
+                        : <>Target optimis {targetPercent}% {periodAdjective} sebesar <span className="font-black text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
                     </p>
                     <div className="pt-2 border-t border-slate-150 dark:border-slate-800/85 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider space-y-1">
                       <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-800 dark:text-slate-200 font-black">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
-                      <div className="flex justify-between"><span>Kebutuhan Bulanan (110%):</span><span className="text-slate-800 dark:text-slate-200 font-black">{formatIndoNumber(avgRequiredKwh110)} kWh/bln</span></div>
+                      <div className="flex justify-between"><span>Kebutuhan Bulanan ({targetPercent}%):</span><span className="text-slate-800 dark:text-slate-200 font-black">{formatIndoNumber(avgRequiredKwh110)} kWh/bln</span></div>
                     </div>
                     <div className="space-y-1 pt-2 border-t border-slate-150 dark:border-slate-800/85">
-                      <div className="flex justify-between text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider"><span>Progres Terhadap Target 110%</span><span>{Math.round(target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%</span></div>
+                      <div className="flex justify-between text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider"><span>Progres Terhadap Target {targetPercent}%</span><span>{Math.round(target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%</span></div>
                       <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${totalRealYear >= target110Year ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%` }} />
                       </div>
@@ -1487,26 +1490,26 @@ export default function DashboardAnalytics({ targets, realization, execSummary, 
                 <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-150 dark:border-slate-800/85 rounded-xl space-y-3 flex flex-col justify-between">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
-                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cara Mencapai Target 110%</span>
+                      <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">Cara Mencapai Target {targetPercent}%</span>
                       <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${totalRealYear >= target110Year ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                         {totalRealYear >= target110Year ? 'TERCAPAI' : `PERLU EFFORT +${pctEffortRequired110}%`}
                       </span>
                     </div>
                     <div className="text-base font-black text-slate-900 dark:text-slate-100">{formatIndoNumber(Math.round(target110Year))} <span className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">kWh</span></div>
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider">Target Optimis (110%)</div>
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-wider">Target Optimis ({targetPercent}%)</div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 leading-4 font-bold">
                       {totalRealYear < target110Year
-                        ? <>Agar target optimis 110% tercapai (<span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {sisaBulan} bulan harus ditingkatkan sebesar <span className="font-black text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
-                        : <>Target optimis 110% {periodAdjective} sebesar <span className="font-black text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
+                        ? <>Agar target optimis {targetPercent}% tercapai (<span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(Math.round(target110Year))} kWh</span>), performa di sisa {sisaBulan} bulan harus ditingkatkan sebesar <span className="font-black text-rose-500">{pctEffortRequired110}%</span> (membutuhkan rata-rata <span className="font-black text-slate-800 dark:text-slate-200">{formatIndoNumber(avgRequiredKwh110)} kWh/bulan</span>).</>
+                        : <>Target optimis {targetPercent}% {periodAdjective} sebesar <span className="font-black text-emerald-500">{formatIndoNumber(Math.round(target110Year))} kWh</span> telah berhasil dilampaui!</>}
                     </p>
                   </div>
                   <div>
                     <div className="pt-2 border-t border-slate-150 dark:border-slate-800/85 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider space-y-1">
                       <div className="flex justify-between"><span>Rata-rata Realisasi:</span><span className="text-slate-800 dark:text-slate-200 font-black">{formatIndoNumber(Math.round(avgRealKwh))} kWh/bln</span></div>
-                      <div className="flex justify-between"><span>Kebutuhan Bulanan (110%):</span><span className="text-slate-800 dark:text-slate-200 font-black">{formatIndoNumber(avgRequiredKwh110)} kWh/bln</span></div>
+                      <div className="flex justify-between"><span>Kebutuhan Bulanan ({targetPercent}%):</span><span className="text-slate-800 dark:text-slate-200 font-black">{formatIndoNumber(avgRequiredKwh110)} kWh/bln</span></div>
                     </div>
                     <div className="space-y-1 pt-2 border-t border-slate-150 dark:border-slate-800/85 mt-2">
-                      <div className="flex justify-between text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider"><span>Progres Terhadap Target 110%</span><span>{Math.round(target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%</span></div>
+                      <div className="flex justify-between text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider"><span>Progres Terhadap Target {targetPercent}%</span><span>{Math.round(target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%</span></div>
                       <div className="h-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                         <div className={`h-full rounded-full ${totalRealYear >= target110Year ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.min(100, target110Year > 0 ? (totalRealYear / target110Year) * 100 : 0)}%` }} />
                       </div>

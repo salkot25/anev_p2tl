@@ -55,6 +55,9 @@ function normalizeDateString(dateVal) {
 }
 
 export default function LaporanPanel({ targets = [], backendUrl }) {
+  const targetPercent = Number(localStorage.getItem('p2tl_target_multiplier_percent')) || 110;
+  const targetMultiplier = targetPercent / 100;
+
   const [reportType, setReportType] = useState('realisasi'); // rencana, realisasi
   const [rawDate, setRawDate] = useState(() => {
     const today = new Date();
@@ -174,7 +177,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
 
         if (mo <= 6) {
           // Semester 1 (Jan-Jun)
-          targetPeriod = monthlyTargetsArray.slice(0, 6).reduce((s, v) => s + v, 0);
+          targetPeriod = monthlyTargetsArray.slice(0, 6).reduce((s, v) => s + v, 0) * targetMultiplier;
           
           // Sisa Hari Kerja s.d. Juni
           const totalDaysInCurrentMonth = new Date(yr, mo, 0).getDate();
@@ -188,7 +191,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
           }
         } else {
           // Semester 2 (Jul-Des)
-          targetPeriod = monthlyTargetsArray.reduce((s, v) => s + v, 0);
+          targetPeriod = monthlyTargetsArray.reduce((s, v) => s + v, 0) * targetMultiplier;
           
           // Sisa Hari Kerja s.d. Desember
           const totalDaysInCurrentMonth = new Date(yr, mo, 0).getDate();
@@ -205,7 +208,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
         remainingWorkingDays = Math.max(1, remainingWorkingDays);
         const sisaTarget = Math.max(0, targetPeriod - totalRealPrev);
         const calculatedTargetHarian = Math.round(sisaTarget / remainingWorkingDays);
-        const calculatedTargetKumulatif = monthlyTargetsArray.slice(0, mo).reduce((sum, val) => sum + val, 0);
+        const calculatedTargetKumulatif = Math.round(monthlyTargetsArray.slice(0, mo).reduce((sum, val) => sum + val, 0) * targetMultiplier);
         
         setTargetHarianKwh(formatKwh(calculatedTargetHarian));
         setTargetKumulatifKwh(formatKwh(calculatedTargetKumulatif));
@@ -265,7 +268,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
 
             if (month <= 6) {
               // Semester 1
-              targetPeriod = monthlyTargetsArray.slice(0, 6).reduce((s, v) => s + v, 0);
+              targetPeriod = monthlyTargetsArray.slice(0, 6).reduce((s, v) => s + v, 0) * targetMultiplier;
               
               // Count remaining working days in current month
               const totalDaysInCurrentMonth = new Date(year, month, 0).getDate();
@@ -280,7 +283,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
               }
             } else {
               // Semester 2
-              targetPeriod = monthlyTargetsArray.reduce((s, v) => s + v, 0);
+              targetPeriod = monthlyTargetsArray.reduce((s, v) => s + v, 0) * targetMultiplier;
               
               // Count remaining working days in current month
               const totalDaysInCurrentMonth = new Date(year, month, 0).getDate();
@@ -303,7 +306,7 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
             const sisaTarget = Math.max(0, targetPeriod - totalRealPrev);
             
             const calculatedTargetHarian = Math.round(sisaTarget / remainingWorkingDays);
-            const calculatedTargetKumulatif = monthlyTargetsArray.slice(0, month).reduce((sum, val) => sum + val, 0);
+            const calculatedTargetKumulatif = Math.round(monthlyTargetsArray.slice(0, month).reduce((sum, val) => sum + val, 0) * targetMultiplier);
             
             setTargetHarianKwh(formatKwh(calculatedTargetHarian));
             setTargetKumulatifKwh(formatKwh(calculatedTargetKumulatif));
@@ -429,17 +432,23 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
 
     const targetK = parseNum(targetKumulatifKwh);
     const realK = parseNum(realisasiKumulatifKwh);
+    const realH = parseNum(realisasiHarianKwh);
 
     let gap = '......';
     let percent = '......';
 
     if (!isNaN(targetK) && !isNaN(realK)) {
-      gap = new Intl.NumberFormat('id-ID').format(targetK - realK);
-      percent = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format((realK / targetK) * 100) + '%';
+      const isRencana = reportType === 'rencana';
+      // In rencana mode, compare target against yesterday's cumulative realization (realK - realH)
+      // In realisasi mode, compare target against today's cumulative realization (realK)
+      const targetReal = isRencana ? (realK - (isNaN(realH) ? 0 : realH)) : realK;
+
+      gap = new Intl.NumberFormat('id-ID').format(targetK - targetReal);
+      percent = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format((targetReal / targetK) * 100) + '%';
     }
 
     return { gap, percent };
-  }, [targetKumulatifKwh, realisasiKumulatifKwh]);
+  }, [targetKumulatifKwh, realisasiKumulatifKwh, realisasiHarianKwh, reportType]);
 
   // Generate WhatsApp Message text template
   const generatedText = useMemo(() => {
@@ -448,12 +457,8 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
     const realHarian = isRencana ? '......' : (realisasiHarianKwh || '......');
     const realKumulatif = isRencana ? '......' : (realisasiKumulatifKwh || '......');
     
-    let gapText = isRencana ? '438.403' : calculatedKwh.gap;
-    if (!isRencana && calculatedKwh.gap === '......') {
-      gapText = '......';
-    }
-
-    const percentText = isRencana ? '71,94%' : calculatedKwh.percent;
+    const gapText = calculatedKwh.gap;
+    const percentText = calculatedKwh.percent;
 
     // Sasaran Operasi realizations fallback to ...... if Rencana
     const fmtPlg = (tCount, rCount) => {
@@ -612,7 +617,7 @@ Terima kasih`;
               <div className="flex-1">
                 <div className="text-[8px] sm:text-xs font-black text-slate-500 uppercase tracking-widest mb-1">GAP Kumulatif</div>
                 <div className="text-lg sm:text-xl font-black font-mono text-white tracking-tight">
-                  {isRealisasi ? calculatedKwh.gap : '438.403'}
+                  {calculatedKwh.gap}
                   <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">kWh</span>
                 </div>
               </div>
@@ -620,7 +625,7 @@ Terima kasih`;
               <div>
                 <div className="text-[8px] sm:text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Capaian</div>
                 <div className="text-lg sm:text-xl font-black font-mono text-emerald-400 tracking-tight">
-                  {isRealisasi ? calculatedKwh.percent : '71,94%'}
+                  {calculatedKwh.percent}
                 </div>
               </div>
               <span className="ml-4 sm:ml-6 shrink-0 text-[8px] sm:text-xs bg-slate-800 border border-slate-700 text-slate-500 px-2 py-1 rounded-lg font-bold tracking-wide">AUTO</span>
