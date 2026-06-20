@@ -525,7 +525,7 @@ Terima kasih`;
   };
 
   // Grid template: #, label, target, real, [%, realisasi only]
-  const colTpl = isRealisasi ? '28px 1fr 64px 64px 52px' : '28px 1fr 64px 64px';
+  const colTpl = isRealisasi ? '28px 1fr 64px 64px 52px' : '28px 1fr 64px';
 
   return (
     <div className="w-full flex flex-col gap-5">
@@ -565,7 +565,7 @@ Terima kasih`;
           </div>
 
           {/* Formatted date */}
-          <div className="flex flex-col gap-1.5">
+          <div className="hidden sm:flex flex-col gap-1.5">
             <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Periode</label>
             <div className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 h-8 flex items-center">{reportDate}</div>
           </div>
@@ -598,12 +598,12 @@ Terima kasih`;
 
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: 'Target Harian', val: targetHarianKwh, set: setTargetHarianKwh, disabled: false, numCls: 'text-slate-900 dark:text-white', focusCls: 'focus:border-blue-400 dark:focus:border-blue-500' },
-                { label: 'Realisasi Harian', val: realisasiHarianKwh, set: setRealisasiHarianKwh, disabled: !isRealisasi, numCls: 'text-emerald-600 dark:text-emerald-400', focusCls: 'focus:border-emerald-400 dark:focus:border-emerald-500' },
-                { label: 'Target Kumulatif', val: targetKumulatifKwh, set: setTargetKumulatifKwh, disabled: false, numCls: 'text-slate-900 dark:text-white', focusCls: 'focus:border-blue-400 dark:focus:border-blue-500' },
-                { label: 'Realisasi Kumulatif', val: realisasiKumulatifKwh, set: setRealisasiKumulatifKwh, disabled: !isRealisasi, numCls: 'text-emerald-600 dark:text-emerald-400', focusCls: 'focus:border-emerald-400 dark:focus:border-emerald-500' },
-              ].map(kpi => (
-                <div key={kpi.label} className={`bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-4 shadow-sm transition-opacity ${kpi.disabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                { label: 'Target Harian', val: targetHarianKwh, set: setTargetHarianKwh, show: true, disabled: false, numCls: 'text-slate-900 dark:text-white', focusCls: 'focus:border-blue-400 dark:focus:border-blue-500' },
+                { label: 'Realisasi Harian', val: realisasiHarianKwh, set: setRealisasiHarianKwh, show: isRealisasi, disabled: !isRealisasi, numCls: 'text-emerald-600 dark:text-emerald-400', focusCls: 'focus:border-emerald-400 dark:focus:border-emerald-500' },
+                { label: 'Target Kumulatif', val: targetKumulatifKwh, set: setTargetKumulatifKwh, show: true, disabled: false, numCls: 'text-slate-900 dark:text-white', focusCls: 'focus:border-blue-400 dark:focus:border-blue-500' },
+                { label: 'Realisasi Kumulatif', val: realisasiKumulatifKwh, set: setRealisasiKumulatifKwh, show: isRealisasi, disabled: !isRealisasi, numCls: 'text-emerald-600 dark:text-emerald-400', focusCls: 'focus:border-emerald-400 dark:focus:border-emerald-500' },
+              ].filter(kpi => kpi.show).map(kpi => (
+                <div key={kpi.label} className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-4 shadow-sm">
                   <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">{kpi.label}</div>
                   <input type="text" value={kpi.val} onChange={e => kpi.set(e.target.value)} disabled={kpi.disabled}
                     className={`w-full text-lg sm:text-xl font-black font-mono bg-transparent outline-none border-b-2 border-dashed border-slate-200 dark:border-slate-700 pb-1 transition-colors disabled:cursor-not-allowed ${kpi.numCls} ${kpi.focusCls}`} />
@@ -662,7 +662,7 @@ Terima kasih`;
               <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">#</div>
               <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kategori Sasaran</div>
               <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Target</div>
-              <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Real.</div>
+              {isRealisasi && <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Real.</div>}
               {isRealisasi && <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">%</div>}
             </div>
 
@@ -692,11 +692,9 @@ Terima kasih`;
                     )}
                   </div>
                   <div className="text-center font-mono font-bold text-sm text-slate-900 dark:text-white">{row.target}</div>
-                  <div className="text-center font-mono font-bold text-sm">
-                    {isRealisasi
-                      ? <span className="text-slate-600 dark:text-slate-300">{row.real}</span>
-                      : <span className="text-slate-300 dark:text-slate-700">—</span>}
-                  </div>
+                  {isRealisasi && (
+                    <div className="text-center font-mono font-bold text-sm text-slate-600 dark:text-slate-300">{row.real}</div>
+                  )}
                   {isRealisasi && (
                     <div className="text-center">
                       {s.pct !== null
@@ -740,12 +738,12 @@ Terima kasih`;
                     <input type="number" value={row.tVal} onChange={e => row.tSet(e.target.value)} min="0"
                       className="w-12 text-center font-mono font-bold text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-1 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 transition-all" />
                   </div>
-                  <div className="text-center">
-                    {isRealisasi
-                      ? <input type="number" value={row.rVal} onChange={e => row.rSet(e.target.value)} min="0"
-                          className="w-12 text-center font-mono font-bold text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-1 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/20 transition-all" />
-                      : <span className="text-slate-300 dark:text-slate-700 font-mono font-bold text-sm">—</span>}
-                  </div>
+                  {isRealisasi && (
+                    <div className="text-center">
+                      <input type="number" value={row.rVal} onChange={e => row.rSet(e.target.value)} min="0"
+                        className="w-12 text-center font-mono font-bold text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-1 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/20 transition-all" />
+                    </div>
+                  )}
                   {isRealisasi && (
                     <div className="text-center">
                       {s.pct !== null
@@ -779,11 +777,9 @@ Terima kasih`;
                     )}
                   </div>
                   <div className="text-center font-mono font-bold text-sm text-slate-900 dark:text-white">{metrics.lainTarget}</div>
-                  <div className="text-center font-mono font-bold text-sm">
-                    {isRealisasi
-                      ? <span className="text-slate-600 dark:text-slate-300">{metrics.lainReal}</span>
-                      : <span className="text-slate-300 dark:text-slate-700">—</span>}
-                  </div>
+                  {isRealisasi && (
+                    <div className="text-center font-mono font-bold text-sm text-slate-600 dark:text-slate-300">{metrics.lainReal}</div>
+                  )}
                   {isRealisasi && (
                     <div className="text-center">
                       {s.pct !== null
@@ -801,11 +797,9 @@ Terima kasih`;
               <div />
               <div className="text-xs sm:text-sm font-black text-blue-700 dark:text-blue-400">Total Sasaran Operasi</div>
               <div className="text-center font-mono font-black text-sm sm:text-base text-blue-700 dark:text-blue-400">{metrics.totalTarget}</div>
-              <div className="text-center font-mono font-black text-base">
-                {isRealisasi
-                  ? <span className="text-emerald-600 dark:text-emerald-400">{metrics.totalReal}</span>
-                  : <span className="text-slate-300 dark:text-slate-700">—</span>}
-              </div>
+              {isRealisasi && (
+                <div className="text-center font-mono font-black text-base text-emerald-600 dark:text-emerald-400">{metrics.totalReal}</div>
+              )}
               {isRealisasi && (
                 <div className="text-center">
                   {metrics.totalTarget > 0 ? (() => {

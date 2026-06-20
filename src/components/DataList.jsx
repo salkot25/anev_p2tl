@@ -702,7 +702,7 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
   return (
     <div className="w-full flex flex-col gap-5">
       {/* 01. Summary Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           { 
             label: 'Total Target TO', 
@@ -736,18 +736,18 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
           return (
             <div 
               key={idx} 
-              className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/85 rounded-2xl p-4 sm:p-5 flex flex-col justify-between shadow-sm transition-all duration-200 hover:shadow-md"
+              className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/85 rounded-2xl p-3 sm:p-5 flex flex-col justify-between shadow-sm transition-all duration-200 hover:shadow-md"
             >
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">{s.label}</span>
-                <span className="text-2xl sm:text-3xl font-black font-mono leading-none text-slate-900 dark:text-white block">{s.value.toLocaleString('id-ID')}</span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium block">{s.sub}</span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider block">{s.label}</span>
+                <span className="text-xl sm:text-3xl font-black font-mono leading-none text-slate-900 dark:text-white block">{s.value.toLocaleString('id-ID')}</span>
+                <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-medium block truncate" title={s.sub}>{s.sub}</span>
               </div>
-              <div className="flex items-center gap-2 mt-4">
-                <div className="flex-1 h-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-full overflow-hidden">
+              <div className="flex items-center gap-1.5 sm:gap-2 mt-3 sm:mt-4">
+                <div className="flex-1 h-1 sm:h-1.5 bg-slate-100 dark:bg-slate-800/80 rounded-full overflow-hidden">
                   <div className={`h-full rounded-full transition-all duration-500 ${s.barColor}`} style={{ width: `${Math.min(100, s.percent)}%` }} />
                 </div>
-                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">{Math.round(s.percent)}%</span>
+                <span className="text-[10px] sm:text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">{Math.round(s.percent)}%</span>
               </div>
             </div>
           );
