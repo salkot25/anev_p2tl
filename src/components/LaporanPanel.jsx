@@ -1,6 +1,24 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Copy, CheckCircle2, Send, RefreshCw, Calendar, Zap, BarChart2 } from 'lucide-react';
 
+// Helper to format last updated timestamp
+function formatLastFetch(date) {
+  if (!date) return '';
+  const now = new Date();
+  const isToday = date.getDate() === now.getDate() &&
+                  date.getMonth() === now.getMonth() &&
+                  date.getFullYear() === now.getFullYear();
+  
+  const timeStr = date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  if (isToday) {
+    return timeStr;
+  } else {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${day}/${month} ${timeStr}`;
+  }
+}
+
 // Helper to calculate working days in a month
 function isDateWorkingDay(year, monthIndex, day, checklist) {
   const date = new Date(year, monthIndex, day);
@@ -84,6 +102,14 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
   
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [lastFetch, setLastFetch] = useState(() => {
+    const saved = localStorage.getItem('p2tl_laporan_last_fetch');
+    if (saved) {
+      const parsed = new Date(saved);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+    return null;
+  });
 
   // Helper to format number to Indonesian format (thousand separator with dot)
   const formatKwh = (val) => {
@@ -218,6 +244,9 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
       const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
       if (!url) {
         calculateTargetsLocally(year, month, day, activeWorkingDaysChecklist);
+        const now = new Date();
+        setLastFetch(now);
+        localStorage.setItem('p2tl_laporan_last_fetch', now.toISOString());
         return;
       }
 
@@ -321,11 +350,17 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
             if (targetData.targetTsMacetPlg !== undefined) {
               setOverrideTargetKuning(String(targetData.targetTsMacetPlg));
             }
+            const now = new Date();
+            setLastFetch(now);
+            localStorage.setItem('p2tl_laporan_last_fetch', now.toISOString());
           }
         }
       } catch (err) {
         console.error('Error fetching dashboard data for report date:', err);
         calculateTargetsLocally(year, month, day, activeWorkingDaysChecklist);
+        const now = new Date();
+        setLastFetch(now);
+        localStorage.setItem('p2tl_laporan_last_fetch', now.toISOString());
       } finally {
         setIsLoading(false);
       }
@@ -570,11 +605,18 @@ Terima kasih`;
             <div className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 h-8 flex items-center">{reportDate}</div>
           </div>
 
-          {isLoading && (
+          {isLoading ? (
             <div className="ml-auto flex items-center gap-2 text-xs text-blue-500 font-bold">
               <RefreshCw className="w-3.5 h-3.5 animate-spin" />
               Memuat data…
             </div>
+          ) : (
+            lastFetch && (
+              <div className="ml-auto flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-bold">
+                <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                <span>Diperbarui: {formatLastFetch(lastFetch)}</span>
+              </div>
+            )
           )}
         </div>
       </div>
