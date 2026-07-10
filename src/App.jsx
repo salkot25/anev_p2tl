@@ -13,6 +13,7 @@ import SettingsPanel from './components/SettingsPanel';
 import DetailDrawer from './components/DetailDrawer';
 import Layout from './components/Layout';
 import Login from './components/Login';
+import { getBackendUrl } from './utils/config';
 
 
 const normalizeData = (dataList) => {
@@ -127,7 +128,11 @@ export default function App() {
   const [toast, setToast] = useState(null); // { message, type }
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [backendUrl, setBackendUrl] = useState(() => {
-    return localStorage.getItem('p2tl_backend_url') || '';
+    return getBackendUrl();
+  });
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(() => {
+    return localStorage.getItem('p2tl_last_sync_time') || null;
   });
 
   const [ulp, setUlp] = useState(() => localStorage.getItem('p2tl_default_ulp') || 'ULP SALATIGA KOTA');
@@ -227,7 +232,8 @@ export default function App() {
 
   // Two-way synchronization function (conflict resolution: newest wins)
   const syncDatabase = useCallback(async (urlToUse) => {
-    if (!urlToUse) return;
+    if (!urlToUse || isSyncing) return;
+    setIsSyncing(true);
     try {
       const response = await fetch(`${urlToUse}?action=readAll`, {
         method: 'GET',
@@ -382,22 +388,31 @@ export default function App() {
           await syncUsersWithBackend(finalUsers);
         }
 
+        const nowStr = new Date().toISOString();
+        setLastSyncTime(nowStr);
+        localStorage.setItem('p2tl_last_sync_time', nowStr);
         showToast('Database disinkronkan dari Google Sheets!', 'success');
       } else {
         showToast('Gagal memuat data dari cloud: ' + (result.message || 'Format tidak dikenal'), 'error');
+        throw new Error(result.message || 'Format respon cloud tidak dikenal');
       }
     } catch (err) {
       console.warn('Gagal sinkronisasi otomatis. Menggunakan database lokal.', err);
       showToast('Sinkronisasi cloud gagal. Menggunakan database lokal.', 'warning');
+      throw err;
+    } finally {
+      setIsSyncing(false);
     }
-  }, [showToast, syncTargetsWithBackend, syncBankToWithBackend, syncUsersWithBackend]);
+  }, [showToast, syncTargetsWithBackend, syncBankToWithBackend, syncUsersWithBackend, isSyncing]);
 
   const handleSaveBackendUrl = (url) => {
-    setBackendUrl(url);
-    localStorage.setItem('p2tl_backend_url', url);
+    const trimmed = (url || '').trim();
+    const finalUrl = trimmed || import.meta.env.VITE_BACKEND_URL || '';
+    setBackendUrl(finalUrl);
+    localStorage.setItem('p2tl_backend_url', trimmed);
     showToast('URL Backend berhasil disimpan.', 'success');
-    if (url.trim()) {
-      syncDatabase(url.trim());
+    if (finalUrl) {
+      syncDatabase(finalUrl);
     }
   };
 
@@ -677,6 +692,8 @@ export default function App() {
       appSubtitle={ulp.trim() ? ulp.trim() : (up3.trim() ? up3.trim() : 'PLN Salatiga')}
       userName={currentUser?.name || "Admin"}
       userRole={currentUser?.role || "Administrator"}
+      isSyncing={isSyncing}
+      lastSyncTime={lastSyncTime}
     >
       {/* Switch content based on activeTab */}
       {activeTab === 'dashboard' ? (
@@ -704,6 +721,7 @@ export default function App() {
           ulp={ulp}
           up3={up3}
           onSaveMetadata={handleSaveMetadata}
+          lastSyncTime={lastSyncTime}
         />
       ) : (
         <DataList 

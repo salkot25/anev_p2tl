@@ -13,7 +13,8 @@ export default function SettingsPanel({
   onUsersChanged,
   ulp = '',
   up3 = '',
-  onSaveMetadata
+  onSaveMetadata,
+  lastSyncTime = null
 }) {
   const [url, setUrl] = useState(propBackendUrl || '');
   const [testStatus, setTestStatus] = useState('idle'); // idle, testing, success, error
@@ -420,6 +421,14 @@ export default function SettingsPanel({
               <span className="font-bold text-slate-700 dark:text-slate-300">
                 Ukuran Database Lokal: {localDatabaseSize}
               </span>
+              {propBackendUrl && lastSyncTime && (
+                <>
+                  <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
+                  <span className="font-bold text-slate-700 dark:text-slate-300">
+                    Sync Terakhir: {new Date(lastSyncTime).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -465,6 +474,11 @@ export default function SettingsPanel({
                   Simpan
                 </button>
               </div>
+              {import.meta.env.VITE_BACKEND_URL && (
+                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold italic mt-0.5">
+                  *Kosongkan input dan klik Simpan untuk menggunakan URL default dari file .env: <span className="font-mono text-[9px] text-slate-500 dark:text-slate-400 break-all">{import.meta.env.VITE_BACKEND_URL}</span>
+                </p>
+              )}
             </div>
 
             {/* Test Connection Output */}

@@ -8,7 +8,9 @@ import {
   Database,
   ScrollText,
   Sliders,
-  Send
+  Send,
+  RefreshCw,
+  CheckCircle
 } from "lucide-react";
 
 // Fallback icon resolver for template customization
@@ -48,7 +50,9 @@ export default function Layout({
   appName = "Anev P2TL",
   appSubtitle = "PLN Salatiga",
   userName = "Admin User",
-  userRole = "Administrator"
+  userRole = "Administrator",
+  isSyncing = false,
+  lastSyncTime = null
 }) {
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
@@ -92,6 +96,11 @@ export default function Layout({
 
         {/* AppBar Actions */}
         <div className="flex items-center gap-1.5">
+          {isSyncing && (
+            <div className="p-2 text-blue-600 dark:text-blue-400 shrink-0" title="Mensinkronisasi...">
+              <RefreshCw size={18} className="animate-spin" />
+            </div>
+          )}
           <button
             onClick={toggleTheme}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
@@ -212,6 +221,17 @@ export default function Layout({
                 />
               )}
             </button>
+            {isSyncing ? (
+              <div className="flex items-center gap-2 text-xs text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-950/30 px-3.5 py-1.5 rounded-lg border border-blue-200 dark:border-blue-800/50 animate-pulse">
+                <RefreshCw size={14} className="animate-spin text-blue-500 shrink-0" />
+                <span>Mensinkronisasi...</span>
+              </div>
+            ) : lastSyncTime ? (
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700" title={`Sinkronisasi Cloud Terakhir: ${new Date(lastSyncTime).toLocaleString('id-ID')}`}>
+                <CheckCircle size={14} className="text-emerald-500 shrink-0" />
+                <span>Tersinkronisasi {new Date(lastSyncTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+            ) : null}
             <div className="text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
               {todayStr}
             </div>
