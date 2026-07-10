@@ -10,7 +10,8 @@ import {
   Sliders,
   Send,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  AlertTriangle
 } from "lucide-react";
 
 // Fallback icon resolver for template customization
@@ -52,7 +53,8 @@ export default function Layout({
   userName = "Admin User",
   userRole = "Administrator",
   isSyncing = false,
-  lastSyncTime = null
+  lastSyncTime = null,
+  hasUnsyncedChanges = false
 }) {
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
@@ -96,11 +98,15 @@ export default function Layout({
 
         {/* AppBar Actions */}
         <div className="flex items-center gap-1.5">
-          {isSyncing && (
+          {isSyncing ? (
             <div className="p-2 text-blue-600 dark:text-blue-400 shrink-0" title="Mensinkronisasi...">
               <RefreshCw size={18} className="animate-spin" />
             </div>
-          )}
+          ) : hasUnsyncedChanges ? (
+            <div className="p-2 text-amber-500 shrink-0" title="Ada perubahan lokal belum disinkronkan">
+              <AlertTriangle size={18} className="animate-bounce" />
+            </div>
+          ) : null}
           <button
             onClick={toggleTheme}
             className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-all duration-200 flex items-center justify-center shrink-0 cursor-pointer"
@@ -227,9 +233,18 @@ export default function Layout({
                 <span>Mensinkronisasi...</span>
               </div>
             ) : lastSyncTime ? (
-              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700" title={`Sinkronisasi Cloud Terakhir: ${new Date(lastSyncTime).toLocaleString('id-ID')}`}>
-                <CheckCircle size={14} className="text-emerald-500 shrink-0" />
-                <span>Tersinkronisasi {new Date(lastSyncTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+              <div className="flex items-center gap-2 text-xs font-medium bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700" title={`Sinkronisasi Cloud Terakhir: ${new Date(lastSyncTime).toLocaleString('id-ID')}`}>
+                {hasUnsyncedChanges ? (
+                  <>
+                    <AlertTriangle size={14} className="text-amber-500 shrink-0" />
+                    <span className="text-amber-600 dark:text-amber-400 font-bold">Ada data baru belum diunggah</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle size={14} className="text-emerald-500 shrink-0" />
+                    <span className="text-slate-500 dark:text-slate-400">Tersinkronisasi {new Date(lastSyncTime).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  </>
+                )}
               </div>
             ) : null}
             <div className="text-xs text-slate-500 dark:text-slate-400 font-medium bg-slate-100 dark:bg-slate-800 px-3.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">

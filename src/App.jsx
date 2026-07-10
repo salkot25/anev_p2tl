@@ -131,8 +131,12 @@ export default function App() {
     return getBackendUrl();
   });
   const [isSyncing, setIsSyncing] = useState(false);
+  const isSyncingRef = useRef(false);
   const [lastSyncTime, setLastSyncTime] = useState(() => {
     return localStorage.getItem('p2tl_last_sync_time') || null;
+  });
+  const [hasUnsyncedChanges, setHasUnsyncedChanges] = useState(() => {
+    return localStorage.getItem('p2tl_has_unsynced_changes') === 'true';
   });
 
   const [ulp, setUlp] = useState(() => localStorage.getItem('p2tl_default_ulp') || 'ULP SALATIGA KOTA');
@@ -231,8 +235,9 @@ export default function App() {
   }, [backendUrl]);
 
   // Two-way synchronization function (conflict resolution: newest wins)
-  const syncDatabase = useCallback(async (urlToUse) => {
-    if (!urlToUse || isSyncing) return;
+  const syncDatabase = useCallback(async (urlToUse, forceDownload = false) => {
+    if (!urlToUse || isSyncingRef.current) return;
+    isSyncingRef.current = true;
     setIsSyncing(true);
     try {
       const response = await fetch(`${urlToUse}?action=readAll`, {
@@ -245,128 +250,149 @@ export default function App() {
         const cloudBankTo = normalizeBankToData(result.bankTo || []);
         const cloudUsers = normalizeUsersData(result.users || []);
 
-        // Load correct local backups
-        let localTargets = [];
-        let localBankTo = [];
-        let localUsers = [];
-        try {
-          const savedT = localStorage.getItem('p2tl_targets');
-          localTargets = savedT ? normalizeData(JSON.parse(savedT)) : [];
-        } catch {
-          localTargets = targetsRef.current;
-        }
-        try {
-          const savedB = localStorage.getItem('p2tl_bank_to');
-          localBankTo = savedB ? normalizeBankToData(JSON.parse(savedB)) : [];
-        } catch {
-          localBankTo = bankToRef.current;
-        }
-        try {
-          const savedU = localStorage.getItem('p2tl_users');
-          localUsers = savedU ? normalizeUsersData(JSON.parse(savedU)) : [];
-        } catch {
-          localUsers = usersRef.current;
-        }
-
-        // --- MERGE TARGETS (data to) ---
-        const mergedTargetsMap = new Map();
-        cloudTargets.forEach(item => {
-          mergedTargetsMap.set(String(item.IDPel).toLowerCase(), item);
-        });
-
+        let finalTargets = [];
+        let finalBankTo = [];
+        let finalUsers = [];
         let targetsNeedPush = false;
-        localTargets.forEach(localItem => {
-          const key = String(localItem.IDPel).toLowerCase();
-          if (mergedTargetsMap.has(key)) {
-            const cloudItem = mergedTargetsMap.get(key);
-            const localTime = new Date(localItem.lastUpdated || 0).getTime();
-            const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
-            
-            if (localTime > cloudTime) {
+        let bankToNeedPush = false;
+        let usersNeedPush = false;
+
+        if (forceDownload) {
+          finalTargets = cloudTargets;
+          finalBankTo = cloudBankTo;
+          finalUsers = cloudUsers;
+          if (finalUsers.length === 0) {
+            finalUsers.push({
+              username: 'Admin',
+              password: 'Salkot@26',
+              role: 'Administrator',
+              whatsapp: '08123456789',
+              unit: 'Salatiga Kota',
+              lastUpdated: new Date().toISOString()
+            });
+            usersNeedPush = true;
+          }
+        } else {
+          // Load correct local backups
+          let localTargets = [];
+          let localBankTo = [];
+          let localUsers = [];
+          try {
+            const savedT = localStorage.getItem('p2tl_targets');
+            localTargets = savedT ? normalizeData(JSON.parse(savedT)) : [];
+          } catch {
+            localTargets = targetsRef.current;
+          }
+          try {
+            const savedB = localStorage.getItem('p2tl_bank_to');
+            localBankTo = savedB ? normalizeBankToData(JSON.parse(savedB)) : [];
+          } catch {
+            localBankTo = bankToRef.current;
+          }
+          try {
+            const savedU = localStorage.getItem('p2tl_users');
+            localUsers = savedU ? normalizeUsersData(JSON.parse(savedU)) : [];
+          } catch {
+            localUsers = usersRef.current;
+          }
+
+          // --- MERGE TARGETS (data to) ---
+          const mergedTargetsMap = new Map();
+          cloudTargets.forEach(item => {
+            mergedTargetsMap.set(String(item.IDPel).toLowerCase(), item);
+          });
+
+          localTargets.forEach(localItem => {
+            const key = String(localItem.IDPel).toLowerCase();
+            if (mergedTargetsMap.has(key)) {
+              const cloudItem = mergedTargetsMap.get(key);
+              const localTime = new Date(localItem.lastUpdated || 0).getTime();
+              const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
+              
+              if (localTime > cloudTime) {
+                mergedTargetsMap.set(key, localItem);
+                targetsNeedPush = true;
+              }
+            } else {
+              // Only exists locally
               mergedTargetsMap.set(key, localItem);
               targetsNeedPush = true;
             }
-          } else {
-            // Only exists locally
-            mergedTargetsMap.set(key, localItem);
-            targetsNeedPush = true;
-          }
-        });
+          });
 
-        const finalTargets = Array.from(mergedTargetsMap.values()).map((t, idx) => ({
-          ...t,
-          No: idx + 1
-        }));
+          finalTargets = Array.from(mergedTargetsMap.values()).map((t, idx) => ({
+            ...t,
+            No: idx + 1
+          }));
 
-        // --- MERGE BANK TO ---
-        const mergedBankToMap = new Map();
-        cloudBankTo.forEach(item => {
-          mergedBankToMap.set(String(item.IDPEL).toLowerCase(), item);
-        });
+          // --- MERGE BANK TO ---
+          const mergedBankToMap = new Map();
+          cloudBankTo.forEach(item => {
+            mergedBankToMap.set(String(item.IDPEL).toLowerCase(), item);
+          });
 
-        let bankToNeedPush = false;
-        localBankTo.forEach(localItem => {
-          const key = String(localItem.IDPEL).toLowerCase();
-          if (mergedBankToMap.has(key)) {
-            const cloudItem = mergedBankToMap.get(key);
-            const localTime = new Date(localItem.lastUpdated || 0).getTime();
-            const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
-            
-            if (localTime > cloudTime) {
+          localBankTo.forEach(localItem => {
+            const key = String(localItem.IDPEL).toLowerCase();
+            if (mergedBankToMap.has(key)) {
+              const cloudItem = mergedBankToMap.get(key);
+              const localTime = new Date(localItem.lastUpdated || 0).getTime();
+              const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
+              
+              if (localTime > cloudTime) {
+                mergedBankToMap.set(key, localItem);
+                bankToNeedPush = true;
+              }
+            } else {
+              // Only exists locally
               mergedBankToMap.set(key, localItem);
               bankToNeedPush = true;
             }
-          } else {
-            // Only exists locally
-            mergedBankToMap.set(key, localItem);
-            bankToNeedPush = true;
-          }
-        });
+          });
 
-        const finalBankTo = Array.from(mergedBankToMap.values()).map((t, idx) => ({
-          ...t,
-          No: idx + 1
-        }));
+          finalBankTo = Array.from(mergedBankToMap.values()).map((t, idx) => ({
+            ...t,
+            No: idx + 1
+          }));
 
-        // --- MERGE USERS ---
-        const mergedUsersMap = new Map();
-        // Add cloud users first
-        cloudUsers.forEach(item => {
-          mergedUsersMap.set(String(item.username).toLowerCase(), item);
-        });
+          // --- MERGE USERS ---
+          const mergedUsersMap = new Map();
+          // Add cloud users first
+          cloudUsers.forEach(item => {
+            mergedUsersMap.set(String(item.username).toLowerCase(), item);
+          });
 
-        let usersNeedPush = false;
-        // Merge local users using timestamp check
-        localUsers.forEach(localItem => {
-          const key = String(localItem.username).toLowerCase();
-          if (mergedUsersMap.has(key)) {
-            const cloudItem = mergedUsersMap.get(key);
-            const localTime = new Date(localItem.lastUpdated || 0).getTime();
-            const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
-            
-            if (localTime > cloudTime) {
+          // Merge local users using timestamp check
+          localUsers.forEach(localItem => {
+            const key = String(localItem.username).toLowerCase();
+            if (mergedUsersMap.has(key)) {
+              const cloudItem = mergedUsersMap.get(key);
+              const localTime = new Date(localItem.lastUpdated || 0).getTime();
+              const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
+              
+              if (localTime > cloudTime) {
+                mergedUsersMap.set(key, localItem);
+                usersNeedPush = true;
+              }
+            } else {
+              // Only exists locally
               mergedUsersMap.set(key, localItem);
               usersNeedPush = true;
             }
-          } else {
-            // Only exists locally
-            mergedUsersMap.set(key, localItem);
+          });
+
+          // Make sure default Admin is preserved if users are empty
+          finalUsers = Array.from(mergedUsersMap.values());
+          if (finalUsers.length === 0) {
+            finalUsers.push({
+              username: 'Admin',
+              password: 'Salkot@26',
+              role: 'Administrator',
+              whatsapp: '08123456789',
+              unit: 'Salatiga Kota',
+              lastUpdated: new Date().toISOString()
+            });
             usersNeedPush = true;
           }
-        });
-
-        // Make sure default Admin is preserved if users are empty
-        const finalUsers = Array.from(mergedUsersMap.values());
-        if (finalUsers.length === 0) {
-          finalUsers.push({
-            username: 'Admin',
-            password: 'Salkot@26',
-            role: 'Administrator',
-            whatsapp: '08123456789',
-            unit: 'Salatiga Kota',
-            lastUpdated: new Date().toISOString()
-          });
-          usersNeedPush = true;
         }
 
         // Update local state and local storage backup
@@ -391,6 +417,8 @@ export default function App() {
         const nowStr = new Date().toISOString();
         setLastSyncTime(nowStr);
         localStorage.setItem('p2tl_last_sync_time', nowStr);
+        setHasUnsyncedChanges(false);
+        localStorage.setItem('p2tl_has_unsynced_changes', 'false');
         showToast('Database disinkronkan dari Google Sheets!', 'success');
       } else {
         showToast('Gagal memuat data dari cloud: ' + (result.message || 'Format tidak dikenal'), 'error');
@@ -401,9 +429,10 @@ export default function App() {
       showToast('Sinkronisasi cloud gagal. Menggunakan database lokal.', 'warning');
       throw err;
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  }, [showToast, syncTargetsWithBackend, syncBankToWithBackend, syncUsersWithBackend, isSyncing]);
+  }, [showToast, syncTargetsWithBackend, syncBankToWithBackend, syncUsersWithBackend]);
 
   const handleSaveBackendUrl = (url) => {
     const trimmed = (url || '').trim();
@@ -497,6 +526,8 @@ export default function App() {
     const normalized = normalizeUsersData(updatedUsers);
     setUsers(normalized);
     localStorage.setItem('p2tl_users', JSON.stringify(normalized));
+    setHasUnsyncedChanges(true);
+    localStorage.setItem('p2tl_has_unsynced_changes', 'true');
     
     // Auto sync to cloud
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
@@ -519,6 +550,8 @@ export default function App() {
       }));
       setTargets(formatted);
       localStorage.setItem('p2tl_targets', JSON.stringify(formatted));
+      setHasUnsyncedChanges(true);
+      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
       showToast(`Berhasil mengganti seluruh data (${formatted.length} target dimasukkan).`, 'success');
     } else {
       // Merge: match by IDPel.
@@ -542,6 +575,8 @@ export default function App() {
       formatted = Array.from(existingMap.values());
       setTargets(formatted);
       localStorage.setItem('p2tl_targets', JSON.stringify(formatted));
+      setHasUnsyncedChanges(true);
+      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
       showToast(`Sinkronisasi selesai! ${added} data baru ditambahkan, ${updated} data lama diperbarui.`, 'success');
     }
     
@@ -562,6 +597,8 @@ export default function App() {
     ];
     setTargets(updatedList);
     localStorage.setItem('p2tl_targets', JSON.stringify(updatedList));
+    setHasUnsyncedChanges(true);
+    localStorage.setItem('p2tl_has_unsynced_changes', 'true');
     showToast('Target P2TL baru berhasil ditambahkan secara manual.', 'success');
     
     // Auto sync to cloud
@@ -586,6 +623,8 @@ export default function App() {
       }));
       setBankToTargets(formatted);
       localStorage.setItem('p2tl_bank_to', JSON.stringify(formatted));
+      setHasUnsyncedChanges(true);
+      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
       showToast(`Berhasil mengganti seluruh data Bank TO (${formatted.length} target dimasukkan).`, 'success');
     } else {
       // Merge: match by IDPEL
@@ -609,6 +648,8 @@ export default function App() {
       formatted = Array.from(existingMap.values());
       setBankToTargets(formatted);
       localStorage.setItem('p2tl_bank_to', JSON.stringify(formatted));
+      setHasUnsyncedChanges(true);
+      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
       showToast(`Sinkronisasi Bank TO selesai! ${added} data baru ditambahkan, ${updated} data lama diperbarui.`, 'success');
     }
 
@@ -629,6 +670,8 @@ export default function App() {
     ];
     setBankToTargets(updatedList);
     localStorage.setItem('p2tl_bank_to', JSON.stringify(updatedList));
+    setHasUnsyncedChanges(true);
+    localStorage.setItem('p2tl_has_unsynced_changes', 'true');
     showToast('Target Bank TO baru berhasil ditambahkan secara manual.', 'success');
 
     // Auto sync to cloud
@@ -645,6 +688,8 @@ export default function App() {
     localStorage.removeItem('p2tl_bank_to');
     setTargets([]);
     setBankToTargets([]);
+    setHasUnsyncedChanges(false);
+    localStorage.setItem('p2tl_has_unsynced_changes', 'false');
     showToast("Seluruh database lokal berhasil dihapus.", "success");
   };
 
@@ -694,6 +739,7 @@ export default function App() {
       userRole={currentUser?.role || "Administrator"}
       isSyncing={isSyncing}
       lastSyncTime={lastSyncTime}
+      hasUnsyncedChanges={hasUnsyncedChanges}
     >
       {/* Switch content based on activeTab */}
       {activeTab === 'dashboard' ? (
@@ -722,6 +768,7 @@ export default function App() {
           up3={up3}
           onSaveMetadata={handleSaveMetadata}
           lastSyncTime={lastSyncTime}
+          hasUnsyncedChanges={hasUnsyncedChanges}
         />
       ) : (
         <DataList 

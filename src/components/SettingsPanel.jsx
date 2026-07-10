@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Database, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, Save, HelpCircle, Building, Trash2, UserPlus, Edit, Search, User, Key, Phone, Shield, X } from 'lucide-react';
+import { Database, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, Save, HelpCircle, Building, Trash2, UserPlus, Edit, Search, User, Key, Phone, Shield, X, Sliders, Settings, Download } from 'lucide-react';
 
 export default function SettingsPanel({ 
   backendUrl: propBackendUrl, 
@@ -14,7 +14,8 @@ export default function SettingsPanel({
   ulp = '',
   up3 = '',
   onSaveMetadata,
-  lastSyncTime = null
+  lastSyncTime = null,
+  hasUnsyncedChanges = false
 }) {
   const [url, setUrl] = useState(propBackendUrl || '');
   const [testStatus, setTestStatus] = useState('idle'); // idle, testing, success, error
@@ -118,6 +119,8 @@ export default function SettingsPanel({
   });
   const [userFormError, setUserFormError] = useState('');
   const [showSetupGuide, setShowSetupGuide] = useState(false);
+  const [activeSettingTab, setActiveSettingTab] = useState('aplikasi'); // aplikasi, pengguna, sinkronisasi
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle, connecting, merging, uploading, success, error
 
 
   // Filtered users list
@@ -366,14 +369,61 @@ export default function SettingsPanel({
   const handleSyncAll = async () => {
     if (!propBackendUrl || !onSyncAll) return;
     setSyncingAll(true);
+    setSyncStatus('connecting');
     try {
+      // Transition to merging state
+      await new Promise(resolve => setTimeout(resolve, 600));
+      setSyncStatus('merging');
+      
       await onSyncAll(propBackendUrl);
+      
+      // Transition to uploading state to show local state updates
+      setSyncStatus('uploading');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setSyncStatus('success');
       showAlert('Sinkronisasi Sukses', 'Sinkronisasi dua arah (sesuai waktu terbaru) selesai dengan sukses!', 'success');
     } catch (err) {
+      setSyncStatus('error');
       showAlert('Gagal Sinkronisasi', 'Gagal menyelaraskan database: ' + err.message, 'error');
     } finally {
       setSyncingAll(false);
+      setTimeout(() => setSyncStatus('idle'), 3000);
     }
+  };
+
+  const handleForceDownloadAll = async () => {
+    if (!propBackendUrl || !onSyncAll) return;
+    setSyncingAll(true);
+    setSyncStatus('connecting');
+    try {
+      // Transition to merging state
+      await new Promise(resolve => setTimeout(resolve, 600));
+      setSyncStatus('merging');
+      
+      await onSyncAll(propBackendUrl, true);
+      
+      // Transition to uploading state to show local state updates
+      setSyncStatus('uploading');
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setSyncStatus('success');
+      showAlert('Unduh Sukses', 'Seluruh data lokal berhasil ditimpa dengan data cloud terbaru dari Google Sheets.', 'success');
+    } catch (err) {
+      setSyncStatus('error');
+      showAlert('Gagal Mengunduh', 'Gagal mengunduh data dari cloud: ' + err.message, 'error');
+    } finally {
+      setSyncingAll(false);
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
+
+  const handleForceDownloadClick = () => {
+    showConfirm(
+      "Paksa Unduh Data Cloud",
+      "Apakah Anda yakin ingin mengganti seluruh database lokal di browser ini dengan data dari Google Spreadsheet? Seluruh perubahan lokal Anda yang belum disinkronkan akan ditimpa dan hilang secara permanen.",
+      handleForceDownloadAll
+    );
   };
 
   const handleClearLocalDataClick = () => {
@@ -387,483 +437,633 @@ export default function SettingsPanel({
   };
 
   return (
-    <div className="w-full">
-      <div className="w-full flex flex-col gap-6 animate-fade-in-up">
-      
-      {/* --- Connection Status Banner --- */}
-      <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm">
-        <div className="flex gap-4 items-center">
-          <div className={`p-3 rounded-2xl shrink-0 ${
-            propBackendUrl 
-              ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-450' 
-              : 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-450'
-          }`}>
-            <Database className="w-6 h-6" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Status Database</h3>
-              <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black uppercase tracking-wider border ${
-                propBackendUrl 
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20' 
-                  : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/20'
-              }`}>
-                {propBackendUrl ? 'Google Sheets' : 'Local Storage'}
-              </span>
-            </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
-              <span>
-                {propBackendUrl 
-                  ? `Terhubung ke Google Sheets API via Web App.` 
-                  : 'Mode Offline (Semua data disimpan di cache browser Local Storage).'}
-              </span>
-              <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
-              <span className="font-bold text-slate-700 dark:text-slate-300">
-                Ukuran Database Lokal: {localDatabaseSize}
-              </span>
-              {propBackendUrl && lastSyncTime && (
-                <>
-                  <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
-                  <span className="font-bold text-slate-700 dark:text-slate-300">
-                    Sync Terakhir: {new Date(lastSyncTime).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })}
-                  </span>
-                </>
-              )}
-            </div>
-          </div>
+    <>
+      <div className="w-full space-y-4 animate-fade-in-up">
+      {/* ── Unified Command Bar (Dashboard Style Sub-tabs) ─────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="flex p-1 bg-slate-100 dark:bg-slate-900 rounded-xl border border-slate-200/60 dark:border-slate-800/60 w-full md:w-auto">
+          <button
+            onClick={() => setActiveSettingTab('aplikasi')}
+            className={`flex-1 md:flex-none md:px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 text-center whitespace-nowrap min-w-[80px] md:min-w-[112px] flex items-center justify-center gap-2 cursor-pointer ${
+              activeSettingTab === 'aplikasi'
+                ? 'bg-white dark:bg-slate-805 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/85 dark:border-slate-700/80'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <Sliders className="w-3.5 h-3.5" />
+            <span>Setting Aplikasi</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveSettingTab('pengguna')}
+            className={`flex-1 md:flex-none md:px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 text-center whitespace-nowrap min-w-[80px] md:min-w-[112px] flex items-center justify-center gap-2 cursor-pointer ${
+              activeSettingTab === 'pengguna'
+                ? 'bg-white dark:bg-slate-805 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/85 dark:border-slate-700/80'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <User className="w-3.5 h-3.5" />
+            <span>Manajemen Pengguna</span>
+          </button>
+          
+          <button
+            onClick={() => setActiveSettingTab('sinkronisasi')}
+            className={`flex-1 md:flex-none md:px-6 py-2 text-xs font-bold rounded-lg transition-all duration-200 text-center whitespace-nowrap min-w-[80px] md:min-w-[112px] flex items-center justify-center gap-2 cursor-pointer ${
+              activeSettingTab === 'sinkronisasi'
+                ? 'bg-white dark:bg-slate-805 dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm border border-slate-200/85 dark:border-slate-700/80'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+            }`}
+          >
+            <Database className="w-3.5 h-3.5" />
+            <span>Sinkronisasi</span>
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        
-        {/* --- Left Column: Form & Config (7 cols if admin, 12 if not admin) --- */}
-        <div className={`${currentUser?.role === 'Administrator' ? 'lg:col-span-7' : 'lg:col-span-12'} flex flex-col gap-6`}>
-          
-          {/* Card 1: Google Sheets URL */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
-            <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800/80">
-              <div className="flex items-center gap-2.5">
-                <Database className="w-4.5 h-4.5 text-blue-500" />
-                <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Google Spreadsheet Database</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowSetupGuide(true)}
-                className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-bold transition-colors focus:outline-none cursor-pointer"
-              >
-                <HelpCircle className="w-4 h-4 text-blue-550" />
-                <span>Panduan Setup</span>
-              </button>
-            </div>
+        {/* Tab 1: Setting Aplikasi */}
+        {activeSettingTab === 'aplikasi' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch animate-fade-in">
+            {/* Card: Pengaturan Unit Kerja */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col gap-5 justify-between">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+                  <Building className="w-4.5 h-4.5 text-blue-500" />
+                  <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Unit & Target Analisis</h3>
+                </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Google Apps Script Web App URL</label>
-              <div className="flex gap-2 items-stretch">
-                <input 
-                  type="text" 
-                  value={url} 
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="input-text text-xs flex-1 font-mono" 
-                  placeholder="https://script.google.com/macros/s/.../exec"
-                />
-                <button 
-                  onClick={handleSaveUrl}
-                  className="btn-primary py-2 px-4 text-xs font-sans font-bold flex gap-2 items-center"
-                >
-                  <Save className="w-4.5 h-4.5" />
-                  Simpan
-                </button>
-              </div>
-              {import.meta.env.VITE_BACKEND_URL && (
-                <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold italic mt-0.5">
-                  *Kosongkan input dan klik Simpan untuk menggunakan URL default dari file .env: <span className="font-mono text-[9px] text-slate-500 dark:text-slate-400 break-all">{import.meta.env.VITE_BACKEND_URL}</span>
-                </p>
-              )}
-            </div>
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Default Unit Layanan (ULP)</label>
+                    <input 
+                      type="text" 
+                      value={defaultUlp} 
+                      onChange={(e) => setDefaultUlp(e.target.value)}
+                      className="input-text text-xs" 
+                    />
+                  </div>
 
-            {/* Test Connection Output */}
-            {testStatus !== 'idle' && (
-              <div className={`p-4 border rounded-2xl flex items-start gap-3 text-xs ${
-                testStatus === 'testing' 
-                  ? 'bg-slate-50 border-slate-150 text-slate-600 dark:bg-slate-950/20 dark:border-slate-850 dark:text-slate-400'
-                  : testStatus === 'success'
-                  ? 'bg-emerald-50 border-emerald-150 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900/30 dark:text-emerald-400'
-                  : 'bg-rose-50 border-rose-150 text-rose-800 dark:bg-rose-950/20 dark:border-rose-900/30 dark:text-rose-450'
-              }`}>
-                {testStatus === 'testing' && <RefreshCw className="w-4.5 h-4.5 text-blue-500 animate-spin shrink-0 mt-0.5" />}
-                {testStatus === 'success' && <CheckCircle className="w-4.5 h-4.5 text-emerald-500 shrink-0 mt-0.5" />}
-                {testStatus === 'error' && <AlertCircle className="w-4.5 h-4.5 text-rose-500 shrink-0 mt-0.5" />}
-                
-                <div className="flex-1">
-                  <p className="font-bold">{testStatus === 'testing' ? 'Sedang mengetes koneksi...' : testStatus === 'success' ? 'Sukses' : 'Gagal'}</p>
-                  <p className="mt-0.5 font-medium leading-relaxed">{testMessage}</p>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Default Area (UP3)</label>
+                    <input 
+                      type="text" 
+                      value={defaultUp3} 
+                      onChange={(e) => setDefaultUp3(e.target.value)}
+                      className="input-text text-xs" 
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Target Optimis (%)</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      max="500"
+                      value={targetOptimisPercent} 
+                      onChange={(e) => setTargetOptimisPercent(Math.max(1, Number(e.target.value)))}
+                      className="input-text text-xs font-semibold" 
+                    />
+                  </div>
                 </div>
               </div>
-            )}
 
-            {propBackendUrl && (
               <button 
-                onClick={handleTestConnection}
-                className="btn-secondary w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center"
-                disabled={testStatus === 'testing'}
+                onClick={handleSaveMetadata}
+                className={`btn-primary w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center ${
+                  saveMetadataStatus ? 'bg-emerald-600 border-emerald-500' : ''
+                }`}
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${testStatus === 'testing' ? 'animate-spin' : ''}`} />
-                Test Ulang Koneksi
+                {saveMetadataStatus ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 animate-bounce" />
+                    Unit Kerja Berhasil Disimpan
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Simpan Unit Kerja
+                  </>
+                )}
               </button>
-            )}
-          </div>
-
-          {/* Card 2: Manual Sync & Clear Local Data */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-              <RefreshCw className="w-4.5 h-4.5 text-blue-500" />
-              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Penyelarasan Data Manual</h3>
             </div>
 
-            {propBackendUrl ? (
-              <>
-                <div className="flex flex-col gap-2.5">
-                  <button 
-                    onClick={handleSyncAll}
-                    disabled={syncingAll}
-                    className="btn-primary w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${syncingAll ? 'animate-spin' : ''}`} />
-                    Mulai Sinkronisasi Dua Arah (Sesuai Waktu Terbaru)
-                  </button>
-                  <p className="text-[8px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold italic -mt-1 text-center">
-                    *Merekomendasikan aksi ini untuk menghindari data tertimpa jika ada pembaruan dari perangkat lain.
-                  </p>
+            {/* Card: Hari Kerja */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col gap-5 justify-between">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+                  <RefreshCw className="w-4.5 h-4.5 text-blue-500 animate-spin-slow" />
+                  <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Hari Kerja</h3>
                 </div>
 
-                <div className="mt-2 border-t border-slate-100 dark:border-slate-800/80 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvanced(!showAdvanced)}
-                    className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 font-black flex items-center gap-1 cursor-pointer transition-colors focus:outline-none select-none"
-                  >
-                    {showAdvanced ? '▼ Sembunyikan Opsi Overwrite Manual' : '► Tampilkan Opsi Overwrite Manual (Tindakan Bahaya)'}
-                  </button>
+                <p className="text-xs text-slate-550 dark:text-slate-400 font-semibold leading-relaxed">
+                  Tentukan hari kerja aktif untuk membagi target kWh bulanan menjadi target harian (breakdown target harian):
+                </p>
 
-                  {showAdvanced && (targets.length > 0 || bankToTargets.length > 0) && (
-                    <div className="flex flex-col gap-4 mt-3 animate-fade-in">
-                      <div className="p-3.5 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800 dark:text-amber-400">
-                        <AlertTriangle className="w-4.5 h-4.5 text-amber-500 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="font-bold">Aksi Overwrite Cadangan (Upload Manual)</p>
-                          <p className="mt-0.5 leading-relaxed font-medium">Gunakan tombol di bawah ini jika Anda ingin memaksa database cloud diganti dengan seluruh baris lokal Anda saat ini.</p>
+                <div className="flex flex-col gap-3 my-1 bg-slate-50 dark:bg-slate-950/20 p-4 border border-slate-100 dark:border-slate-800 rounded-2xl">
+                  <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={workingDays.monFri} 
+                      onChange={() => handleCheckboxChange('monFri')}
+                      className="rounded border-slate-350 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500/30 w-4.5 h-4.5 cursor-pointer" 
+                    />
+                    Senin - Jumat
+                  </label>
+
+                  <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={workingDays.sat} 
+                      onChange={() => handleCheckboxChange('sat')}
+                      className="rounded border-slate-350 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500/30 w-4.5 h-4.5 cursor-pointer" 
+                    />
+                    Sabtu
+                  </label>
+
+                  <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 cursor-pointer select-none">
+                    <input 
+                      type="checkbox" 
+                      checked={workingDays.sun} 
+                      onChange={() => handleCheckboxChange('sun')}
+                      className="rounded border-slate-350 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500/30 w-4.5 h-4.5 cursor-pointer" 
+                    />
+                    Minggu
+                  </label>
+                </div>
+              </div>
+
+              <button 
+                onClick={handleSaveWorkingDays}
+                className={`btn-primary w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center ${
+                  saveDaysStatus ? 'bg-emerald-600 border-emerald-500' : ''
+                }`}
+              >
+                {saveDaysStatus ? (
+                  <>
+                    <CheckCircle className="w-4 h-4 animate-bounce" />
+                    Hari Kerja Berhasil Disimpan
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Simpan Hari Kerja
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Tab 2: Manajemen Pengguna */}
+        {activeSettingTab === 'pengguna' && (
+          <div className="grid grid-cols-1 gap-6 animate-fade-in">
+            {currentUser?.role === 'Administrator' ? (
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col gap-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-xl">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Manajemen Pengguna</h3>
+                      <p className="text-[8px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 mt-0.5">Kelola akun akses, kata sandi, dan role petugas di cloud.</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={openAddUserModal}
+                    className="btn-primary py-2 px-4 text-xs font-sans font-bold flex gap-2 items-center cursor-pointer shadow-lg shadow-blue-500/10"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Tambah User
+                  </button>
+                </div>
+
+                {/* Search & stats */}
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
+                  <div className="relative flex-1 max-w-md">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <input 
+                      type="text" 
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="input-text text-xs pl-9 py-2"
+                      placeholder="Cari user berdasarkan nama, role, unit..."
+                    />
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-455 font-black bg-slate-50 dark:bg-slate-950/20 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
+                    Total: <span className="text-blue-600 dark:text-blue-400">{users.length}</span> User
+                  </div>
+                </div>
+
+                {/* Users List Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredUsers.map((user) => {
+                    const isSelf = user.username.toLowerCase() === currentUser?.name?.toLowerCase();
+                    const isAdminUser = user.role === 'Administrator';
+                    return (
+                      <div 
+                        key={user.username}
+                        className="bg-slate-50 dark:bg-slate-950/40 border border-slate-150 dark:border-slate-850 p-4 rounded-2xl flex flex-col gap-3.5 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-sm"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 uppercase">
+                            {user.username.substring(0, 2)}
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">{user.username}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black border uppercase shrink-0 ${
+                                isAdminUser 
+                                  ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/10' 
+                                  : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/10'
+                              }`}>
+                                {user.role}
+                              </span>
+                            </div>
+                            <p className="text-[8px] sm:text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">{user.unit}</p>
+                          </div>
+                        </div>
+
+                        <div className="border-t border-slate-100 dark:border-slate-850 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 dark:text-slate-400">
+                          {user.whatsapp && (
+                            <div className="flex items-center gap-2 font-medium">
+                              <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              <a 
+                                href={`https://wa.me/${String(user.whatsapp).replace(/\D/g, '')}`} 
+                                target="_blank" 
+                                rel="noreferrer"
+                                className="hover:underline hover:text-emerald-555 font-semibold"
+                              >
+                                {user.whatsapp}
+                              </a>
+                            </div>
+                          )}
+                          <div className="flex items-center gap-2 font-medium">
+                            <Key className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            <span className="font-mono text-slate-500 dark:text-slate-555 truncate animate-pulse" title={user.password}>
+                              Password: {user.password}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex justify-between items-center mt-1 border-t border-slate-100 dark:border-slate-850 pt-2.5">
+                          <span className="text-[8px] sm:text-xs text-slate-455 dark:text-slate-500 font-bold">
+                            Updated: {new Date(user.lastUpdated).toLocaleDateString()}
+                          </span>
+                          
+                          <div className="flex gap-2 shrink-0">
+                            <button 
+                              onClick={() => openEditUserModal(user)}
+                              className="p-1.5 bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950/40 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-lg transition-colors cursor-pointer focus:outline-none"
+                              title="Edit User"
+                            >
+                              <Edit className="w-3.5 h-3.5" />
+                            </button>
+                            {!isSelf && (
+                              <button 
+                                onClick={() => handleDeleteUser(user.username)}
+                                className="p-1.5 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-955/45 text-slate-550 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-455 rounded-lg transition-colors cursor-pointer focus:outline-none"
+                                title="Hapus User"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {targets.length > 0 && (
-                          <button 
-                            onClick={handleSyncTargets}
-                            disabled={syncingTargets}
-                            className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
-                          >
-                            <RefreshCw className={`w-3.5 h-3.5 ${syncingTargets ? 'animate-spin' : ''}`} />
-                            Upload Target ({targets.length} Baris)
-                          </button>
-                        )}
-                        {bankToTargets.length > 0 && (
-                          <button 
-                            onClick={handleSyncBankTo}
-                            disabled={syncingBankTo}
-                            className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2.5"
-                          >
-                            <RefreshCw className={`w-3.5 h-3.5 ${syncingBankTo ? 'animate-spin' : ''}`} />
-                            Upload Bank TO ({bankToTargets.length} Baris)
-                          </button>
-                        )}
-                      </div>
+                  {filteredUsers.length === 0 && (
+                    <div className="col-span-full py-8 text-center text-xs text-slate-400 dark:text-slate-500 font-bold border border-dashed border-slate-200 dark:border-slate-805 rounded-2xl">
+                      Tidak ada user ditemukan.
                     </div>
                   )}
                 </div>
-              </>
+              </div>
             ) : (
-              <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Penyelarasan ke Google Sheets tidak aktif karena URL Backend belum dikonfigurasi.
-              </div>
-            )}
-
-            <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 flex flex-col gap-3">
-              <div className="p-3.5 bg-rose-50 dark:bg-rose-955/20 border border-rose-100 dark:border-rose-900/20 rounded-2xl flex items-start gap-2.5 text-xs text-rose-800 dark:text-rose-455">
-                <AlertCircle className="w-4.5 h-4.5 text-rose-500 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-bold">Hapus Seluruh Data Lokal ({localDatabaseSize})</p>
-                  <p className="mt-0.5 leading-relaxed font-medium">Aksi ini akan menghapus permanen semua target dan bank TO yang disimpan secara lokal di browser ini sebesar **{localDatabaseSize}**.</p>
-                </div>
-              </div>
-
-              <button 
-                onClick={handleClearLocalDataClick}
-                className="btn-secondary border-rose-200 hover:border-rose-350 dark:border-rose-900/40 text-rose-600 dark:text-rose-455 hover:bg-rose-50 dark:hover:bg-rose-950/20 py-2.5 text-xs font-bold w-full flex justify-center items-center gap-2"
-              >
-                <Trash2 className="w-4 h-4" />
-                Hapus Database Lokal
-              </button>
-            </div>
-          </div>
-
-          {/* Card 3: Default Metadata Settings */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-              <Building className="w-4.5 h-4.5 text-blue-500" />
-              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Unit & Target Analisis</h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Default Unit Layanan (ULP)</label>
-                <input 
-                  type="text" 
-                  value={defaultUlp} 
-                  onChange={(e) => setDefaultUlp(e.target.value)}
-                  className="input-text text-xs" 
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Default Area (UP3)</label>
-                <input 
-                  type="text" 
-                  value={defaultUp3} 
-                  onChange={(e) => setDefaultUp3(e.target.value)}
-                  className="input-text text-xs" 
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wide">Target Optimis (%)</label>
-                <input 
-                  type="number" 
-                  min="1"
-                  max="500"
-                  value={targetOptimisPercent} 
-                  onChange={(e) => setTargetOptimisPercent(Math.max(1, Number(e.target.value)))}
-                  className="input-text text-xs font-semibold" 
-                />
-              </div>
-            </div>
-
-            <button 
-              onClick={handleSaveMetadata}
-              className={`btn-primary w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center ${
-                saveMetadataStatus ? 'bg-emerald-600 border-emerald-500' : ''
-              }`}
-            >
-              {saveMetadataStatus ? (
-                <>
-                  <CheckCircle className="w-4 h-4 animate-bounce" />
-                  Unit Kerja Berhasil Disimpan
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Simpan Unit Kerja
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Card 4: Working Days Checklist */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-5 shadow-sm flex flex-col gap-4">
-            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
-              <RefreshCw className="w-4.5 h-4.5 text-blue-500 animate-spin-slow" />
-              <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Pengaturan Hari Kerja</h3>
-            </div>
-
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
-              Tentukan hari kerja aktif untuk membagi target kWh bulanan menjadi target harian (breakdown target harian):
-            </p>
-
-            <div className="flex flex-col sm:flex-row sm:items-center gap-5 my-1 bg-slate-50 dark:bg-slate-950/20 p-4 border border-slate-100 dark:border-slate-800 rounded-2xl">
-              <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  checked={workingDays.monFri} 
-                  onChange={() => handleCheckboxChange('monFri')}
-                  className="rounded border-slate-350 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500/30 w-4.5 h-4.5 cursor-pointer" 
-                />
-                Senin - Jumat
-              </label>
-
-              <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  checked={workingDays.sat} 
-                  onChange={() => handleCheckboxChange('sat')}
-                  className="rounded border-slate-350 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500/30 w-4.5 h-4.5 cursor-pointer" 
-                />
-                Sabtu
-              </label>
-
-              <label className="flex items-center gap-2.5 text-xs font-bold text-slate-700 dark:text-slate-350 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  checked={workingDays.sun} 
-                  onChange={() => handleCheckboxChange('sun')}
-                  className="rounded border-slate-350 dark:border-slate-700 text-emerald-600 focus:ring-emerald-500/30 w-4.5 h-4.5 cursor-pointer" 
-                />
-                Minggu
-              </label>
-            </div>
-
-            <button 
-              onClick={handleSaveWorkingDays}
-              className={`btn-primary w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center ${
-                saveDaysStatus ? 'bg-emerald-600 border-emerald-500' : ''
-              }`}
-            >
-              {saveDaysStatus ? (
-                <>
-                  <CheckCircle className="w-4 h-4 animate-bounce" />
-                  Hari Kerja Berhasil Disimpan
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  Simpan Hari Kerja
-                </>
-              )}
-            </button>
-          </div>
-
-        </div>
-
-        {/* --- Right Column: User Management (5 cols) --- */}
-        {currentUser?.role === 'Administrator' && (
-          <div className="lg:col-span-5 flex flex-col h-full">
-            <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col gap-6 flex-1 h-full">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/80">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2.5 bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 rounded-xl">
-                    <User className="w-5 h-5" />
+              /* Non-Admin User View Profile Card */
+              <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm max-w-xl mx-auto flex flex-col gap-6 w-full">
+                <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 flex items-center justify-center font-bold text-lg uppercase shadow-sm">
+                    {currentUser?.name?.substring(0, 2) || 'US'}
                   </div>
                   <div>
-                    <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Manajemen Pengguna</h3>
-                    <p className="text-[8px] sm:text-xs font-semibold text-slate-400 dark:text-slate-500 mt-0.5">Kelola akun akses, kata sandi, dan role petugas di cloud.</p>
+                    <h3 className="text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Profil Akun</h3>
+                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Detail akun Anda yang terdaftar pada sistem.</p>
                   </div>
                 </div>
-                <button 
-                  onClick={openAddUserModal}
-                  className="btn-primary py-2 px-4 text-xs font-sans font-bold flex gap-2 items-center cursor-pointer shadow-lg shadow-blue-500/10"
-                >
-                  <UserPlus className="w-4 h-4" />
-                  Tambah User
-                </button>
-              </div>
 
-              {/* Search bar & statistics */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-between items-stretch sm:items-center">
-                <div className="relative flex-1 max-w-md">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Search className="w-4 h-4 text-slate-400" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col gap-1">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wide">Nama Pengguna</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-bold text-sm">{currentUser?.name || '-'}</span>
                   </div>
-                  <input 
-                    type="text" 
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="input-text text-xs pl-9 py-2"
-                    placeholder="Cari user berdasarkan nama, role, unit..."
-                  />
+
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col gap-1">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wide">Role Hak Akses</span>
+                    <span className="text-blue-600 dark:text-blue-400 font-bold text-sm uppercase tracking-wide">{currentUser?.role || '-'}</span>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 dark:bg-slate-950/20 border border-slate-100 dark:border-slate-800 rounded-2xl flex flex-col gap-1 sm:col-span-2">
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wide">Unit Kerja Asosiasi</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-bold text-sm">{currentUser?.unit || '-'}</span>
+                  </div>
                 </div>
-                <div className="text-xs text-slate-500 dark:text-slate-455 font-black bg-slate-50 dark:bg-slate-950/20 px-3 py-1.5 rounded-xl border border-slate-100 dark:border-slate-800/40">
-                  Total: <span className="text-blue-600 dark:text-blue-400">{users.length}</span> User
+
+                <div className="p-4 bg-amber-50 dark:bg-amber-955/25 border border-amber-100 dark:border-amber-900/20 rounded-2xl flex gap-3 text-xs text-amber-800 dark:text-amber-400 leading-relaxed font-semibold">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
+                  <p>Hanya Administrator yang memiliki wewenang penuh untuk melakukan manajemen akun pengguna (tambah/edit/hapus). Silakan hubungi admin unit Anda jika memerlukan pembaruan kredensial atau informasi akun.</p>
                 </div>
               </div>
+            )}
+          </div>
+        )}
 
-              {/* Users List */}
-              <div className="flex flex-col gap-4 flex-1 overflow-y-auto pr-1 max-h-[550px] lg:max-h-[calc(100vh-420px)] scrollbar-thin">
-                {filteredUsers.map((user) => {
-                  const isSelf = user.username.toLowerCase() === currentUser?.name?.toLowerCase();
-                  const isAdminUser = user.role === 'Administrator';
-                  return (
-                    <div 
-                      key={user.username}
-                      className="bg-slate-50 dark:bg-slate-950/40 border border-slate-150 dark:border-slate-850 p-4 rounded-2xl flex flex-col gap-3.5 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-sm"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0 uppercase">
-                          {user.username.substring(0, 2)}
-                        </div>
-                        
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-slate-800 dark:text-slate-200 text-xs truncate">{user.username}</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-black border uppercase shrink-0 ${
-                              isAdminUser 
-                                ? 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/10' 
-                                : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/10'
-                            }`}>
-                              {user.role}
-                            </span>
-                          </div>
-                          <p className="text-[8px] sm:text-xs text-slate-400 dark:text-slate-500 font-semibold mt-0.5 truncate">{user.unit}</p>
-                        </div>
+        {/* Tab 3: Sinkronisasi Cloud */}
+        {activeSettingTab === 'sinkronisasi' && (
+          <div className="flex flex-col gap-6 animate-fade-in">
+            {/* Top Row: Status & Config Side-by-Side */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+              {/* Left (5 cols): Database Status Card */}
+              <div className="lg:col-span-5 flex flex-col">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex gap-4 items-center pb-3 border-b border-slate-100 dark:border-slate-800/80">
+                      <div className={`p-3 rounded-2xl shrink-0 ${
+                        propBackendUrl 
+                          ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-455' 
+                          : 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-455'
+                      }`}>
+                        <Database className="w-6 h-6" />
                       </div>
-
-                      <div className="border-t border-slate-100 dark:border-slate-850 pt-3 flex flex-col gap-1.5 text-xs text-slate-600 dark:text-slate-400">
-                        {user.whatsapp && (
-                          <div className="flex items-center gap-2 font-medium">
-                            <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            <a 
-                              href={`https://wa.me/${String(user.whatsapp).replace(/\D/g, '')}`} 
-                              target="_blank" 
-                              rel="noreferrer"
-                              className="hover:underline hover:text-emerald-500 font-semibold"
-                            >
-                              {user.whatsapp}
-                            </a>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 font-medium">
-                          <Key className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="font-mono text-slate-500 dark:text-slate-555 truncate animate-pulse" title={user.password}>
-                            Password: {user.password}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center mt-1 border-t border-slate-100 dark:border-slate-850 pt-2.5">
-                        <span className="text-[8px] sm:text-xs text-slate-455 dark:text-slate-500 font-bold">
-                          Updated: {new Date(user.lastUpdated).toLocaleDateString()}
+                      <div>
+                        <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Status Cloud</h3>
+                        <span className={`mt-1 inline-block px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${
+                          propBackendUrl 
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20' 
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border-emerald-100 dark:border-emerald-900/20'
+                        }`}>
+                          {propBackendUrl ? 'Google Sheets Terkoneksi' : 'Local Storage Only'}
                         </span>
-                        
-                        <div className="flex gap-2 shrink-0">
-                          <button 
-                            onClick={() => openEditUserModal(user)}
-                            className="p-1.5 bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-950/40 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 rounded-lg transition-colors cursor-pointer focus:outline-none"
-                            title="Edit User"
-                          >
-                            <Edit className="w-3.5 h-3.5" />
-                          </button>
-                          {!isSelf && (
-                            <button 
-                              onClick={() => handleDeleteUser(user.username)}
-                              className="p-1.5 bg-slate-100 hover:bg-rose-50 dark:bg-slate-800 dark:hover:bg-rose-950/40 text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-455 rounded-lg transition-colors cursor-pointer focus:outline-none"
-                              title="Hapus User"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
                       </div>
                     </div>
-                  );
-                })}
 
-                {filteredUsers.length === 0 && (
-                  <div className="col-span-full py-8 text-center text-xs text-slate-400 dark:text-slate-500 font-bold border border-dashed border-slate-200 dark:border-slate-805 rounded-2xl">
-                    Tidak ada user ditemukan.
+                    <div className="flex flex-col gap-3.5 text-xs font-semibold text-slate-650 dark:text-slate-400 mt-4">
+                      <div className="flex justify-between items-center py-1">
+                        <span className="text-slate-400 dark:text-slate-500">Penyimpanan Lokal:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-250">{localDatabaseSize}</span>
+                      </div>
+                      
+                      <div className="flex justify-between items-center py-1 border-t border-slate-100 dark:border-slate-850">
+                        <span className="text-slate-400 dark:text-slate-500">Data Target P2TL:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-250">{targets.length} Baris</span>
+                      </div>
+
+                      <div className="flex justify-between items-center py-1 border-t border-slate-100 dark:border-slate-850">
+                        <span className="text-slate-400 dark:text-slate-500">Data Bank TO:</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-250">{bankToTargets.length} Baris</span>
+                      </div>
+                    </div>
                   </div>
-                )}
+
+                  {propBackendUrl && lastSyncTime && (
+                    <div className="flex flex-col gap-1.5 pt-3 border-t border-slate-100 dark:border-slate-850 mt-4">
+                      <span className="text-slate-400 dark:text-slate-500">Sinkronisasi Cloud Terakhir:</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-250 bg-slate-50 dark:bg-slate-950/30 p-2 rounded-xl border border-slate-100 dark:border-slate-800 font-mono text-[10px] break-all">
+                        {new Date(lastSyncTime).toLocaleString('id-ID')}
+                      </span>
+                      {hasUnsyncedChanges && (
+                        <div className="text-amber-600 dark:text-amber-400 font-black italic flex items-center gap-1 mt-1 text-[10px] animate-pulse">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Ada data baru belum diunggah</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right (7 cols): Google Sheets API Config */}
+              <div className="lg:col-span-7 flex flex-col">
+                <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col justify-between h-full">
+                  <div>
+                    <div className="flex justify-between items-center pb-3 border-b border-slate-100 dark:border-slate-800/80">
+                      <div className="flex items-center gap-2.5">
+                        <Database className="w-4.5 h-4.5 text-blue-500" />
+                        <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Google Spreadsheet Database</h3>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowSetupGuide(true)}
+                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-bold transition-colors focus:outline-none cursor-pointer animate-pulse"
+                      >
+                        <HelpCircle className="w-4 h-4 text-blue-555" />
+                        <span>Panduan Setup</span>
+                      </button>
+                    </div>
+
+                    <div className="flex flex-col gap-2 mt-4">
+                      <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Google Apps Script Web App URL</label>
+                      <div className="flex gap-2 items-stretch">
+                        <input 
+                          type="text" 
+                          value={url} 
+                          onChange={(e) => setUrl(e.target.value)}
+                          className="input-text text-xs flex-1 font-mono" 
+                          placeholder="https://script.google.com/macros/s/.../exec"
+                        />
+                        <button 
+                          onClick={handleSaveUrl}
+                          className="btn-primary py-2 px-4 text-xs font-sans font-bold flex gap-2 items-center shrink-0"
+                        >
+                          <Save className="w-4.5 h-4.5" />
+                          Simpan
+                        </button>
+                      </div>
+                      {import.meta.env.VITE_BACKEND_URL && (
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold italic mt-0.5">
+                          *Kosongkan input dan klik Simpan untuk menggunakan URL default dari file .env: <span className="font-mono text-[9px] text-slate-500 dark:text-slate-400 break-all">{import.meta.env.VITE_BACKEND_URL}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Test Connection Output */}
+                    {testStatus !== 'idle' && (
+                      <div className={`p-4 border rounded-2xl flex items-start gap-3 text-xs mt-3 ${
+                        testStatus === 'testing' 
+                          ? 'bg-slate-50 border-slate-150 text-slate-600 dark:bg-slate-955/20 dark:border-slate-850 dark:text-slate-400'
+                          : testStatus === 'success'
+                          ? 'bg-emerald-50 border-emerald-150 text-emerald-800 dark:bg-emerald-955/20 dark:border-emerald-900/30 dark:text-emerald-400'
+                          : 'bg-rose-50 border-rose-150 text-rose-800 dark:bg-rose-955/20 dark:border-rose-900/30 dark:text-rose-455'
+                      }`}>
+                        {testStatus === 'testing' && <RefreshCw className="w-4.5 h-4.5 text-blue-500 animate-spin shrink-0 mt-0.5" />}
+                        {testStatus === 'success' && <CheckCircle className="w-4.5 h-4.5 text-emerald-500 shrink-0 mt-0.5" />}
+                        {testStatus === 'error' && <AlertCircle className="w-4.5 h-4.5 text-rose-500 shrink-0 mt-0.5" />}
+                        
+                        <div className="flex-1">
+                          <p className="font-bold">{testStatus === 'testing' ? 'Sedang mengetes koneksi...' : testStatus === 'success' ? 'Sukses' : 'Gagal'}</p>
+                          <p className="mt-0.5 font-medium leading-relaxed">{testMessage}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {propBackendUrl && (
+                    <button 
+                      onClick={handleTestConnection}
+                      className="btn-secondary w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center mt-4"
+                      disabled={testStatus === 'testing'}
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${testStatus === 'testing' ? 'animate-spin' : ''}`} />
+                      Test Ulang Koneksi
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Row: Penyelarasan Data Manual (Full Width) */}
+            <div className="bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/60 rounded-3xl p-6 shadow-sm flex flex-col gap-6">
+              <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+                <RefreshCw className="w-4.5 h-4.5 text-blue-550" />
+                <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200 uppercase tracking-wide">Penyelarasan Data Manual</h3>
+              </div>
+
+              {propBackendUrl ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                  {/* Left Column: Visual & Direct Sync */}
+                  <div className="flex flex-col gap-4">
+                    {/* Visual Diagram of Database Integration */}
+                    <div className="grid grid-cols-3 items-center bg-slate-50 dark:bg-slate-950/40 p-4 border border-slate-150 dark:border-slate-850 rounded-2xl gap-2">
+                      <div className="flex flex-col items-center text-center">
+                        <Sliders className="w-7 h-7 text-blue-500 mb-1" />
+                        <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Local DB</span>
+                        <span className="text-[11px] font-bold text-slate-800 dark:text-slate-250 mt-0.5">{targets.length + bankToTargets.length} Baris</span>
+                      </div>
+                      
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <div className={`p-3 rounded-full bg-blue-50 dark:bg-blue-950/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/10 relative ${syncingAll ? 'animate-pulse' : ''}`}>
+                          <RefreshCw className={`w-5 h-5 ${syncingAll ? 'animate-spin' : ''}`} />
+                          {hasUnsyncedChanges && !syncingAll && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-555 mt-1">
+                          {syncingAll ? 'Syncing...' : hasUnsyncedChanges ? 'Belum Unggah' : 'Up-to-date'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-center text-center">
+                        <Database className="w-7 h-7 text-emerald-500 mb-1" />
+                        <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500">Google Sheet</span>
+                        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full mt-0.5 border ${
+                          propBackendUrl 
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/20' 
+                            : 'bg-amber-50 text-amber-700 dark:bg-amber-955/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/20'
+                        }`}>
+                          {propBackendUrl ? 'Connected' : 'Offline'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Sync button */}
+                    <div className="flex flex-col gap-4">
+                      <div className="flex flex-col gap-2.5">
+                        <button 
+                          onClick={handleSyncAll}
+                          disabled={syncingAll}
+                          className="btn-primary w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center shadow-lg shadow-blue-550/15"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingAll ? 'animate-spin' : ''}`} />
+                          Mulai Sinkronisasi Dua Arah
+                        </button>
+                        <p className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold leading-relaxed">
+                          Aksi ini merekonsiliasi seluruh data target, bank TO, dan pengguna lokal dengan data di Google Spreadsheet secara cerdas. Konflik diselesaikan secara otomatis dengan mengambil data dengan stempel waktu terakhir yang paling baru (Newest-wins).
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                        <button 
+                          onClick={handleForceDownloadClick}
+                          disabled={syncingAll}
+                          className="btn-secondary border-amber-250 hover:border-amber-350 text-amber-600 dark:text-amber-450 hover:bg-amber-50 dark:hover:bg-amber-950/10 w-full py-2.5 text-xs font-bold flex justify-center gap-2 items-center"
+                        >
+                          <Download className="w-4 h-4 text-amber-500 animate-pulse" />
+                          Gunakan Data Server (Timpa Data Lokal)
+                        </button>
+                        <p className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold leading-relaxed">
+                          Aksi ini mengunduh seluruh data dari Google Spreadsheet dan menimpa database lokal Anda secara paksa. Seluruh perubahan lokal yang belum disinkronkan akan dibuang.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Danger actions */}
+                  <div className="flex flex-col gap-6">
+                    {/* Card: Force Upload to Cloud */}
+                    <div className="bg-slate-50 dark:bg-slate-955/25 border border-slate-100 dark:border-slate-800/80 rounded-2xl p-4 flex flex-col gap-3">
+                      <div>
+                        <h4 className="text-[11px] font-black uppercase text-amber-600 dark:text-amber-400 tracking-wider">Aksi Overwrite Cloud (Gunakan Data Lokal)</h4>
+                        <p className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold mt-0.5 leading-relaxed">
+                          Paksa data di Google Spreadsheet diganti dengan data lokal Anda saat ini. Tindakan ini akan menimpa seluruh baris data di cloud.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+                        <button 
+                          onClick={handleSyncTargets}
+                          disabled={targets.length === 0 || syncingTargets || syncingAll}
+                          className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingTargets ? 'animate-spin' : ''}`} />
+                          Upload Target ({targets.length})
+                        </button>
+                        
+                        <button 
+                          onClick={handleSyncBankTo}
+                          disabled={bankToTargets.length === 0 || syncingBankTo || syncingAll}
+                          className="btn-secondary flex justify-center gap-2 items-center font-bold text-xs py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${syncingBankTo ? 'animate-spin' : ''}`} />
+                          Upload Bank TO ({bankToTargets.length})
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Card: Reset Database */}
+                    <div className="bg-rose-50/50 dark:bg-rose-955/10 border border-rose-100/50 dark:border-rose-900/20 rounded-2xl p-4 flex flex-col gap-3">
+                      <div>
+                        <h4 className="text-[11px] font-black uppercase text-rose-600 dark:text-rose-455 tracking-wider">Hapus Seluruh Data Lokal ({localDatabaseSize})</h4>
+                        <p className="text-[10px] text-slate-450 dark:text-slate-500 font-semibold mt-0.5 leading-relaxed">
+                          Aksi ini akan menghapus secara permanen seluruh cached target P2TL, data bank target operasi (TO), dan password pengguna dari browser Anda.
+                        </p>
+                      </div>
+
+                      <button 
+                        onClick={handleClearLocalDataClick}
+                        className="btn-secondary border-rose-200 hover:border-rose-350 dark:border-rose-900/40 text-rose-600 dark:text-rose-455 hover:bg-rose-50 dark:hover:bg-rose-950/20 py-2.5 text-xs font-bold w-full flex justify-center items-center gap-2 cursor-pointer focus:outline-none"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Hapus Database Lokal
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              ) : (
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  Penyelarasan ke Google Sheets tidak aktif karena URL Backend belum dikonfigurasi.
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
-      </div>
+        )}
       </div>
 
       {/* --- Add/Edit User Dialog Modal --- */}
@@ -1132,7 +1332,7 @@ export default function SettingsPanel({
         </div>
       )}
 
-    </div>
+    </>
   );
 }
 
