@@ -90,14 +90,48 @@ export default function SettingsPanel({
     return saved ? Number(saved) : 110;
   });
 
+  const getUnitCodeFromValues = (ulpVal, up3Val) => {
+    const cleanU = (ulpVal || '').toUpperCase();
+    if (cleanU.includes('KOTA') || cleanU.includes('52351')) return '52351';
+    if (cleanU.includes('AMBARAWA') || cleanU.includes('52352')) return '52352';
+    if (cleanU.includes('UNGARAN') || cleanU.includes('52353')) return '52353';
+    return '52350';
+  };
+
+  const [selectedUnitCode, setSelectedUnitCode] = useState(() => {
+    const cached = localStorage.getItem('p2tl_default_unit_code');
+    if (cached) return cached;
+    return getUnitCodeFromValues(ulp, up3);
+  });
+
   if (ulp !== prevUlp) {
     setPrevUlp(ulp);
     setDefaultUlp(ulp);
+    setSelectedUnitCode(getUnitCodeFromValues(ulp, up3));
   }
   if (up3 !== prevUp3) {
     setPrevUp3(up3);
     setDefaultUp3(up3);
+    setSelectedUnitCode(getUnitCodeFromValues(ulp, up3));
   }
+
+  const handleUnitChange = (val) => {
+    setSelectedUnitCode(val);
+    if (val === '52351') {
+      setDefaultUlp('ULP SALATIGA KOTA');
+      setDefaultUp3('UP3 SALATIGA');
+    } else if (val === '52352') {
+      setDefaultUlp('ULP AMBARAWA');
+      setDefaultUp3('UP3 SALATIGA');
+    } else if (val === '52353') {
+      setDefaultUlp('ULP UNGARAN');
+      setDefaultUp3('UP3 SALATIGA');
+    } else {
+      // 52350
+      setDefaultUlp('');
+      setDefaultUp3('UP3 SALATIGA');
+    }
+  };
 
   // Working days checklist state
   const [workingDays, setWorkingDays] = useState(() => {
@@ -288,6 +322,7 @@ export default function SettingsPanel({
     if (onSaveMetadata) {
       onSaveMetadata(defaultUlp, defaultUp3);
     }
+    localStorage.setItem('p2tl_default_unit_code', selectedUnitCode);
     localStorage.setItem('p2tl_target_multiplier_percent', targetOptimisPercent.toString());
     setSaveMetadataStatus(true);
     setTimeout(() => setSaveMetadataStatus(false), 2000);
@@ -493,23 +528,17 @@ export default function SettingsPanel({
 
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Default Unit Layanan (ULP)</label>
-                    <input 
-                      type="text" 
-                      value={defaultUlp} 
-                      onChange={(e) => setDefaultUlp(e.target.value)}
-                      className="input-text text-xs" 
-                    />
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Default Area (UP3)</label>
-                    <input 
-                      type="text" 
-                      value={defaultUp3} 
-                      onChange={(e) => setDefaultUp3(e.target.value)}
-                      className="input-text text-xs" 
-                    />
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Unit Kerja Aktif</label>
+                    <select 
+                      value={selectedUnitCode} 
+                      onChange={(e) => handleUnitChange(e.target.value)}
+                      className="input-text text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-2.5 outline-none cursor-pointer focus:border-blue-500 text-slate-700 dark:text-slate-350"
+                    >
+                      <option value="52350">UP3 Salatiga (52350)</option>
+                      <option value="52351">ULP Salatiga Kota (52351)</option>
+                      <option value="52352">ULP Ambarawa (52352)</option>
+                      <option value="52353">ULP Ungaran (52353)</option>
+                    </select>
                   </div>
 
                   <div className="flex flex-col gap-1.5">

@@ -752,7 +752,7 @@ export default function App() {
           onAddRecord={handleBankToAddRecord}
         />
       ) : activeTab === 'laporan' ? (
-        <LaporanPanel targets={targets} backendUrl={backendUrl} />
+        <LaporanPanel targets={targets} backendUrl={backendUrl} ulp={ulp} up3={up3} />
       ) : activeTab === 'pengaturan' ? (
         <SettingsPanel 
           backendUrl={backendUrl}

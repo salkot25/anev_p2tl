@@ -136,7 +136,8 @@ export default function DashboardPanel({ backendUrl }) {
     }
 
     try {
-      const response = await fetch(`${url}?action=get_dashboard_data&date=${date}`, {
+      const unitCode = localStorage.getItem('p2tl_default_unit_code') || '52350';
+      const response = await fetch(`${url}?action=get_dashboard_data&date=${date}&unit_code=${unitCode}`, {
         method: 'GET',
         headers: { 'Accept': 'application/json' }
       });

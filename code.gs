@@ -77,7 +77,8 @@ function doGet(e) {
   // ── Dashboard Data (Realisasi + Target + execSummary) ────────────────────
   if (action === "get_dashboard_data") {
     var date = e.parameter.date || getTodayDate();
-    return jsonResponse(getDashboardData(ss, date));
+    var unitCode = e.parameter.unit_code || "52350";
+    return jsonResponse(getDashboardData(ss, date, unitCode));
   }
   
   // ── Logs / Realisasi history for chart ──────────────────────────────────
@@ -107,7 +108,8 @@ function getTodayDate() {
 }
 
 // ── Helper: build dashboard response ──────────────────────────────────────
-function getDashboardData(ss, date) {
+function getDashboardData(ss, date, unitCode) {
+  var uCode = unitCode || "52350";
   var parts = date.split("-");
   var year  = parts[0];
   var month = parseInt(parts[1], 10);
@@ -133,16 +135,47 @@ function getDashboardData(ss, date) {
       var r = targetRows[i];
       var rowDate = normalizeDateCell(r["Tanggal"] || r["Date"] || r["date"] || "");
       if (rowDate === date) {
-        targetObj.targetHarianKwh      = toNum(r["Target Harian kWh"] || r["Target_Harian_kWh"] || r["targetHarianKwh"]);
-        targetObj.targetKumulatifKwh   = toNum(r["Target Kumulatif kWh"] || r["Target_Kumulatif_kWh"] || r["targetKumulatifKwh"]);
-        targetObj.targetLkbkPlg        = toNum(r["Target LKBK Plg"] || r["Target_LKBK_Plg"] || r["targetLkbkPlg"]);
-        targetObj.target3PhasaPlg      = toNum(r["Target 3Phasa Plg"] || r["Target_3Phasa_Plg"] || r["target3PhasaPlg"]);
-        targetObj.targetDlpdPlg        = toNum(r["Target DLPD Plg"] || r["Target_DLPD_Plg"] || r["targetDlpdPlg"]);
-        targetObj.targetPengembanganPlg = toNum(r["Target Pengembangan Plg"] || r["Target_Pengembangan_Plg"] || r["targetPengembanganPlg"]);
-        targetObj.targetTsPeriodikPlg  = toNum(r["Target TS Periodik Plg"] || r["Target_TS_Periodik_Plg"] || r["targetTsPeriodikPlg"]);
-        targetObj.targetTsMacetPlg     = toNum(r["Target TS Macet Plg"] || r["Target_TS_Macet_Plg"] || r["targetTsMacetPlg"]);
-        targetObj.targetLainnyaPlg     = toNum(r["Target Lainnya Plg"] || r["Target_Lainnya_Plg"] || r["targetLainnyaPlg"]);
-        break;
+        var rowUnit = String(r["UNIT"] || r["Unit"] || r["ULP"] || r["Ulp"] || "").toUpperCase().trim();
+        var matchesUnit = false;
+        
+        if (uCode === "52350") {
+          matchesUnit = true;
+        } else if (uCode === "52351" && (rowUnit.indexOf("52351") !== -1 || rowUnit.indexOf("SALATIGA KOTA") !== -1)) {
+          matchesUnit = true;
+        } else if (uCode === "52352" && (rowUnit.indexOf("52352") !== -1 || rowUnit.indexOf("AMBARAWA") !== -1)) {
+          matchesUnit = true;
+        } else if (uCode === "52353" && (rowUnit.indexOf("52353") !== -1 || rowUnit.indexOf("UNGARAN") !== -1)) {
+          matchesUnit = true;
+        } else if (rowUnit === "") {
+          matchesUnit = true;
+        }
+        
+        if (matchesUnit) {
+          if (uCode === "52350") {
+            // For UP3, sum the targets of all units
+            targetObj.targetHarianKwh      += toNum(r["Target Harian kWh"] || r["Target_Harian_kWh"] || r["targetHarianKwh"]);
+            targetObj.targetKumulatifKwh   += toNum(r["Target Kumulatif kWh"] || r["Target_Kumulatif_kWh"] || r["targetKumulatifKwh"]);
+            targetObj.targetLkbkPlg        += toNum(r["Target LKBK Plg"] || r["Target_LKBK_Plg"] || r["targetLkbkPlg"]);
+            targetObj.target3PhasaPlg      += toNum(r["Target 3Phasa Plg"] || r["Target_3Phasa_Plg"] || r["target3PhasaPlg"]);
+            targetObj.targetDlpdPlg        += toNum(r["Target DLPD Plg"] || r["Target_DLPD_Plg"] || r["targetDlpdPlg"]);
+            targetObj.targetPengembanganPlg += toNum(r["Target Pengembangan Plg"] || r["Target_Pengembangan_Plg"] || r["targetPengembanganPlg"]);
+            targetObj.targetTsPeriodikPlg  += toNum(r["Target TS Periodik Plg"] || r["Target_TS_Periodik_Plg"] || r["targetTsPeriodikPlg"]);
+            targetObj.targetTsMacetPlg     += toNum(r["Target TS Macet Plg"] || r["Target_TS_Macet_Plg"] || r["targetTsMacetPlg"]);
+            targetObj.targetLainnyaPlg     += toNum(r["Target Lainnya Plg"] || r["Target_Lainnya_Plg"] || r["targetLainnyaPlg"]);
+          } else {
+            // For specific unit, overwrite (or sum if there are duplicates)
+            targetObj.targetHarianKwh      = toNum(r["Target Harian kWh"] || r["Target_Harian_kWh"] || r["targetHarianKwh"]);
+            targetObj.targetKumulatifKwh   = toNum(r["Target Kumulatif kWh"] || r["Target_Kumulatif_kWh"] || r["targetKumulatifKwh"]);
+            targetObj.targetLkbkPlg        = toNum(r["Target LKBK Plg"] || r["Target_LKBK_Plg"] || r["targetLkbkPlg"]);
+            targetObj.target3PhasaPlg      = toNum(r["Target 3Phasa Plg"] || r["Target_3Phasa_Plg"] || r["target3PhasaPlg"]);
+            targetObj.targetDlpdPlg        = toNum(r["Target DLPD Plg"] || r["Target_DLPD_Plg"] || r["targetDlpdPlg"]);
+            targetObj.targetPengembanganPlg = toNum(r["Target Pengembangan Plg"] || r["Target_Pengembangan_Plg"] || r["targetPengembanganPlg"]);
+            targetObj.targetTsPeriodikPlg  = toNum(r["Target TS Periodik Plg"] || r["Target_TS_Periodik_Plg"] || r["targetTsPeriodikPlg"]);
+            targetObj.targetTsMacetPlg     = toNum(r["Target TS Macet Plg"] || r["Target_TS_Macet_Plg"] || r["targetTsMacetPlg"]);
+            targetObj.targetLainnyaPlg     = toNum(r["Target Lainnya Plg"] || r["Target_Lainnya_Plg"] || r["targetLainnyaPlg"]);
+            break;
+          }
+        }
       }
     }
   }
@@ -177,6 +210,23 @@ function getDashboardData(ss, date) {
       var row = realRows[j];
       var rowDate = row.date;
       if (!rowDate) continue;
+      
+      var rowUnitCode = String(row.unitCode || "");
+      var matchesRealUnit = false;
+      if (uCode === "52350") {
+        matchesRealUnit = true;
+      } else if (uCode === "52351" && rowUnitCode === "52351") {
+        matchesRealUnit = true;
+      } else if (uCode === "52352" && rowUnitCode === "52352") {
+        matchesRealUnit = true;
+      } else if (uCode === "52353" && rowUnitCode === "52353") {
+        matchesRealUnit = true;
+      } else if (rowUnitCode === "") {
+        // If unitCode could not be determined, include when filtering UP3 aggregate
+        matchesRealUnit = (uCode === "52350");
+      }
+      
+      if (!matchesRealUnit) continue;
       
       var rowParts = rowDate.split("-");
       var rowYear  = rowParts[0];
@@ -537,6 +587,8 @@ function readRealisasiSheetData(sheet) {
       colMap["tarif"] = c;
     } else if (norm === "DAYA") {
       colMap["daya"] = c;
+    } else if (norm === "NOREGISTER" || norm === "NOMOREGISTER" || norm === "NOREG" || norm === "REGISTER") {
+      colMap["no_register"] = c;
     }
   }
   
@@ -558,10 +610,32 @@ function readRealisasiSheetData(sheet) {
     
     var noagenda = colMap["noagenda"] !== undefined ? String(row[colMap["noagenda"]] || "").trim() : "";
     var idpel = colMap["idpel"] !== undefined ? String(row[colMap["idpel"]] || "").trim() : "";
+    var noregister = colMap["no_register"] !== undefined ? String(row[colMap["no_register"]] || "").trim() : "";
     var nama = colMap["nama"] !== undefined ? String(row[colMap["nama"]] || "").trim() : "";
     var gol = colMap["gol"] !== undefined ? String(row[colMap["gol"]] || "").trim() : "";
     var alamat = colMap["alamat"] !== undefined ? String(row[colMap["alamat"]] || "").trim() : "";
     var tarifDaya = colMap["tarif_daya"] !== undefined ? String(row[colMap["tarif_daya"]] || "").trim() : "";
+    
+    // ── Detect unit code for this row ──────────────────────────────────────
+    // Priority 1: parse code from No Agenda after "P2TL/" e.g. "P2TL/52351/..." → "52351"
+    var unitCode = "";
+    var agendaUpper = noagenda.toUpperCase();
+    var p2tlIdx = agendaUpper.indexOf("P2TL/");
+    if (p2tlIdx !== -1) {
+      var afterP2tl = noagenda.substring(p2tlIdx + 5);
+      var codeMatch = afterP2tl.match(/^(\d{5})/);
+      if (codeMatch) unitCode = codeMatch[1];
+    }
+    // Priority 2: first 5 digits of No Register (nomor register) if distinct from IDPEL
+    if (!unitCode && noregister && noregister.length >= 5) {
+      var regMatch = noregister.replace(/[^\d]/g, "").substring(0, 5);
+      if (/^5235[0-3]$/.test(regMatch)) unitCode = regMatch;
+    }
+    // Priority 3: first 5 digits of IDPEL
+    if (!unitCode && idpel.length >= 5) {
+      var idMatch = idpel.replace(/[^\d]/g, "").substring(0, 5);
+      if (/^5235[0-3]$/.test(idMatch)) unitCode = idMatch;
+    }
     
     var kwh = 0;
     if (colMap["kwh"] !== undefined) {
@@ -613,6 +687,7 @@ function readRealisasiSheetData(sheet) {
       "noagenda": noagenda,
       "IDPEL": idpel,
       "idpel": idpel,
+      "unitCode": unitCode,
       "Nama": nama,
       "nama": nama,
       "NAMA": nama,

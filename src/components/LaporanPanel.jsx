@@ -72,7 +72,7 @@ function normalizeDateString(dateVal) {
   return str;
 }
 
-export default function LaporanPanel({ targets = [], backendUrl }) {
+export default function LaporanPanel({ targets = [], backendUrl, ulp = '', up3 = '' }) {
   const targetPercent = Number(localStorage.getItem('p2tl_target_multiplier_percent')) || 110;
   const targetMultiplier = targetPercent / 100;
 
@@ -253,7 +253,8 @@ export default function LaporanPanel({ targets = [], backendUrl }) {
       setIsLoading(true);
       try {
         // Fetch dashboard data
-        const response = await fetch(`${url}?action=get_dashboard_data&date=${rawDate}`, {
+        const unitCode = localStorage.getItem('p2tl_default_unit_code') || '52350';
+        const response = await fetch(`${url}?action=get_dashboard_data&date=${rawDate}&unit_code=${unitCode}`, {
           method: 'GET',
           headers: { 'Accept': 'application/json' }
         });
@@ -510,7 +511,7 @@ MUP3 Salatiga
 Asman TEL
 Semangat Pagi
 
-Berikut disampaikan ${reportType === 'rencana' ? 'Rencana' : 'Realisasi'} P2TL ULP Salatiga Kota
+Berikut disampaikan ${reportType === 'rencana' ? 'Rencana' : 'Realisasi'} P2TL ${ulp || up3 || 'UP3 Salatiga'}
 ${reportDate || 'Senin, 08 Juni 2026'}
 1. Target / Realisasi Harian : ${targetHarianKwh || '......'}/ ${realHarian} kWh
 2. Target/ Realisasi Kumulatif : ${targetKumulatifKwh || '......'}/ ${realKumulatif} kWh (${percentText})
@@ -881,7 +882,7 @@ Terima kasih`;
               <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-[8px] sm:text-xs font-black shrink-0 border border-white/20">MUP</div>
               <div className="flex-1 min-w-0">
                 <div className="text-white text-xs font-semibold truncate">MUP3 Salatiga · Asman TEL</div>
-                <div className="text-green-200 text-[8px] sm:text-xs font-bold">P2TL ULP Salatiga Kota</div>
+                <div className="text-green-200 text-[8px] sm:text-xs font-bold">P2TL {ulp || up3 || 'UP3 Salatiga'}</div>
               </div>
               <div className="text-[8px] sm:text-xs text-green-200/60 font-bold hidden sm:block">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
             </div>

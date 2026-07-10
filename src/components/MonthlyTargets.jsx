@@ -240,6 +240,10 @@ export default function MonthlyTargets({
   const targetSemester1 = targets.slice(0, 6).reduce((sum, val) => sum + val, 0);
   const targetSemester2 = targets.slice(6, 12).reduce((sum, val) => sum + val, 0);
 
+  const targetPercent = Number(localStorage.getItem('p2tl_target_multiplier_percent')) || 110;
+  const targetOptimisTotal = Math.round(totalYearTarget * (targetPercent / 100));
+  const optimisGapKwh = targetOptimisTotal - totalYearTarget;
+
   return (
     <div className="space-y-6">
       {status?.show && (
@@ -363,6 +367,50 @@ export default function MonthlyTargets({
                   </div>
                 </div>
 
+                {/* Target Optimis Card */}
+                <div className="group relative overflow-hidden p-4 rounded-xl border transition-all duration-300 hover:scale-[1.02] hover:shadow-xl cursor-pointer
+                  bg-gradient-to-br from-amber-500/8 via-orange-500/5 to-rose-500/8
+                  dark:from-amber-500/12 dark:via-orange-500/8 dark:to-rose-500/10
+                  border-amber-400/20 dark:border-amber-500/20
+                  hover:border-amber-400/40 hover:shadow-amber-500/10">
+                  {/* Animated glow orb */}
+                  <div className="absolute -top-6 -right-6 w-20 h-20 rounded-full bg-amber-400/10 dark:bg-amber-400/15 blur-xl group-hover:scale-150 transition-transform duration-700 pointer-events-none" />
+
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="space-y-1 min-w-0">
+                      <span className="text-[9px] font-bold uppercase text-slate-400 dark:text-slate-500 tracking-wider">
+                        Target Optimis ({targetPercent}%)
+                      </span>
+                      <div className="text-base sm:text-lg font-black text-amber-600 dark:text-amber-400 tracking-tight leading-none">
+                        {formatIndoNumber(targetOptimisTotal)}
+                        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 ml-1">kWh</span>
+                      </div>
+                      <div className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 pt-0.5">
+                        +{formatIndoNumber(optimisGapKwh)} kWh dari target dasar
+                      </div>
+                    </div>
+
+                    {/* Animated radial progress ring */}
+                    <div className="relative flex-shrink-0 w-12 h-12">
+                      <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                        {/* Track */}
+                        <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor"
+                          className="text-amber-200/30 dark:text-amber-700/30" strokeWidth="3.5" />
+                        {/* Arc — always shows targetPercent as a fraction of 200 max */}
+                        <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor"
+                          className="text-amber-500 dark:text-amber-400 transition-all duration-1000 ease-out"
+                          strokeWidth="3.5"
+                          strokeLinecap="round"
+                          strokeDasharray={`${Math.min(targetPercent / 200, 1) * 2 * Math.PI * 20} ${2 * Math.PI * 20}`}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-[9px] font-black text-amber-600 dark:text-amber-400">{targetPercent}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Semester Breakdown Section */}
                 <div className="space-y-4 pt-2">
                   <div className="text-[10px] font-extrabold uppercase text-slate-400 dark:text-slate-500 tracking-wider">Distribusi Semester</div>
@@ -370,12 +418,15 @@ export default function MonthlyTargets({
                   {/* Semester 1 */}
                   {(() => {
                     const s1Percent = totalYearTarget > 0 ? Math.round((targetSemester1 / totalYearTarget) * 100) : 0;
+                    const s1Optimis = Math.round(targetSemester1 * (targetPercent / 100));
+                    const s1OptimisPercent = targetOptimisTotal > 0 ? Math.min(Math.round((s1Optimis / targetOptimisTotal) * 100), 100) : 0;
                     return (
                       <div className="space-y-2">
                         <div className="flex justify-between items-center text-xs font-semibold">
                           <span className="text-slate-600 dark:text-slate-300">Semester 1 (Jan - Jun)</span>
                           <span className="font-extrabold text-slate-800 dark:text-slate-200">{formatIndoNumber(targetSemester1)} kWh</span>
                         </div>
+                        {/* Base bar */}
                         <div className="h-5 w-full bg-slate-150/60 dark:bg-slate-950/60 border border-slate-200/50 dark:border-slate-850/80 rounded-lg overflow-hidden relative hover:scale-[1.01] hover:shadow-[0_0_12px_rgba(16,185,129,0.15)] transition-all duration-300 cursor-pointer">
                           <div 
                             className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-1000 ease-out flex items-center justify-end pr-2"
@@ -394,6 +445,22 @@ export default function MonthlyTargets({
                           )}
                         </div>
                         <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">Porsi: {s1Percent}% dari setahun</div>
+
+                        {/* Optimis sub-bar S1 */}
+                        <div className="h-3 w-full bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/30 dark:border-amber-700/20 rounded-md overflow-hidden relative transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_0_8px_rgba(245,158,11,0.15)] cursor-pointer">
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-400 to-orange-400 dark:from-amber-500 dark:to-orange-500 transition-all duration-1000 ease-out flex items-center justify-end pr-1.5 opacity-80"
+                            style={{ width: `${s1OptimisPercent}%` }}
+                          >
+                            {s1OptimisPercent > 18 && (
+                              <span className="text-[8px] font-black text-amber-900 dark:text-amber-100 select-none">{s1OptimisPercent}%</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center -mt-1">
+                          <span className="text-[8px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wide">↑ Optimis {targetPercent}%</span>
+                          <span className="text-[8px] font-extrabold text-amber-600 dark:text-amber-400">{formatIndoNumber(s1Optimis)} kWh</span>
+                        </div>
                       </div>
                     );
                   })()}
@@ -401,12 +468,15 @@ export default function MonthlyTargets({
                   {/* Semester 2 */}
                   {(() => {
                     const s2Percent = totalYearTarget > 0 ? Math.round((targetSemester2 / totalYearTarget) * 100) : 0;
+                    const s2Optimis = Math.round(targetSemester2 * (targetPercent / 100));
+                    const s2OptimisPercent = targetOptimisTotal > 0 ? Math.min(Math.round((s2Optimis / targetOptimisTotal) * 100), 100) : 0;
                     return (
                       <div className="space-y-2 pt-1">
                         <div className="flex justify-between items-center text-xs font-semibold">
                           <span className="text-slate-600 dark:text-slate-300">Semester 2 (Jul - Des)</span>
                           <span className="font-extrabold text-slate-800 dark:text-slate-200">{formatIndoNumber(targetSemester2)} kWh</span>
                         </div>
+                        {/* Base bar */}
                         <div className="h-5 w-full bg-slate-150/60 dark:bg-slate-950/60 border border-slate-200/50 dark:border-slate-850/80 rounded-lg overflow-hidden relative hover:scale-[1.01] hover:shadow-[0_0_12px_rgba(59,130,246,0.15)] transition-all duration-300 cursor-pointer">
                           <div 
                             className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 transition-all duration-1000 ease-out flex items-center justify-end pr-2"
@@ -425,6 +495,22 @@ export default function MonthlyTargets({
                           )}
                         </div>
                         <div className="text-[9px] text-slate-400 dark:text-slate-500 font-bold">Porsi: {s2Percent}% dari setahun</div>
+
+                        {/* Optimis sub-bar S2 */}
+                        <div className="h-3 w-full bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/30 dark:border-amber-700/20 rounded-md overflow-hidden relative transition-all duration-300 hover:scale-[1.01] hover:shadow-[0_0_8px_rgba(245,158,11,0.15)] cursor-pointer">
+                          <div
+                            className="h-full bg-gradient-to-r from-amber-400 to-orange-400 dark:from-amber-500 dark:to-orange-500 transition-all duration-1000 ease-out flex items-center justify-end pr-1.5 opacity-80"
+                            style={{ width: `${s2OptimisPercent}%` }}
+                          >
+                            {s2OptimisPercent > 18 && (
+                              <span className="text-[8px] font-black text-amber-900 dark:text-amber-100 select-none">{s2OptimisPercent}%</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center -mt-1">
+                          <span className="text-[8px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wide">↑ Optimis {targetPercent}%</span>
+                          <span className="text-[8px] font-extrabold text-amber-600 dark:text-amber-400">{formatIndoNumber(s2Optimis)} kWh</span>
+                        </div>
                       </div>
                     );
                   })()}
