@@ -737,6 +737,7 @@ export default function App() {
       appSubtitle={ulp.trim() ? ulp.trim() : (up3.trim() ? up3.trim() : 'PLN Salatiga')}
       userName={currentUser?.name || "Admin"}
       userRole={currentUser?.role || "Administrator"}
+      currentUser={currentUser}
       isSyncing={isSyncing}
       lastSyncTime={lastSyncTime}
       hasUnsyncedChanges={hasUnsyncedChanges}

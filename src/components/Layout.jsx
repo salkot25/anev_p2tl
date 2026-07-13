@@ -40,6 +40,8 @@ const resolveSubtitle = (tabId) => {
   return subtitleMap[tabId.toLowerCase()] || "Menu analisis, monitoring target, dan pengunggahan berkas P2TL.";
 };
 
+import { useState } from "react";
+
 export default function Layout({
   children,
   currentTab,
@@ -52,10 +54,12 @@ export default function Layout({
   appSubtitle = "PLN Salatiga",
   userName = "Admin User",
   userRole = "Administrator",
+  currentUser = null,
   isSyncing = false,
   lastSyncTime = null,
   hasUnsyncedChanges = false
 }) {
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "dark" : "light"));
   };
@@ -171,9 +175,63 @@ export default function Layout({
           ))}
         </nav>
 
-        <div className="p-4 border-t border-slate-800/60 mx-3">
+        <div className="p-4 border-t border-slate-800/60 mx-3 relative">
+          {/* Invisible overlay to close dropdown on click outside */}
+          {showUserDropdown && (
+            <div 
+              className="fixed inset-0 z-40 cursor-default" 
+              onClick={() => setShowUserDropdown(false)}
+            />
+          )}
+
+          {/* Floating Dropdown Card */}
+          {showUserDropdown && (
+            <div className="absolute bottom-full left-0 right-0 mb-3 bg-slate-900/95 backdrop-blur-md border border-slate-850 rounded-xl p-4 shadow-2xl z-50 animate-fade-in text-slate-200">
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2.5 pb-2 border-b border-slate-800">
+                  <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center text-sm font-bold text-white uppercase shrink-0">
+                    {userName.substring(0, 2)}
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-black text-white uppercase tracking-wider truncate">Profil Pengguna</h4>
+                    <p className="text-[10px] text-slate-400 font-bold truncate">{userRole}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-[11px] font-semibold">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Nama Pengguna</span>
+                    <span className="text-slate-200 truncate">{userName}</span>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">Unit Kerja</span>
+                    <span className="text-slate-300 truncate">{currentUser?.unit || appSubtitle || 'PLN Salatiga'}</span>
+                  </div>
+                  {currentUser?.whatsapp && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider">No. WhatsApp</span>
+                      <span className="text-slate-300 truncate">{currentUser.whatsapp}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-2 border-t border-slate-800 flex justify-end">
+                  <button
+                    onClick={() => setShowUserDropdown(false)}
+                    className="px-2.5 py-1.5 bg-slate-850 hover:bg-slate-850 text-[10px] font-black text-slate-300 uppercase tracking-wider rounded-lg transition-all cursor-pointer active:scale-95"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
+            <div 
+              onClick={() => setShowUserDropdown(!showUserDropdown)}
+              className="flex items-center gap-2.5 cursor-pointer hover:bg-slate-800/40 p-1 rounded-lg transition-all active:scale-98 select-none"
+            >
               <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-300 uppercase">
                 {userName.substring(0, 2)}
               </div>
