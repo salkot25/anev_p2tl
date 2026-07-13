@@ -175,6 +175,12 @@ export default function DashboardPanel({ backendUrl }) {
             tariffBreakdown: Array.isArray(result.execSummary?.tariffBreakdown) ? result.execSummary.tariffBreakdown : [],
             golonganBreakdown: Array.isArray(result.execSummary?.golonganBreakdown) ? result.execSummary.golonganBreakdown : [],
             dayaBreakdown: Array.isArray(result.execSummary?.dayaBreakdown) ? result.execSummary.dayaBreakdown : [],
+            tariffBreakdownMonth: Array.isArray(result.execSummary?.tariffBreakdownMonth) ? result.execSummary.tariffBreakdownMonth : [],
+            golonganBreakdownMonth: Array.isArray(result.execSummary?.golonganBreakdownMonth) ? result.execSummary.golonganBreakdownMonth : [],
+            dayaBreakdownMonth: Array.isArray(result.execSummary?.dayaBreakdownMonth) ? result.execSummary.dayaBreakdownMonth : [],
+            tariffBreakdownDay: Array.isArray(result.execSummary?.tariffBreakdownDay) ? result.execSummary.tariffBreakdownDay : [],
+            golonganBreakdownDay: Array.isArray(result.execSummary?.golonganBreakdownDay) ? result.execSummary.golonganBreakdownDay : [],
+            dayaBreakdownDay: Array.isArray(result.execSummary?.dayaBreakdownDay) ? result.execSummary.dayaBreakdownDay : [],
             kwhBreakdown: Array.isArray(result.execSummary?.kwhBreakdown) ? result.execSummary.kwhBreakdown : [],
             prevTotalCasesYear: Number(result.execSummary?.prevTotalCasesYear) || 0,
             prevTotalKwhYear: Number(result.execSummary?.prevTotalKwhYear) || 0,
@@ -270,20 +276,6 @@ export default function DashboardPanel({ backendUrl }) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            {/* Inline status indicator */}
-            <div className="flex items-center gap-2 bg-slate-100/50 dark:bg-slate-900/50 px-2.5 py-1.5 rounded-xl border border-slate-200/50 dark:border-slate-800/50">
-              <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isOnline ? 'bg-emerald-500 shadow-sm shadow-emerald-500/50' : 'bg-amber-500 shadow-sm shadow-amber-500/50'}`} />
-              <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider hidden sm:inline">
-                {isOnline ? 'Online' : 'Offline'}
-              </span>
-              {lastFetch && (
-                <span className="text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">
-                  <span className="hidden sm:inline">· </span>
-                  {formatLastFetch(lastFetch)}
-                </span>
-              )}
-            </div>
-
             {/* Refresh Button */}
             <button
               onClick={handleRefresh}

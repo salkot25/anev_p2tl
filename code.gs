@@ -196,6 +196,16 @@ function getDashboardData(ss, date, unitCode) {
   var tariffMap    = {};  // "R"|"B"|... -> { kwh, cases }
   var golonganMap  = {};  // "P1"|"P2"|... -> { kwh, cases }
   var dayaMap      = {};  // "450 VA"|... -> { kwh, cases }
+  
+  // Dynamic monthly breakdowns
+  var tariffMapMonth    = {};
+  var golonganMapMonth  = {};
+  var dayaMapMonth      = {};
+  
+  // Dynamic daily breakdowns
+  var tariffMapDay    = {};
+  var golonganMapDay  = {};
+  var dayaMapDay      = {};
   var yearKwh      = 0;
   var yearCases    = 0;
   var yearTs       = 0;
@@ -270,7 +280,7 @@ function getDashboardData(ss, date, unitCode) {
         monthlyMap[rowMonthKey].kwh   += kwh;
         monthlyMap[rowMonthKey].cases += cases;
         
-        // Tariff breakdown
+        // Tariff breakdown (Yearly)
         if (tarif) {
           var tariffKey = tarif[0]; // R, B, S, I, P
           if (!tariffMap[tariffKey]) tariffMap[tariffKey] = { kwh: 0, cases: 0, ts: 0 };
@@ -279,7 +289,7 @@ function getDashboardData(ss, date, unitCode) {
           tariffMap[tariffKey].ts    += hTs;
         }
         
-        // Golongan breakdown
+        // Golongan breakdown (Yearly)
         var gol = (row.gol || "").toUpperCase().trim();
         if (gol) {
           if (!golonganMap[gol]) golonganMap[gol] = { kwh: 0, cases: 0, ts: 0 };
@@ -288,7 +298,7 @@ function getDashboardData(ss, date, unitCode) {
           golonganMap[gol].ts    += hTs;
         }
         
-        // Daya breakdown
+        // Daya breakdown (Yearly)
         var daya = (row.daya || "").toUpperCase().trim();
         if (daya) {
           var dayaKey = classifyDaya(daya);
@@ -296,6 +306,54 @@ function getDashboardData(ss, date, unitCode) {
           dayaMap[dayaKey].kwh   += kwh;
           dayaMap[dayaKey].cases += cases;
           dayaMap[dayaKey].ts    += hTs;
+        }
+
+        // --- Monthly breakdown ---
+        if (rowYear === year && parseInt(rowMonth, 10) === month) {
+          if (tarif) {
+            var tariffKey = tarif[0];
+            if (!tariffMapMonth[tariffKey]) tariffMapMonth[tariffKey] = { kwh: 0, cases: 0, ts: 0 };
+            tariffMapMonth[tariffKey].kwh   += kwh;
+            tariffMapMonth[tariffKey].cases += cases;
+            tariffMapMonth[tariffKey].ts    += hTs;
+          }
+          if (gol) {
+            if (!golonganMapMonth[gol]) golonganMapMonth[gol] = { kwh: 0, cases: 0, ts: 0 };
+            golonganMapMonth[gol].kwh   += kwh;
+            golonganMapMonth[gol].cases += cases;
+            golonganMapMonth[gol].ts    += hTs;
+          }
+          if (daya) {
+            var dayaKey = classifyDaya(daya);
+            if (!dayaMapMonth[dayaKey]) dayaMapMonth[dayaKey] = { kwh: 0, cases: 0, ts: 0 };
+            dayaMapMonth[dayaKey].kwh   += kwh;
+            dayaMapMonth[dayaKey].cases += cases;
+            dayaMapMonth[dayaKey].ts    += hTs;
+          }
+        }
+
+        // --- Daily breakdown ---
+        if (rowDate === date) {
+          if (tarif) {
+            var tariffKey = tarif[0];
+            if (!tariffMapDay[tariffKey]) tariffMapDay[tariffKey] = { kwh: 0, cases: 0, ts: 0 };
+            tariffMapDay[tariffKey].kwh   += kwh;
+            tariffMapDay[tariffKey].cases += cases;
+            tariffMapDay[tariffKey].ts    += hTs;
+          }
+          if (gol) {
+            if (!golonganMapDay[gol]) golonganMapDay[gol] = { kwh: 0, cases: 0, ts: 0 };
+            golonganMapDay[gol].kwh   += kwh;
+            golonganMapDay[gol].cases += cases;
+            golonganMapDay[gol].ts    += hTs;
+          }
+          if (daya) {
+            var dayaKey = classifyDaya(daya);
+            if (!dayaMapDay[dayaKey]) dayaMapDay[dayaKey] = { kwh: 0, cases: 0, ts: 0 };
+            dayaMapDay[dayaKey].kwh   += kwh;
+            dayaMapDay[dayaKey].cases += cases;
+            dayaMapDay[dayaKey].ts    += hTs;
+          }
         }
         
         // Top findings (entries with kwh > 5000)
@@ -341,20 +399,27 @@ function getDashboardData(ss, date, unitCode) {
     prevMonthlyTrend.push({ month: monthNames[pm-1], kwh: pe.kwh, cases: pe.cases, ts: pe.kwh * 1000 });
   }
   
-  // Build tariff breakdown
-  var tariffBreakdown = Object.keys(tariffMap).map(function(k) {
-    return { class: k, kwh: tariffMap[k].kwh, cases: tariffMap[k].cases, ts: tariffMap[k].ts || 0 };
-  });
+  // Helper to build breakdown arrays
+  var buildBreakdown = function(map) {
+    return Object.keys(map).map(function(k) {
+      return { class: k, kwh: map[k].kwh, cases: map[k].cases, ts: map[k].ts || 0 };
+    });
+  };
 
-  // Build golongan breakdown
-  var golonganBreakdown = Object.keys(golonganMap).map(function(k) {
-    return { class: k, kwh: golonganMap[k].kwh, cases: golonganMap[k].cases, ts: golonganMap[k].ts || 0 };
-  });
+  // Build tariff breakdown (Yearly)
+  var tariffBreakdown = buildBreakdown(tariffMap);
+  var golonganBreakdown = buildBreakdown(golonganMap);
+  var dayaBreakdown = buildBreakdown(dayaMap);
 
-  // Build daya breakdown
-  var dayaBreakdown = Object.keys(dayaMap).map(function(k) {
-    return { class: k, kwh: dayaMap[k].kwh, cases: dayaMap[k].cases, ts: dayaMap[k].ts || 0 };
-  });
+  // Dynamic monthly breakdowns
+  var tariffBreakdownMonth = buildBreakdown(tariffMapMonth);
+  var golonganBreakdownMonth = buildBreakdown(golonganMapMonth);
+  var dayaBreakdownMonth = buildBreakdown(dayaMapMonth);
+
+  // Dynamic daily breakdowns
+  var tariffBreakdownDay = buildBreakdown(tariffMapDay);
+  var golonganBreakdownDay = buildBreakdown(golonganMapDay);
+  var dayaBreakdownDay = buildBreakdown(dayaMapDay);
   
   // Sort top findings by kwh desc, take top 10
   topFindings.sort(function(a, b) { return b.kwh - a.kwh; });
@@ -373,6 +438,15 @@ function getDashboardData(ss, date, unitCode) {
       tariffBreakdown: tariffBreakdown,
       golonganBreakdown: golonganBreakdown,
       dayaBreakdown: dayaBreakdown,
+      
+      tariffBreakdownMonth: tariffBreakdownMonth,
+      golonganBreakdownMonth: golonganBreakdownMonth,
+      dayaBreakdownMonth: dayaBreakdownMonth,
+
+      tariffBreakdownDay: tariffBreakdownDay,
+      golonganBreakdownDay: golonganBreakdownDay,
+      dayaBreakdownDay: dayaBreakdownDay,
+
       kwhBreakdown: [],
       prevTotalCasesYear: prevYearCases,
       prevTotalKwhYear: prevYearKwh,
