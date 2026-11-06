@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Database, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, Save, HelpCircle, Building, Trash2, UserPlus, Edit, Search, User, Key, Phone, Shield, X, Sliders, Settings, Download } from 'lucide-react';
+import { Database, RefreshCw, CheckCircle, AlertTriangle, AlertCircle, Save, HelpCircle, Building, Trash2, UserPlus, Edit, Search, User, Key, Phone, Shield, X, Sliders, Download } from 'lucide-react';
 
 export default function SettingsPanel({ 
   backendUrl: propBackendUrl, 
@@ -23,7 +23,6 @@ export default function SettingsPanel({
   const [syncingTargets, setSyncingTargets] = useState(false);
   const [syncingBankTo, setSyncingBankTo] = useState(false);
   const [syncingAll, setSyncingAll] = useState(false);
-  const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Custom Alert / Confirm Modal State
   const [modalAlert, setModalAlert] = useState({
@@ -90,7 +89,7 @@ export default function SettingsPanel({
     return saved ? Number(saved) : 110;
   });
 
-  const getUnitCodeFromValues = (ulpVal, up3Val) => {
+  const getUnitCodeFromValues = (ulpVal) => {
     const cleanU = (ulpVal || '').toUpperCase();
     if (cleanU.includes('KOTA') || cleanU.includes('52351')) return '52351';
     if (cleanU.includes('AMBARAWA') || cleanU.includes('52352')) return '52352';
@@ -101,18 +100,18 @@ export default function SettingsPanel({
   const [selectedUnitCode, setSelectedUnitCode] = useState(() => {
     const cached = localStorage.getItem('p2tl_default_unit_code');
     if (cached) return cached;
-    return getUnitCodeFromValues(ulp, up3);
+    return getUnitCodeFromValues(ulp);
   });
 
   if (ulp !== prevUlp) {
     setPrevUlp(ulp);
     setDefaultUlp(ulp);
-    setSelectedUnitCode(getUnitCodeFromValues(ulp, up3));
+    setSelectedUnitCode(getUnitCodeFromValues(ulp));
   }
   if (up3 !== prevUp3) {
     setPrevUp3(up3);
     setDefaultUp3(up3);
-    setSelectedUnitCode(getUnitCodeFromValues(ulp, up3));
+    setSelectedUnitCode(getUnitCodeFromValues(ulp));
   }
 
   const handleUnitChange = (val) => {
@@ -984,7 +983,9 @@ export default function SettingsPanel({
                           )}
                         </div>
                         <span className="text-[9px] font-bold text-slate-400 dark:text-slate-555 mt-1">
-                          {syncingAll ? 'Syncing...' : hasUnsyncedChanges ? 'Belum Unggah' : 'Up-to-date'}
+                          {syncingAll 
+                            ? (syncStatus === 'connecting' ? 'Menghubungkan...' : syncStatus === 'merging' ? 'Menggabungkan...' : syncStatus === 'uploading' ? 'Mengunggah...' : 'Sinkronisasi...')
+                            : hasUnsyncedChanges ? 'Belum Unggah' : 'Up-to-date'}
                         </span>
                       </div>
 

@@ -368,7 +368,7 @@ export default function LaporanPanel({ targets = [], backendUrl, ulp = '', up3 =
     };
 
     fetchReportDateData();
-  }, [rawDate, backendUrl]);
+  }, [rawDate, backendUrl, targetMultiplier]);
 
   // Format rawDate into Indonesian long format dynamically
   const reportDate = useMemo(() => {
@@ -527,7 +527,7 @@ Sasaran Operasi :   ${totalLine} (target diperiksa/ yang diperiksa)
 
 Demikian disampaikan 
 Terima kasih`;
-  }, [reportType, reportDate, targetHarianKwh, realisasiHarianKwh, targetKumulatifKwh, realisasiKumulatifKwh, metrics, calculatedKwh]);
+  }, [reportType, reportDate, targetHarianKwh, realisasiHarianKwh, targetKumulatifKwh, realisasiKumulatifKwh, metrics, calculatedKwh, ulp, up3]);
 
   // Copy trigger
   const handleCopy = () => {

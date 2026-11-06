@@ -1,19 +1,32 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { 
   CheckCircle,
   X,
   AlertTriangle
 } from 'lucide-react';
-// Hardcoded mock data imports removed
-import DashboardPanel from './components/DashboardPanel';
-import DataList from './components/DataList';
-import BankToPanel from './components/BankToPanel';
-import LaporanPanel from './components/LaporanPanel';
-import SettingsPanel from './components/SettingsPanel';
 import DetailDrawer from './components/DetailDrawer';
 import Layout from './components/Layout';
 import Login from './components/Login';
 import { getBackendUrl } from './utils/config';
+
+const DashboardPanel = lazy(() => import('./components/DashboardPanel'));
+const DataList = lazy(() => import('./components/DataList'));
+const BankToPanel = lazy(() => import('./components/BankToPanel'));
+const LaporanPanel = lazy(() => import('./components/LaporanPanel'));
+const SettingsPanel = lazy(() => import('./components/SettingsPanel'));
+
+function TabLoadingFallback() {
+  return (
+    <div className="space-y-4 animate-pulse p-4">
+      <div className="h-28 bg-slate-100 dark:bg-slate-800/60 rounded-2xl w-full" />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="h-40 bg-slate-100 dark:bg-slate-800/60 rounded-2xl" />
+        <div className="h-40 bg-slate-100 dark:bg-slate-800/60 rounded-2xl" />
+        <div className="h-40 bg-slate-100 dark:bg-slate-800/60 rounded-2xl" />
+      </div>
+    </div>
+  );
+}
 
 
 const normalizeData = (dataList) => {
@@ -743,42 +756,44 @@ export default function App() {
       hasUnsyncedChanges={hasUnsyncedChanges}
     >
       {/* Switch content based on activeTab */}
-      {activeTab === 'dashboard' ? (
-        <DashboardPanel backendUrl={backendUrl} />
-      ) : activeTab === 'bankto' ? (
-        <BankToPanel 
-          targets={bankToTargets}
-          realizedTargets={targets}
-          onDataLoaded={handleBankToDataLoaded}
-          onAddRecord={handleBankToAddRecord}
-        />
-      ) : activeTab === 'laporan' ? (
-        <LaporanPanel targets={targets} backendUrl={backendUrl} ulp={ulp} up3={up3} />
-      ) : activeTab === 'pengaturan' ? (
-        <SettingsPanel 
-          backendUrl={backendUrl}
-          onSaveBackendUrl={handleSaveBackendUrl}
-          onSyncAll={syncDatabase}
-          targets={targets}
-          bankToTargets={bankToTargets}
-          onClearLocalData={handleClearLocalData}
-          currentUser={currentUser}
-          users={users}
-          onUsersChanged={handleUsersChanged}
-          ulp={ulp}
-          up3={up3}
-          onSaveMetadata={handleSaveMetadata}
-          lastSyncTime={lastSyncTime}
-          hasUnsyncedChanges={hasUnsyncedChanges}
-        />
-      ) : (
-        <DataList 
-          targets={targets} 
-          onSelectRecord={handleSelectRecord}
-          onAddRecord={handleAddRecord}
-          onDataLoaded={handleDataLoaded}
-        />
-      )}
+      <Suspense fallback={<TabLoadingFallback />}>
+        {activeTab === 'dashboard' ? (
+          <DashboardPanel backendUrl={backendUrl} />
+        ) : activeTab === 'bankto' ? (
+          <BankToPanel 
+            targets={bankToTargets}
+            realizedTargets={targets}
+            onDataLoaded={handleBankToDataLoaded}
+            onAddRecord={handleBankToAddRecord}
+          />
+        ) : activeTab === 'laporan' ? (
+          <LaporanPanel targets={targets} backendUrl={backendUrl} ulp={ulp} up3={up3} />
+        ) : activeTab === 'pengaturan' ? (
+          <SettingsPanel 
+            backendUrl={backendUrl}
+            onSaveBackendUrl={handleSaveBackendUrl}
+            onSyncAll={syncDatabase}
+            targets={targets}
+            bankToTargets={bankToTargets}
+            onClearLocalData={handleClearLocalData}
+            currentUser={currentUser}
+            users={users}
+            onUsersChanged={handleUsersChanged}
+            ulp={ulp}
+            up3={up3}
+            onSaveMetadata={handleSaveMetadata}
+            lastSyncTime={lastSyncTime}
+            hasUnsyncedChanges={hasUnsyncedChanges}
+          />
+        ) : (
+          <DataList 
+            targets={targets} 
+            onSelectRecord={handleSelectRecord}
+            onAddRecord={handleAddRecord}
+            onDataLoaded={handleDataLoaded}
+          />
+        )}
+      </Suspense>
 
       {/* Floating toast notification */}
       {toast && (

@@ -1,6 +1,9 @@
+import process from 'node:process'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+
+const base = process.env.VITE_BASE_PATH || (process.env.NODE_ENV === 'production' ? '/anev_p2tl/' : '/');
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -21,7 +24,7 @@ export default defineConfig({
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
+        start_url: base,
         icons: [
           {
             src: 'logo192.png',
@@ -48,5 +51,20 @@ export default defineConfig({
       }
     })
   ],
-  base: '/',
+  base,
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/xlsx')) {
+            return 'vendor-xlsx';
+          }
+          if (id.includes('node_modules/lucide-react')) {
+            return 'vendor-icons';
+          }
+        }
+      }
+    }
+  }
 })

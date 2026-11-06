@@ -97,7 +97,6 @@ export default function DashboardPanel({ backendUrl }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isOnline, setIsOnline] = useState(true);
   const [lastFetch, setLastFetch] = useState(() => {
     const cachedTime = localStorage.getItem('p2tl_last_fetch');
     if (cachedTime) {
@@ -121,7 +120,6 @@ export default function DashboardPanel({ backendUrl }) {
         try {
           const parsed = JSON.parse(cached);
           setData(parsed);
-          setIsOnline(false);
           setLoading(false);
           return;
         } catch {
@@ -129,7 +127,6 @@ export default function DashboardPanel({ backendUrl }) {
         }
       }
       setData(buildDefaultData(date));
-      setIsOnline(false);
       setLoading(false);
       setError('Backend URL belum dikonfigurasi. Silakan atur URL di halaman Pengaturan.');
       return;
@@ -191,7 +188,6 @@ export default function DashboardPanel({ backendUrl }) {
         };
 
         setData(dashData);
-        setIsOnline(true);
         const now = new Date();
         setLastFetch(now);
         // Cache the data
@@ -206,7 +202,6 @@ export default function DashboardPanel({ backendUrl }) {
       }
     } catch (err) {
       console.warn('Dashboard fetch failed, using cache:', err);
-      setIsOnline(false);
 
       const cached = localStorage.getItem(CACHE_KEY);
       if (cached) {
@@ -276,12 +271,17 @@ export default function DashboardPanel({ backendUrl }) {
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
+            {lastFetch && (
+              <span className="hidden sm:inline-block text-[11px] text-slate-400 dark:text-slate-500 font-mono" title="Waktu pembaruan terakhir">
+                {formatLastFetch(lastFetch)}
+              </span>
+            )}
             {/* Refresh Button */}
             <button
               onClick={handleRefresh}
               disabled={loading}
               className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-              title="Refresh data"
+              title={lastFetch ? `Terakhir diperbarui: ${formatLastFetch(lastFetch)} (Klik untuk refresh)` : "Refresh data"}
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
             </button>
