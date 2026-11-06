@@ -1,6 +1,8 @@
-# ⚡ Anev P2TL - ULP Salatiga Kota
+# ⚡ Anev P2TL - PLN UP3 Salatiga
 
-Aplikasi **Analisa & Evaluasi P2TL** (Penertiban Pemakaian Tenaga Listrik) dirancang khusus untuk mempermudah monitoring target, realisasi temuan kWh, dan manajemen Target Operasi (TO) di lingkungan PLN ULP Salatiga Kota.
+Aplikasi **Analisa & Evaluasi P2TL** (Penertiban Pemakaian Tenaga Listrik) dirancang khusus untuk mempermudah monitoring target, realisasi temuan kWh, dan manajemen Target Operasi (TO) di lingkungan PLN Unit Pelaksana Pelayanan Pelanggan (UP3) Salatiga dan Unit Layanan Pelanggan (ULP Salatiga Kota, ULP Ambarawa, ULP Ungaran).
+
+Aplikasi dapat diakses langsung secara online di: **[https://p2tl.salkot.online](https://p2tl.salkot.online)**
 
 ---
 
@@ -31,9 +33,9 @@ Aplikasi **Analisa & Evaluasi P2TL** (Penertiban Pemakaian Tenaga Listrik) diran
 
 ## 🛠️ Stack Teknologi
 
-- **Frontend**: React.js (Vite), Tailwind CSS / Vanilla CSS, Lucide React (Icons).
+- **Frontend**: React 19, Vite 8, Tailwind CSS, Lucide React (Icons), SheetJS (XLSX).
 - **Backend/Database**: Google Apps Script (`code.gs`) terhubung ke Google Spreadsheet.
-- **PWA (Progressive Web App)**: Dukungan instalasi aplikasi di desktop/mobile dan precaching aset.
+- **PWA (Progressive Web App)**: Dukungan instalasi aplikasi di desktop/mobile dan precaching aset offline.
 
 ---
 
@@ -54,12 +56,17 @@ Pastikan Anda sudah menginstal [Node.js](https://nodejs.org/).
    ```
    Aplikasi akan berjalan di `http://localhost:5173/` (atau port alternatif).
 
-4. Untuk membuat build produksi:
+4. Untuk melakukan verifikasi kualitas kode:
+   ```bash
+   npm run lint
+   ```
+
+5. Untuk membuat build produksi:
    ```bash
    npm run build
    ```
 
-5. Untuk melakukan deploy ke GitHub Pages:
+6. Untuk melakukan deploy ke GitHub Pages / Custom Domain:
    ```bash
    npm run deploy
    ```
@@ -69,11 +76,10 @@ Pastikan Anda sudah menginstal [Node.js](https://nodejs.org/).
 ## 📂 Konfigurasi Backend (Google Apps Script)
 
 Untuk mengaktifkan sinkronisasi database awan:
-1. Buat Google Spreadsheet baru.
+1. Buka spreadsheet database Anda di Google Spreadsheet.
 2. Buka menu **Ekstensi** > **Apps Script**.
-3. Salin dan tempel kode dari file [code.gs](file:///d:/Antigravity/anev_p2tl/code.gs) ke editor Apps Script Anda.
-4. Jalankan fungsi `setupTables` sekali untuk menginisialisasi tabel-tabel utama (`bank to`, `data to`, `users`, `Target`, `Realisasi`).
-5. Terapkan (Deploy) Apps Script tersebut sebagai **Aplikasi Web (Web App)**:
+3. Salin dan tempel kode dari file [code.gs](code.gs) ke editor Apps Script Anda.
+4. Terapkan (Deploy) Apps Script tersebut sebagai **Aplikasi Web (Web App)**:
    - Pilih akses untuk: *Siapa saja (Anyone)*.
-6. Salin URL Web App yang dihasilkan.
-7. Jalankan aplikasi frontend Anev P2TL, masuk ke menu **Pengaturan**, lalu tempelkan URL tersebut ke input URL Database dan klik **Simpan**.
+5. Salin URL Web App yang dihasilkan.
+6. Jalankan aplikasi frontend Anev P2TL, masuk ke menu **Pengaturan**, lalu tempelkan URL tersebut ke input URL Database dan klik **Simpan**.

@@ -253,7 +253,7 @@ function getDashboardData(ss, date, unitCode) {
       var tsm   = row["Realisasi TS Macet Plg"];
       var lain  = row["Realisasi Lainnya Plg"];
       var cases = lkbk + ph3 + dlpd + peng + tsp + tsm + lain;
-      var tarif = row.tarif.toUpperCase().trim();
+      var tarif = (row.tarif || "").toUpperCase().trim();
       
       // Today's record
       if (rowDate === date) {
@@ -606,9 +606,9 @@ function readSheetData(sheet) {
 function readRealisasiSheetData(sheet) {
   if (!sheet) return [];
   var rows = sheet.getDataRange().getValues();
-  if (rows.length <= 8) return [];
+  if (rows.length <= 1) return [];
   
-  // Find the main header row (Row 7, index 6 typically)
+  // Find the header row (typically row 1, or within first 15 rows)
   var headerRowIdx = -1;
   for (var i = 0; i < Math.min(rows.length, 15); i++) {
     var row = rows[i];
@@ -626,54 +626,91 @@ function readRealisasiSheetData(sheet) {
     return readSheetData(sheet);
   }
   
-  var row7 = rows[headerRowIdx];
-  var row8 = rows[headerRowIdx + 1];
-  
+  // Dynamically find where actual data rows start
+  var dataStartIdx = headerRowIdx + 1;
+  for (var r = headerRowIdx + 1; r < Math.min(rows.length, headerRowIdx + 6); r++) {
+    var checkNo = parseInt(String(rows[r][0] || "").trim(), 10);
+    var checkAgenda = String(rows[r][1] || "").toUpperCase();
+    if (!isNaN(checkNo) && checkNo === 1) {
+      dataStartIdx = r;
+      break;
+    }
+    if (checkAgenda.indexOf("P2TL/") !== -1) {
+      dataStartIdx = r;
+      break;
+    }
+  }
+
+  // Scan and map all header columns across header rows (supports single-row and multi-tier headers)
   var colMap = {};
-  for (var c = 0; c < row7.length; c++) {
-    var h7 = String(row7[c] || "").trim();
-    var h8 = String(row8[c] || "").trim();
+  var numCols = rows[headerRowIdx].length;
+  for (var c = 0; c < numCols; c++) {
+    var combinedName = "";
+    for (var hr = headerRowIdx; hr < dataStartIdx; hr++) {
+      var cellVal = String(rows[hr][c] || "").trim();
+      if (cellVal) {
+        combinedName += (combinedName ? " " : "") + cellVal;
+      }
+    }
+    var norm = combinedName.toUpperCase().replace(/[\s_()/-]/g, "");
     
-    var name = h7 ? h7 : h8;
-    var norm = name.toUpperCase().replace(/[\s_()/-]/g, "");
-    
-    if (norm === "NOAGENDA") {
+    if (norm === "NOAGENDA" || norm === "NOMORAGENDA" || norm === "AGENDA") {
       colMap["noagenda"] = c;
-    } else if (norm === "IDPEL") {
+    } else if (norm === "IDPEL" || norm === "IDPELANGGAN" || norm === "NOMORPELANGGAN" || norm === "NOPEL") {
       colMap["idpel"] = c;
     } else if (norm === "NAMA" || norm === "NAMAPELANGGAN") {
       colMap["nama"] = c;
-    } else if (norm === "GOL" || norm === "GOLONGAN") {
+    } else if (norm === "GOL" || norm === "GOLONGAN" || norm === "GOLTARIF") {
       colMap["gol"] = c;
     } else if (norm === "ALAMAT") {
       colMap["alamat"] = c;
-    } else if (norm === "TARIF/DAYA" || norm === "TARIFDAYA") {
+    } else if (norm === "TARIFDAYA" || norm === "TARIPDAYA") {
       colMap["tarif_daya"] = c;
-    } else if (norm === "KWH") {
-      colMap["kwh"] = c;
-    } else if (norm === "TS" || (h7.indexOf("SUSULAN") !== -1 && h8 === "TS")) {
-      colMap["ts"] = c;
-    } else if (norm === "TANGGALREGISTER" || norm === "TGLREGISTER") {
-      colMap["tanggal_register"] = c;
-    } else if (norm === "TANGGALSPH" || norm === "TGLSPH") {
-      colMap["tanggal_sph"] = c;
-    } else if (norm === "TARIF") {
+    } else if (norm === "TARIF" || norm === "TARIP" || norm === "TRF") {
       colMap["tarif"] = c;
     } else if (norm === "DAYA") {
       colMap["daya"] = c;
+    } else if (norm === "KWH" || norm === "TSKWH" || norm === "TAGIHANSUSULANKWH" || norm === "REALISASIKWH") {
+      colMap["kwh"] = c;
+    } else if (norm === "RPTS" || norm === "TS" || norm === "TAGIHANSUSULAN" || norm === "RPTAGIHANSUSULAN" || norm === "TOTALTS" || norm === "NILAITS" || (combinedName.toUpperCase().indexOf("SUSULAN") !== -1 && combinedName.toUpperCase().indexOf("TS") !== -1)) {
+      colMap["ts"] = c;
+    } else if (norm === "RPKWH") {
+      colMap["rp_kwh"] = c;
+    } else if (norm === "RPBEBAN") {
+      colMap["rp_beban"] = c;
+    } else if (norm === "TOTALP2TL" || norm === "TOTALTAGIHAN") {
+      colMap["total_p2tl"] = c;
+    } else if (norm === "TUNAI" || norm === "BAYARTUNAI") {
+      colMap["tunai"] = c;
+    } else if (norm === "RPTOTALANGSUR" || norm === "ANGSURAN") {
+      colMap["total_angsur"] = c;
+    } else if (norm === "TGLREGISTER" || norm === "TANGGALREGISTER" || norm === "TGLREG" || norm === "TANGGALREG") {
+      colMap["tanggal_register"] = c;
+    } else if (norm === "TGLSPH" || norm === "TANGGALSPH" || norm === "TGLBA" || norm === "TANGGALBA" || norm === "TGLPELAKSANAAN" || norm === "TANGGALPELAKSANAAN") {
+      colMap["tanggal_sph"] = c;
+    } else if (norm === "NOSIP" || norm === "SIP") {
+      colMap["no_sip"] = c;
+    } else if (norm === "NOSPH" || norm === "SPH") {
+      colMap["no_sph"] = c;
     } else if (norm === "NOREGISTER" || norm === "NOMOREGISTER" || norm === "NOREG" || norm === "REGISTER") {
       colMap["no_register"] = c;
     }
   }
   
+  // Intelligent fallbacks based on standard column layout if headers were ambiguous
   if (colMap["noagenda"] === undefined) colMap["noagenda"] = 1;
-  if (colMap["idpel"] === undefined) colMap["idpel"] = 3;
-  if (colMap["nama"] === undefined) colMap["nama"] = 4;
-  if (colMap["gol"] === undefined) colMap["gol"] = 7;
-  if (colMap["alamat"] === undefined) colMap["alamat"] = 8;
+  if (colMap["idpel"] === undefined) colMap["idpel"] = 2;
+  if (colMap["nama"] === undefined) colMap["nama"] = 3;
+  if (colMap["gol"] === undefined) colMap["gol"] = 4;
+  if (colMap["alamat"] === undefined) colMap["alamat"] = 5;
+  if (colMap["tarif"] === undefined && colMap["tarif_daya"] === undefined) colMap["tarif"] = 6;
+  if (colMap["daya"] === undefined && colMap["tarif_daya"] === undefined) colMap["daya"] = 7;
+  if (colMap["kwh"] === undefined) colMap["kwh"] = 8;
+  if (colMap["ts"] === undefined) colMap["ts"] = 11;
+  if (colMap["tanggal_register"] === undefined) colMap["tanggal_register"] = 18;
+  if (colMap["tanggal_sph"] === undefined) colMap["tanggal_sph"] = 20;
   
   var data = [];
-  var dataStartIdx = headerRowIdx + 3;
   
   for (var i = dataStartIdx; i < rows.length; i++) {
     var row = rows[i];
@@ -684,14 +721,35 @@ function readRealisasiSheetData(sheet) {
     
     var noagenda = colMap["noagenda"] !== undefined ? String(row[colMap["noagenda"]] || "").trim() : "";
     var idpel = colMap["idpel"] !== undefined ? String(row[colMap["idpel"]] || "").trim() : "";
-    var noregister = colMap["no_register"] !== undefined ? String(row[colMap["no_register"]] || "").trim() : "";
     var nama = colMap["nama"] !== undefined ? String(row[colMap["nama"]] || "").trim() : "";
     var gol = colMap["gol"] !== undefined ? String(row[colMap["gol"]] || "").trim() : "";
     var alamat = colMap["alamat"] !== undefined ? String(row[colMap["alamat"]] || "").trim() : "";
+    
+    var tarif = colMap["tarif"] !== undefined ? String(row[colMap["tarif"]] || "").trim() : "";
+    var daya = colMap["daya"] !== undefined ? String(row[colMap["daya"]] || "").trim() : "";
     var tarifDaya = colMap["tarif_daya"] !== undefined ? String(row[colMap["tarif_daya"]] || "").trim() : "";
     
+    if (!tarif && tarifDaya) {
+      tarif = tarifDaya.split("/")[0] || "";
+    }
+    if (!daya && tarifDaya) {
+      daya = tarifDaya.split("/")[1] || "";
+    }
+    if (!tarifDaya && tarif) {
+      tarifDaya = tarif + (daya ? "/" + daya : "");
+    }
+    
+    var noregister = "";
+    if (colMap["no_register"] !== undefined) {
+      noregister = String(row[colMap["no_register"]] || "").trim();
+    } else if (colMap["no_sip"] !== undefined) {
+      noregister = String(row[colMap["no_sip"]] || "").trim();
+    } else if (colMap["no_sph"] !== undefined) {
+      noregister = String(row[colMap["no_sph"]] || "").trim();
+    }
+    
     // ── Detect unit code for this row ──────────────────────────────────────
-    // Priority 1: parse code from No Agenda after "P2TL/" e.g. "P2TL/52351/..." → "52351"
+    // Priority 1: parse code from No Agenda after "P2TL/" e.g. "P2TL/52353/..." or direct 5-digit unit prefix
     var unitCode = "";
     var agendaUpper = noagenda.toUpperCase();
     var p2tlIdx = agendaUpper.indexOf("P2TL/");
@@ -699,8 +757,13 @@ function readRealisasiSheetData(sheet) {
       var afterP2tl = noagenda.substring(p2tlIdx + 5);
       var codeMatch = afterP2tl.match(/^(\d{5})/);
       if (codeMatch) unitCode = codeMatch[1];
+    } else {
+      var directMatch = agendaUpper.match(/^(\d{5})/);
+      if (directMatch && /^5235[0-3]$/.test(directMatch[1])) {
+        unitCode = directMatch[1];
+      }
     }
-    // Priority 2: first 5 digits of No Register (nomor register) if distinct from IDPEL
+    // Priority 2: first 5 digits of No Register / SIP if distinct from IDPEL
     if (!unitCode && noregister && noregister.length >= 5) {
       var regMatch = noregister.replace(/[^\d]/g, "").substring(0, 5);
       if (/^5235[0-3]$/.test(regMatch)) unitCode = regMatch;
@@ -711,20 +774,10 @@ function readRealisasiSheetData(sheet) {
       if (/^5235[0-3]$/.test(idMatch)) unitCode = idMatch;
     }
     
-    var kwh = 0;
-    if (colMap["kwh"] !== undefined) {
-      kwh = toNum(row[colMap["kwh"]]);
-    } else {
-      kwh = toNum(row[11] || row[10] || 0);
-    }
+    var kwh = colMap["kwh"] !== undefined ? toNum(row[colMap["kwh"]]) : 0;
+    var ts  = colMap["ts"]  !== undefined ? toNum(row[colMap["ts"]])  : 0;
     
-    var ts = 0;
-    if (colMap["ts"] !== undefined) {
-      ts = toNum(row[colMap["ts"]]);
-    } else {
-      ts = toNum(row[14] || row[15] || 0);
-    }
-    
+    // Priority date: TGL REGISTER, then TGL SPH, then scan fallback
     var dateVal = "";
     if (colMap["tanggal_register"] !== undefined) {
       dateVal = normalizeDateCell(row[colMap["tanggal_register"]]);
@@ -732,15 +785,17 @@ function readRealisasiSheetData(sheet) {
     if (!dateVal && colMap["tanggal_sph"] !== undefined) {
       dateVal = normalizeDateCell(row[colMap["tanggal_sph"]]);
     }
-    if (!dateVal && row.length > 29) {
-      dateVal = normalizeDateCell(row[29] || row[30] || row[31] || "");
+    if (!dateVal && row.length > 20) {
+      for (var dc = 18; dc < Math.min(row.length, 25); dc++) {
+        var cand = normalizeDateCell(row[dc]);
+        if (cand && cand.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          dateVal = cand;
+          break;
+        }
+      }
     }
     
-    var parts = tarifDaya.split("/");
-    var tarif = parts[0] || (colMap["tarif"] !== undefined ? String(row[colMap["tarif"]] || "").trim() : "");
-    var daya = parts[1] || (colMap["daya"] !== undefined ? String(row[colMap["daya"]] || "").trim() : "");
-    
-    var classif = classifyFinding(gol, tarifDaya);
+    var classif = classifyFinding(gol, tarifDaya, daya, tarif);
     
     // Do not count as case/finding if kwh is 0, unless gol is "P1"
     if (kwh === 0 && gol !== "P1") {
@@ -807,7 +862,7 @@ function readRealisasiSheetData(sheet) {
 }
 
 // ── Helper: classify P2TL finding category ────────────────────────────────
-function classifyFinding(golType, tarifDaya) {
+function classifyFinding(golType, tarifDaya, dayaVal, tarifVal) {
   var res = {
     lkbk: 0,
     ph3: 0,
@@ -820,10 +875,16 @@ function classifyFinding(golType, tarifDaya) {
   
   var gol = String(golType || "").toUpperCase().trim();
   var td = String(tarifDaya || "").toUpperCase().trim();
+  var trf = String(tarifVal || "").toUpperCase().trim();
+  var dNum = toNum(dayaVal);
+  
+  var is3Phasa = gol.indexOf("3P") !== -1 || td.indexOf("3P") !== -1 || td.indexOf("3 PHASA") !== -1 || td.indexOf("3PHASA") !== -1 ||
+                 trf === "I3" || trf === "I4" || trf === "B3" || trf === "P2" || trf === "S3" ||
+                 (dNum >= 6600 && dNum !== 7700);
   
   if (gol.indexOf("LKBK") !== -1) {
     res.lkbk = 1;
-  } else if (gol.indexOf("3P") !== -1 || td.indexOf("3P") !== -1 || td.indexOf("3 PHASA") !== -1 || td.indexOf("3PHASA") !== -1) {
+  } else if (is3Phasa) {
     res.ph3 = 1;
   } else if (gol.indexOf("DLPD") !== -1) {
     res.dlpd = 1;

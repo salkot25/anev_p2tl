@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Copy, CheckCircle2, Send, RefreshCw, Calendar, Zap, BarChart2 } from 'lucide-react';
+import { Copy, CheckCircle2, Send, RefreshCw, Calendar, Zap, Users, Target, SearchCheck } from 'lucide-react';
 
 // Helper to format last updated timestamp
 function formatLastFetch(date) {
@@ -72,34 +72,60 @@ function normalizeDateString(dateVal) {
   return str;
 }
 
+const MONTH_NAMES = [
+  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+];
+
 export default function LaporanPanel({ targets = [], backendUrl, ulp = '', up3 = '' }) {
   const targetPercent = Number(localStorage.getItem('p2tl_target_multiplier_percent')) || 110;
   const targetMultiplier = targetPercent / 100;
 
-  const [reportType, setReportType] = useState('realisasi'); // rencana, realisasi
   const [rawDate, setRawDate] = useState(() => {
     const today = new Date();
     const offset = today.getTimezoneOffset();
     const localToday = new Date(today.getTime() - (offset * 60 * 1000));
     return localToday.toISOString().split('T')[0];
   });
-  
-  // kWh parameters
+
+  // 1. Petugas P2TL & Organik
+  const [petugasRegu, setPetugasRegu] = useState('3');
+  const [petugasJumlah, setPetugasJumlah] = useState('6');
+  const [organikJumlah, setOrganikJumlah] = useState('1');
+  const [trPotensialRegu, setTrPotensialRegu] = useState('..');
+  const [trPotensialOrang, setTrPotensialOrang] = useState('..');
+
+  // 2. Rencana TO Hari Ini
+  const [toTurun40, setToTurun40] = useState('2');
+  const [toLpbPasif, setToLpbPasif] = useState('0');
+  const [toJamNyala400, setToJamNyala400] = useState('5');
+  const [toLbkb, setToLbkb] = useState('1');
+  const [toSambungLangsung, setToSambungLangsung] = useState('0');
+  const [toPotensialAmr, setToPotensialAmr] = useState('0');
+
+  // 3. Rincian Pemeriksaan
+  const [rincianBongkar, setRincianBongkar] = useState('..');
+  const [rincianNormal, setRincianNormal] = useState('..');
+  const [p1Plg, setP1Plg] = useState('0');
+  const [p2Plg, setP2Plg] = useState('0');
+  const [p2Kwh, setP2Kwh] = useState('0');
+  const [p3Plg, setP3Plg] = useState('0');
+  const [p3Kwh, setP3Kwh] = useState('0');
+  const [p4Plg, setP4Plg] = useState('0');
+  const [p4Kwh, setP4Kwh] = useState('0');
+  const [k2Plg, setK2Plg] = useState('0');
+  const [k2Kwh, setK2Kwh] = useState('0');
+
+  // 4. Target & Realisasi Parameters
   const [targetHarianKwh, setTargetHarianKwh] = useState('0');
   const [realisasiHarianKwh, setRealisasiHarianKwh] = useState('0');
+  const [realisasiBulanKwh, setRealisasiBulanKwh] = useState('0');
+  const [targetBulanKwh, setTargetBulanKwh] = useState('0');
   const [targetKumulatifKwh, setTargetKumulatifKwh] = useState('0');
-  const [realisasiKumulatifKwh, setRealisasiKumulatifKwh] = useState('0');
-  
-  // Custom manual override state for Sasaran Operasi categories 4, 5, and 6
-  const [overrideTargetDev, setOverrideTargetDev] = useState('0');
-  const [overrideRealDev, setOverrideRealDev] = useState('0');
-  
-  const [overrideTargetPeriodik, setOverrideTargetPeriodik] = useState('0');
-  const [overrideRealPeriodik, setOverrideRealPeriodik] = useState('0');
-  
-  const [overrideTargetKuning, setOverrideTargetKuning] = useState('0');
-  const [overrideRealKuning, setOverrideRealKuning] = useState('0');
-  
+  const [realisasiKumulatifKemarinKwh, setRealisasiKumulatifKemarinKwh] = useState('0');
+  const [targetTahunanKwh, setTargetTahunanKwh] = useState('0');
+  const [realisasiTahunanKwh, setRealisasiTahunanKwh] = useState('0');
+
   const [copied, setCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lastFetch, setLastFetch] = useState(() => {
@@ -113,21 +139,113 @@ export default function LaporanPanel({ targets = [], backendUrl, ulp = '', up3 =
 
   // Helper to format number to Indonesian format (thousand separator with dot)
   const formatKwh = (val) => {
-    if (val === undefined || val === null || isNaN(Number(val))) return '';
-    return new Intl.NumberFormat('id-ID').format(val);
+    if (val === undefined || val === null || isNaN(Number(val))) return '0';
+    return new Intl.NumberFormat('id-ID').format(Math.round(Number(val)));
   };
+
+  const parseNum = (str) => {
+    if (!str) return 0;
+    const cleaned = String(str).replace(/\./g, '').replace(/,/g, '.').trim();
+    const n = parseFloat(cleaned);
+    return isNaN(n) ? 0 : n;
+  };
+
+  // Date objects & labels
+  const dateInfo = useMemo(() => {
+    if (!rawDate) return { tanggalReport: '..', tanggalKemarin: '..', namaBulan: '..', year: new Date().getFullYear() };
+    const parts = rawDate.split('-');
+    const y = parseInt(parts[0], 10) || new Date().getFullYear();
+    const m = parseInt(parts[1], 10) || (new Date().getMonth() + 1);
+    const d = parseInt(parts[2], 10) || new Date().getDate();
+
+    const dateObj = new Date(y, m - 1, d);
+    const dayNum = dateObj.getDate();
+    const namaBulan = MONTH_NAMES[dateObj.getMonth()];
+    const tanggalReport = `${dayNum} ${namaBulan} ${y}`;
+
+    // Kemarin
+    const yObj = new Date(dateObj.getTime() - 24 * 60 * 60 * 1000);
+    const yDay = String(yObj.getDate()).padStart(2, '0');
+    const yMonth = MONTH_NAMES[yObj.getMonth()];
+    const yYear = yObj.getFullYear();
+    const tanggalKemarin = `${yDay} ${yMonth} ${yYear}`;
+
+    return { tanggalReport, tanggalKemarin, namaBulan, year: y, month: m, day: d };
+  }, [rawDate]);
+
+  // Unit label formatted nicely
+  const unitLabel = useMemo(() => {
+    const u = (ulp || '').trim();
+    if (u) {
+      if (u.toUpperCase().startsWith('ULP')) {
+        const parts = u.split(' ');
+        return parts[0].toUpperCase() + ' ' + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1).toLowerCase()).join(' ');
+      }
+      return 'ULP ' + u.charAt(0).toUpperCase() + u.slice(1).toLowerCase();
+    }
+    const up = (up3 || '').trim();
+    if (up) return up;
+    return 'ULP Ungaran';
+  }, [ulp, up3]);
+
+  // Auto-count Rencana TO from local targets if available
+  useEffect(() => {
+    if (!Array.isArray(targets) || targets.length === 0) return;
+
+    const timer = setTimeout(() => {
+      const todayTargets = targets.filter(t => {
+        const d = normalizeDateString(t.TanggalOrder || t.TanggalUpload || '');
+        return d === rawDate;
+      });
+
+      if (todayTargets.length === 0) return;
+
+      let turun40 = 0;
+      let lpbPasif = 0;
+      let jamNyala400 = 0;
+      let lbkb = 0;
+      let sambungLangsung = 0;
+      let potensialAmr = 0;
+
+      todayTargets.forEach(t => {
+        const sub = String(t.SubDLPD || t.DLPD || t.Sumber || '').toUpperCase();
+        const jenis = String(t.JENIS_TO || '').toUpperCase();
+        const allText = `${sub} ${jenis}`;
+
+        if (allText.includes('40%') || allText.includes('TURUN')) {
+          turun40++;
+        } else if (allText.includes('PASIF') || allText.includes('LPB')) {
+          lpbPasif++;
+        } else if (allText.includes('400') || allText.includes('JAM NYALA')) {
+          jamNyala400++;
+        } else if (allText.includes('LKBK') || allText.includes('LBKB') || allText.includes('MACET')) {
+          lbkb++;
+        } else if (allText.includes('SAMBUNG') || allText.includes('LANGSUNG')) {
+          sambungLangsung++;
+        } else if (allText.includes('AMR') || allText.includes('POTENSIAL')) {
+          potensialAmr++;
+        }
+      });
+
+      if (turun40 > 0) setToTurun40(String(turun40));
+      if (lpbPasif > 0) setToLpbPasif(String(lpbPasif));
+      if (jamNyala400 > 0) setToJamNyala400(String(jamNyala400));
+      if (lbkb > 0) setToLbkb(String(lbkb));
+      if (sambungLangsung > 0) setToSambungLangsung(String(sambungLangsung));
+      if (potensialAmr > 0) setToPotensialAmr(String(potensialAmr));
+    }, 0);
+
+    return () => clearTimeout(timer);
+  }, [targets, rawDate]);
 
   // Fetch target and realization data matching rawDate
   useEffect(() => {
     const fetchReportDateData = async () => {
       if (!rawDate) return;
       
-      const dateParts = rawDate.split('-');
-      const year = parseInt(dateParts[0], 10) || new Date().getFullYear();
-      const month = parseInt(dateParts[1], 10) || (new Date().getMonth() + 1);
-      const day = parseInt(dateParts[2], 10) || new Date().getDate();
+      const { year, month, day } = dateInfo;
 
-      // Read active working days checklist setting
+      // Active working days checklist
       let activeWorkingDaysChecklist = { monFri: true, sat: true, sun: true };
       const savedChecklist = localStorage.getItem('p2tl_working_days_checklist');
       if (savedChecklist) {
@@ -136,138 +254,28 @@ export default function LaporanPanel({ targets = [], backendUrl, ulp = '', up3 =
         } catch {
           // ignore
         }
-      } else {
-        const oldSetting = localStorage.getItem('p2tl_working_days') || '7';
-        if (oldSetting === '5') activeWorkingDaysChecklist = { monFri: true, sat: false, sun: false };
-        if (oldSetting === '6') activeWorkingDaysChecklist = { monFri: true, sat: true, sun: false };
       }
 
-      // 1. Try local logs cache first for instant update of realization values
-      const cachedLogs = localStorage.getItem('p2tl_logs_cache');
-      if (cachedLogs) {
-        try {
-          const logsList = JSON.parse(cachedLogs);
-          const matchedLog = logsList.find(log => {
-            const logDate = log.Date || log.date || '';
-            return logDate === rawDate;
-          });
-          if (matchedLog) {
-            setRealisasiHarianKwh(formatKwh(matchedLog.Realisasi_Harian_kWh || matchedLog.realisasi_harian_kwh || 0));
-            setRealisasiKumulatifKwh(formatKwh(matchedLog.Realisasi_Kumulatif_kWh || matchedLog.realisasi_kumulatif_kwh || 0));
-          } else {
-            // Clear realization if not found in logs to avoid displaying stale data of another day
-            setRealisasiHarianKwh('0');
-            setRealisasiKumulatifKwh('0');
-          }
-        } catch (err) {
-          console.error('Error reading logs cache in LaporanPanel:', err);
-        }
-      }
-
-      // Helper for local calculations when offline or fetch fails
-      const calculateTargetsLocally = (yr, mo, dy, activeWD) => {
-        let monthlyTargetsArray = Array(12).fill(0);
-        const cachedTargets = localStorage.getItem(`p2tl_monthly_targets_cache_${yr}`);
-        if (cachedTargets) {
-          try {
-            const parsed = JSON.parse(cachedTargets);
-            parsed.forEach(item => {
-              const mIdx = Number(item.Month) - 1;
-              if (mIdx >= 0 && mIdx < 12) {
-                monthlyTargetsArray[mIdx] = Number(item.Target_kWh) || 0;
-              }
-            });
-          } catch {
-            // ignore
-          }
-        }
-
-        // Read totalRealPrev from logs cache (realization up to yesterday)
-        let totalRealPrev = 0;
-        if (cachedLogs) {
-          try {
-            const logsList = JSON.parse(cachedLogs);
-            logsList.forEach(log => {
-              const logDate = log.Date || log.date || '';
-              if (logDate.startsWith(String(yr)) && logDate < rawDate) {
-                totalRealPrev += Number(log.Realisasi_Harian_kWh || log.realisasiHarianKwh || 0);
-              }
-            });
-          } catch {
-            // ignore
-          }
-        }
-
-        let targetPeriod;
-        let remainingWorkingDays = 0;
-
-        if (mo <= 6) {
-          // Semester 1 (Jan-Jun)
-          targetPeriod = monthlyTargetsArray.slice(0, 6).reduce((s, v) => s + v, 0) * targetMultiplier;
-          
-          // Sisa Hari Kerja s.d. Juni
-          const totalDaysInCurrentMonth = new Date(yr, mo, 0).getDate();
-          for (let d = dy; d <= totalDaysInCurrentMonth; d++) {
-            if (isDateWorkingDay(yr, mo - 1, d, activeWD)) {
-              remainingWorkingDays++;
-            }
-          }
-          for (let m = mo; m < 6; m++) {
-            remainingWorkingDays += getWorkingDaysCount(yr, m, activeWD);
-          }
-        } else {
-          // Semester 2 (Jul-Des)
-          targetPeriod = monthlyTargetsArray.reduce((s, v) => s + v, 0) * targetMultiplier;
-          
-          // Sisa Hari Kerja s.d. Desember
-          const totalDaysInCurrentMonth = new Date(yr, mo, 0).getDate();
-          for (let d = dy; d <= totalDaysInCurrentMonth; d++) {
-            if (isDateWorkingDay(yr, mo - 1, d, activeWD)) {
-              remainingWorkingDays++;
-            }
-          }
-          for (let m = mo; m < 12; m++) {
-            remainingWorkingDays += getWorkingDaysCount(yr, m, activeWD);
-          }
-        }
-
-        remainingWorkingDays = Math.max(1, remainingWorkingDays);
-        const sisaTarget = Math.max(0, targetPeriod - totalRealPrev);
-        const calculatedTargetHarian = Math.round(sisaTarget / remainingWorkingDays);
-        const calculatedTargetKumulatif = Math.round(monthlyTargetsArray.slice(0, mo).reduce((sum, val) => sum + val, 0) * targetMultiplier);
-        
-        setTargetHarianKwh(formatKwh(calculatedTargetHarian));
-        setTargetKumulatifKwh(formatKwh(calculatedTargetKumulatif));
-      };
-
-      // 2. Fetch fresh data from backend
       const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-      if (!url) {
-        calculateTargetsLocally(year, month, day, activeWorkingDaysChecklist);
-        const now = new Date();
-        setLastFetch(now);
-        localStorage.setItem('p2tl_laporan_last_fetch', now.toISOString());
-        return;
-      }
+      if (!url) return;
 
       setIsLoading(true);
       try {
-        // Fetch dashboard data
         const unitCode = localStorage.getItem('p2tl_default_unit_code') || '52350';
-        const response = await fetch(`${url}?action=get_dashboard_data&date=${rawDate}&unit_code=${unitCode}`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' }
-        });
-        
-        // Fetch monthly targets
-        const targetsResponse = await fetch(`${url}?action=get_monthly_targets&year=${year}`, {
-          method: 'GET',
-          headers: { 'Accept': 'application/json' }
-        });
+        const [dashRes, targetsRes] = await Promise.all([
+          fetch(`${url}?action=get_dashboard_data&date=${rawDate}&unit_code=${unitCode}`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+          }),
+          fetch(`${url}?action=get_monthly_targets&year=${year}`, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+          })
+        ]);
 
         let monthlyTargetsArray = Array(12).fill(0);
-        if (targetsResponse.ok) {
-          const targetsResult = await targetsResponse.json();
+        if (targetsRes.ok) {
+          const targetsResult = await targetsRes.json();
           if (targetsResult.status === 'success' && Array.isArray(targetsResult.data)) {
             targetsResult.data.forEach(item => {
               const mIdx = Number(item.Month) - 1;
@@ -279,78 +287,91 @@ export default function LaporanPanel({ targets = [], backendUrl, ulp = '', up3 =
           }
         }
 
-        if (response.ok) {
-          const result = await response.json();
+        if (dashRes.ok) {
+          const result = await dashRes.json();
           if (result.status === 'success') {
-            const targetData = result.target || {};
             const realData = result.realization || {};
-            
-            if (realData.realisasiHarianKwh !== undefined) {
-              setRealisasiHarianKwh(formatKwh(realData.realisasiHarianKwh));
-            }
-            if (realData.realisasiKumulatifKwh !== undefined) {
-              setRealisasiKumulatifKwh(formatKwh(realData.realisasiKumulatifKwh));
-            }
-            
-            // Calculate targets matching semester / cumulative projections logic
+            const execData = result.execSummary || {};
+
+            const realHarian = Number(realData.realisasiHarianKwh) || 0;
+            const realKumulatif = Number(realData.realisasiKumulatifKwh) || 0;
+            const realKumKemarin = Math.max(0, realKumulatif - realHarian);
+            const totalKwhYear = Number(execData.totalKwhYear) || realKumulatif;
+
+            setRealisasiHarianKwh(formatKwh(realHarian));
+            setRealisasiKumulatifKemarinKwh(formatKwh(realKumKemarin));
+            setRealisasiTahunanKwh(formatKwh(totalKwhYear));
+
+            // Monthly realization from monthlyTrend
+            const monthShort = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'][month - 1];
+            const currentMonthObj = Array.isArray(execData.monthlyTrend) 
+              ? execData.monthlyTrend.find(m => m.month === monthShort) 
+              : null;
+            const realBulan = currentMonthObj?.kwh || realHarian;
+            setRealisasiBulanKwh(formatKwh(realBulan));
+
+            // Targets calculation
+            const targetBulan = (monthlyTargetsArray[month - 1] || 0) * targetMultiplier;
+            setTargetBulanKwh(formatKwh(targetBulan));
+
+            const totalTargetYear = monthlyTargetsArray.reduce((s, v) => s + v, 0) * targetMultiplier;
+            setTargetTahunanKwh(formatKwh(totalTargetYear));
+
+            const targetKumulatifCalc = Math.round(monthlyTargetsArray.slice(0, month).reduce((sum, val) => sum + val, 0) * targetMultiplier);
+            setTargetKumulatifKwh(formatKwh(targetKumulatifCalc));
+
+            // Target Harian calculation
             let targetPeriod = 0;
             let remainingWorkingDays = 0;
-
             if (month <= 6) {
-              // Semester 1
               targetPeriod = monthlyTargetsArray.slice(0, 6).reduce((s, v) => s + v, 0) * targetMultiplier;
-              
-              // Count remaining working days in current month
               const totalDaysInCurrentMonth = new Date(year, month, 0).getDate();
               for (let d = day; d <= totalDaysInCurrentMonth; d++) {
-                if (isDateWorkingDay(year, month - 1, d, activeWorkingDaysChecklist)) {
-                  remainingWorkingDays++;
-                }
+                if (isDateWorkingDay(year, month - 1, d, activeWorkingDaysChecklist)) remainingWorkingDays++;
               }
-              // Add full working days for subsequent months in Semester 1 (from month to index 5)
               for (let m = month; m < 6; m++) {
                 remainingWorkingDays += getWorkingDaysCount(year, m, activeWorkingDaysChecklist);
               }
             } else {
-              // Semester 2
               targetPeriod = monthlyTargetsArray.reduce((s, v) => s + v, 0) * targetMultiplier;
-              
-              // Count remaining working days in current month
               const totalDaysInCurrentMonth = new Date(year, month, 0).getDate();
               for (let d = day; d <= totalDaysInCurrentMonth; d++) {
-                if (isDateWorkingDay(year, month - 1, d, activeWorkingDaysChecklist)) {
-                  remainingWorkingDays++;
-                }
+                if (isDateWorkingDay(year, month - 1, d, activeWorkingDaysChecklist)) remainingWorkingDays++;
               }
-              // Add full working days for subsequent months in the year (from month to index 11)
               for (let m = month; m < 12; m++) {
                 remainingWorkingDays += getWorkingDaysCount(year, m, activeWorkingDaysChecklist);
               }
             }
-
             remainingWorkingDays = Math.max(1, remainingWorkingDays);
-            
-            const realKumulatif = realData.realisasiKumulatifKwh || 0;
-            const realHarian = realData.realisasiHarianKwh || 0;
-            const totalRealPrev = realKumulatif - realHarian;
-            const sisaTarget = Math.max(0, targetPeriod - totalRealPrev);
-            
+            const sisaTarget = Math.max(0, targetPeriod - realKumKemarin);
             const calculatedTargetHarian = Math.round(sisaTarget / remainingWorkingDays);
-            const calculatedTargetKumulatif = Math.round(monthlyTargetsArray.slice(0, month).reduce((sum, val) => sum + val, 0) * targetMultiplier);
-            
             setTargetHarianKwh(formatKwh(calculatedTargetHarian));
-            setTargetKumulatifKwh(formatKwh(calculatedTargetKumulatif));
 
-            // Also populate overrides for targets if present
-            if (targetData.targetPengembanganPlg !== undefined) {
-              setOverrideTargetDev(String(targetData.targetPengembanganPlg));
+            // Auto-populate daily findings breakdown if present in golonganBreakdownDay
+            if (Array.isArray(execData.golonganBreakdownDay) && execData.golonganBreakdownDay.length > 0) {
+              let p1Cases = 0, p2Cases = 0, p3Cases = 0, p4Cases = 0, k2Cases = 0;
+              let p2KwhVal = 0, p3KwhVal = 0, p4KwhVal = 0, k2KwhVal = 0;
+
+              execData.golonganBreakdownDay.forEach(g => {
+                const c = String(g.class || '').toUpperCase().trim();
+                if (c === 'P1') { p1Cases += g.cases || 0; }
+                else if (c === 'P2') { p2Cases += g.cases || 0; p2KwhVal += g.kwh || 0; }
+                else if (c === 'P3') { p3Cases += g.cases || 0; p3KwhVal += g.kwh || 0; }
+                else if (c === 'P4') { p4Cases += g.cases || 0; p4KwhVal += g.kwh || 0; }
+                else if (c === 'K2') { k2Cases += g.cases || 0; k2KwhVal += g.kwh || 0; }
+              });
+
+              setP1Plg(String(p1Cases));
+              setP2Plg(String(p2Cases));
+              setP2Kwh(formatKwh(p2KwhVal));
+              setP3Plg(String(p3Cases));
+              setP3Kwh(formatKwh(p3KwhVal));
+              setP4Plg(String(p4Cases));
+              setP4Kwh(formatKwh(p4KwhVal));
+              setK2Plg(String(k2Cases));
+              setK2Kwh(formatKwh(k2KwhVal));
             }
-            if (targetData.targetTsPeriodikPlg !== undefined) {
-              setOverrideTargetPeriodik(String(targetData.targetTsPeriodikPlg));
-            }
-            if (targetData.targetTsMacetPlg !== undefined) {
-              setOverrideTargetKuning(String(targetData.targetTsMacetPlg));
-            }
+
             const now = new Date();
             setLastFetch(now);
             localStorage.setItem('p2tl_laporan_last_fetch', now.toISOString());
@@ -358,176 +379,86 @@ export default function LaporanPanel({ targets = [], backendUrl, ulp = '', up3 =
         }
       } catch (err) {
         console.error('Error fetching dashboard data for report date:', err);
-        calculateTargetsLocally(year, month, day, activeWorkingDaysChecklist);
-        const now = new Date();
-        setLastFetch(now);
-        localStorage.setItem('p2tl_laporan_last_fetch', now.toISOString());
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchReportDateData();
-  }, [rawDate, backendUrl, targetMultiplier]);
+  }, [rawDate, backendUrl, targetMultiplier, dateInfo]);
 
-  // Format rawDate into Indonesian long format dynamically
-  const reportDate = useMemo(() => {
-    if (!rawDate) return '......';
-    const dateObj = new Date(rawDate);
-    if (isNaN(dateObj.getTime())) return '......';
-    
-    const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
-    const dayName = days[dateObj.getDay()];
-    const dayNum = String(dateObj.getDate()).padStart(2, '0');
-    const monthName = months[dateObj.getMonth()];
-    const year = dateObj.getFullYear();
-    return `${dayName}, ${dayNum} ${monthName} ${year}`;
-  }, [rawDate]);
+  // Derived calculations: Temuan & Percentages
+  const temuanTotalPlg = useMemo(() => {
+    return (parseInt(p1Plg, 10) || 0) +
+           (parseInt(p2Plg, 10) || 0) +
+           (parseInt(p3Plg, 10) || 0) +
+           (parseInt(p4Plg, 10) || 0) +
+           (parseInt(k2Plg, 10) || 0);
+  }, [p1Plg, p2Plg, p3Plg, p4Plg, k2Plg]);
 
-  // Calculate targets & realizations from database state
-  const metrics = useMemo(() => {
-    const getTargetCategory = (t) => {
-      const sub = String(t.SubDLPD || '').toUpperCase();
-      if (sub.includes('KWH MACET') || sub.includes('STAND ACMT TIDAK SESUAI')) {
-        return 'lkbk';
-      }
-      
-      const dayaVal = parseInt(t.Daya, 10) || 0;
-      if (dayaVal >= 6600) {
-        return 'phase3';
-      }
-      
-      const dlpdVal = String(t.DLPD || '').toUpperCase();
-      if (dlpdVal.includes('SISIR')) {
-        return 'lainnya';
-      }
-      
-      return 'toDlpd';
-    };
+  const percentages = useMemo(() => {
+    const tH = parseNum(targetHarianKwh);
+    const rH = parseNum(realisasiHarianKwh);
+    const persenH = tH > 0 ? (rH / tH) * 100 : 0;
 
-    // Filter targets by category
-    const categorized = targets.map(t => ({
-      category: getTargetCategory(t),
-      dateOrder: normalizeDateString(t.TanggalOrder || t.TanggalUpload),
-      dateExec: normalizeDateString(t.TanggalPelaksanaan)
-    }));
+    const tB = parseNum(targetBulanKwh);
+    const rB = parseNum(realisasiBulanKwh);
+    const persenB = tB > 0 ? (rB / tB) * 100 : 0;
 
-    // 1. LKBK Macet / Numpuk (Filtered by report date rawDate)
-    const lkbkTarget = categorized.filter(t => t.category === 'lkbk' && t.dateOrder === rawDate).length;
-    const lkbkReal = categorized.filter(t => t.category === 'lkbk' && t.dateExec === rawDate).length;
+    const tK = parseNum(targetKumulatifKwh);
+    const rK = parseNum(realisasiKumulatifKemarinKwh);
+    const persenK = tK > 0 ? (rK / tK) * 100 : 0;
 
-    // 2. Periksa Plg 3 Phasa (Filtered by report date rawDate)
-    const phase3Target = 5; // Target selalu 5
-    const phase3Real = categorized.filter(t => t.category === 'phase3' && t.dateExec === rawDate).length;
+    const tY = parseNum(targetTahunanKwh);
+    const rY = parseNum(realisasiTahunanKwh);
+    const persenY = tY > 0 ? Math.round((rY / tY) * 100) : 0;
 
-    // 3. Periksa TO DLPD (Filtered by report date rawDate)
-    const toDlpdTarget = categorized.filter(t => t.category === 'toDlpd' && t.dateOrder === rawDate).length;
-    const toDlpdReal = categorized.filter(t => t.category === 'toDlpd' && t.dateExec === rawDate).length;
-
-    // 4, 5, 6 are mapped to overrides or default to 0
-    const devTarget = parseInt(overrideTargetDev, 10) || 0;
-    const devReal = parseInt(overrideRealDev, 10) || 0;
-    
-    const periodikTarget = parseInt(overrideTargetPeriodik, 10) || 0;
-    const periodikReal = parseInt(overrideRealPeriodik, 10) || 0;
-    
-    const kuningTarget = parseInt(overrideTargetKuning, 10) || 0;
-    const kuningReal = parseInt(overrideRealKuning, 10) || 0;
-
-    // 7. lainnya: sisa dari 33 dikurangi poin 1-6. Jika poin 1-6 melebihi 33, maka poin 7 = 0
-    const sumOthers = lkbkTarget + phase3Target + toDlpdTarget + devTarget + periodikTarget + kuningTarget;
-    const lainTarget = sumOthers >= 33 ? 0 : (33 - sumOthers);
-    const lainReal = categorized.filter(t => t.category === 'lainnya' && t.dateExec === rawDate).length;
-
-    // Totals: jika melebihi 33, total target = jumlah aktual semua kategori
-    const totalTarget = sumOthers + lainTarget; // = sumOthers jika >= 33, else always 33
-    const totalReal = lkbkReal + phase3Real + toDlpdReal + devReal + periodikReal + kuningReal + lainReal;
+    const fmtDec = (val) => new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
 
     return {
-      lkbkTarget, lkbkReal,
-      phase3Target, phase3Real,
-      toDlpdTarget, toDlpdReal,
-      devTarget, devReal,
-      periodikTarget, periodikReal,
-      kuningTarget, kuningReal,
-      lainTarget, lainReal,
-      totalTarget, totalReal
+      persenHarianFormatted: `${fmtDec(persenH)}%`,
+      persenBulanFormatted: `${fmtDec(persenB)}%`,
+      persenKumulatifFormatted: `${fmtDec(persenK)}%`,
+      persenTahunanFormatted: `${persenY}%`
     };
-  }, [targets, rawDate, overrideTargetDev, overrideRealDev, overrideTargetPeriodik, overrideRealPeriodik, overrideTargetKuning, overrideRealKuning]);
-
-  // Helper to clean and calculate GAP/Percentage from custom text inputs
-  const calculatedKwh = useMemo(() => {
-    const parseNum = (str) => {
-      if (!str) return NaN;
-      return parseFloat(String(str).replace(/\./g, '').replace(/,/g, '.').trim());
-    };
-
-    const targetK = parseNum(targetKumulatifKwh);
-    const realK = parseNum(realisasiKumulatifKwh);
-    const realH = parseNum(realisasiHarianKwh);
-
-    let gap = '......';
-    let percent = '......';
-
-    if (!isNaN(targetK) && !isNaN(realK)) {
-      const isRencana = reportType === 'rencana';
-      // In rencana mode, compare target against yesterday's cumulative realization (realK - realH)
-      // In realisasi mode, compare target against today's cumulative realization (realK)
-      const targetReal = isRencana ? (realK - (isNaN(realH) ? 0 : realH)) : realK;
-
-      gap = new Intl.NumberFormat('id-ID').format(targetK - targetReal);
-      percent = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 }).format((targetReal / targetK) * 100) + '%';
-    }
-
-    return { gap, percent };
-  }, [targetKumulatifKwh, realisasiKumulatifKwh, realisasiHarianKwh, reportType]);
+  }, [targetHarianKwh, realisasiHarianKwh, targetBulanKwh, realisasiBulanKwh, targetKumulatifKwh, realisasiKumulatifKemarinKwh, targetTahunanKwh, realisasiTahunanKwh]);
 
   // Generate WhatsApp Message text template
   const generatedText = useMemo(() => {
-    const isRencana = reportType === 'rencana';
-    
-    const realHarian = isRencana ? '......' : (realisasiHarianKwh || '......');
-    const realKumulatif = isRencana ? '......' : (realisasiKumulatifKwh || '......');
-    
-    const gapText = calculatedKwh.gap;
-    const percentText = calculatedKwh.percent;
+    return `Ysh. Bapak Manager UP3
+         Bapak Asman TEL
 
-    // Sasaran Operasi realizations fallback to ...... if Rencana
-    const fmtPlg = (tCount, rCount) => {
-      const realStr = isRencana ? '......' : rCount;
-      return `${tCount} Plg / ${realStr} Plg`;
-    };
+Berikut kami sampaikan Pelaksanaan P2TL ${unitLabel}, Tanggal ${dateInfo.tanggalReport} :
 
-    // Total header line
-    const totalLine = fmtPlg(metrics.totalTarget, metrics.totalReal);
+1. Petugas P2TL
+* ${petugasRegu} Regu / ${petugasJumlah} Petugas
+2. Petugas P2TL Organik : ${organikJumlah} orang
+* Pemeriksaan Plg TR Potensial = ${trPotensialRegu} Regu/ ${trPotensialOrang} orang
+3. Rencana TO hari ini :
+- Plg Pemakaian Turun 40 % : ${toTurun40} Plg
+- LPB Pasif : ${toLpbPasif} Plg
+- Jam nyala >400 : ${toJamNyala400} Plg
+- LBKB : ${toLbkb} Plg
+- Sambung Lagsung : ${toSambungLangsung} Plg
+- TO Potensial AMR : ${toPotensialAmr} Plg
+4. Rincian Pemeriksaan :   
+* Pembongkaran = ${rincianBongkar} Plg
+* Normal = ${rincianNormal} Plg
+* Temuan = ${temuanTotalPlg > 0 ? temuanTotalPlg : '..'} Plg   
+* P1 = ${p1Plg} Plg  
+* P2 = ${p2Plg} Plg  --> ${p2Kwh} kWh
+* P3 = ${p3Plg} Plg  --> ${p3Kwh} kWh
+* P4 = ${p4Plg} Plg  --> ${p4Kwh} kWh
+* K2 = ${k2Plg} Plg  --> ${k2Kwh} kWh
 
-    return `Assalamualaikum Wr. Wb.
-Yth.
-MUP3 Salatiga
-Asman TEL
-Semangat Pagi
-
-Berikut disampaikan ${reportType === 'rencana' ? 'Rencana' : 'Realisasi'} P2TL ${ulp || up3 || 'UP3 Salatiga'}
-${reportDate || 'Senin, 08 Juni 2026'}
-1. Target / Realisasi Harian : ${targetHarianKwh || '......'}/ ${realHarian} kWh
-2. Target/ Realisasi Kumulatif : ${targetKumulatifKwh || '......'}/ ${realKumulatif} kWh (${percentText})
-3. GAP Kumulatif : ${gapText} kWh
-Sasaran Operasi :   ${totalLine} (target diperiksa/ yang diperiksa)
-1. LKBK Macet / Numpuk : ${fmtPlg(metrics.lkbkTarget, metrics.lkbkReal)}
-2. Periksa Plg 3 Phasa : ${fmtPlg(metrics.phase3Target, metrics.phase3Real)}
-3. Periksa TO DLPD : ${fmtPlg(metrics.toDlpdTarget, metrics.toDlpdReal)}
-4. Pengembangan TO  : ${fmtPlg(metrics.devTarget, metrics.devReal)}
-5. Penagihan TS kWh Periodik : ${fmtPlg(metrics.periodikTarget, metrics.periodikReal)}
-6. Penagihan TS Macet (Kuning): ${fmtPlg(metrics.kuningTarget, metrics.kuningReal)}
-7. lainnya : ${fmtPlg(metrics.lainTarget, metrics.lainReal)}
-
-Demikian disampaikan 
-Terima kasih`;
-  }, [reportType, reportDate, targetHarianKwh, realisasiHarianKwh, targetKumulatifKwh, realisasiKumulatifKwh, metrics, calculatedKwh, ulp, up3]);
+4. Target Harian : ${targetHarianKwh || '0'} kWh
+* Realisasi Harian : ${realisasiHarianKwh || '0'} kWh ( ${percentages.persenHarianFormatted} )
+* Realisasi bulan ${dateInfo.namaBulan} : ${realisasiBulanKwh || '0'} kWh (${percentages.persenBulanFormatted})
+5. Target kumulatif : ${targetKumulatifKwh || '0'} kWh
+* Realisasi Kumulatif s.d ${dateInfo.tanggalKemarin} : ${realisasiKumulatifKemarinKwh || '0'} kWh (${percentages.persenKumulatifFormatted})
+6. Target Tahunan : ${targetTahunanKwh || '0'} kWh
+* Realisasi Kumulatif Tahunan : ${realisasiTahunanKwh || '0'} kWh (${percentages.persenTahunanFormatted})`;
+  }, [unitLabel, dateInfo, petugasRegu, petugasJumlah, organikJumlah, trPotensialRegu, trPotensialOrang, toTurun40, toLpbPasif, toJamNyala400, toLbkb, toSambungLangsung, toPotensialAmr, rincianBongkar, rincianNormal, temuanTotalPlg, p1Plg, p2Plg, p2Kwh, p3Plg, p3Kwh, p4Plg, p4Kwh, k2Plg, k2Kwh, targetHarianKwh, realisasiHarianKwh, percentages, realisasiBulanKwh, targetKumulatifKwh, realisasiKumulatifKemarinKwh, targetTahunanKwh, realisasiTahunanKwh]);
 
   // Copy trigger
   const handleCopy = () => {
@@ -542,81 +473,44 @@ Terima kasih`;
     window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
   };
 
-  const isRealisasi = reportType === 'realisasi';
-
-  // Helper: achievement badge style
-  const achStyle = (target, real) => {
-    if (target <= 0) return { color: '#94a3b8', bg: 'transparent', pct: null };
-    const pct = Math.round((real / target) * 100);
-    if (pct >= 100) return { color: '#059669', bg: 'rgba(16,185,129,0.09)', pct };
-    if (pct >= 50)  return { color: '#d97706', bg: 'rgba(245,158,11,0.09)',  pct };
-    return            { color: '#dc2626', bg: 'rgba(239,68,68,0.09)',   pct };
-  };
-
-  // Progress bar fill color
-  const barColor = (target, real) => {
-    if (target <= 0) return '#94a3b8';
-    const p = real / target;
-    return p >= 1 ? '#10b981' : p >= 0.5 ? '#f59e0b' : '#ef4444';
-  };
-
-  // Grid template: #, label, target, real, [%, realisasi only]
-  const colTpl = isRealisasi ? '28px 1fr 64px 64px 52px' : '28px 1fr 64px';
-
   return (
-    <div className="w-full flex flex-col gap-5">
+    <div className="w-full flex flex-col gap-5 animate-fade-in">
 
       {/* ══════════════════════════════════════════════
            01. CONFIGURATION BAR
       ══════════════════════════════════════════════ */}
       <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl px-5 py-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-4">
-          {/* Report Type */}
-          <div className="flex flex-col gap-1.5 w-full sm:w-64">
-            <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Jenis Laporan</label>
-            <div className="flex w-full gap-0.5 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-xl h-8">
-              {['rencana', 'realisasi'].map(t => (
-                <button key={t} type="button" onClick={() => setReportType(t)}
-                  className={`flex-1 text-xs font-bold rounded-[10px] transition-all capitalize ${
-                    reportType === t
-                      ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
-                      : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                  }`}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </button>
-              ))}
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Date Picker */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tanggal Laporan</label>
+              <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 h-9 w-fit">
+                <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                <input type="date" value={rawDate} onChange={e => setRawDate(e.target.value)}
+                  className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 outline-none cursor-pointer w-[130px]" />
+              </div>
+            </div>
+
+            {/* Formatted Date & Unit */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Unit & Periode</label>
+              <div className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                <span className="text-blue-600 dark:text-blue-400">{unitLabel}</span> · {dateInfo.tanggalReport}
+              </div>
             </div>
           </div>
 
-          <div className="hidden sm:block self-stretch w-px bg-slate-200 dark:bg-slate-700 my-0.5" />
-
-          {/* Date Picker */}
-          <div className="flex flex-col gap-1.5">
-            <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Tanggal Laporan</label>
-            <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 h-8 w-fit">
-              <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <input type="date" value={rawDate} onChange={e => setRawDate(e.target.value)}
-                className="bg-transparent text-xs font-medium text-slate-700 dark:text-slate-300 outline-none cursor-pointer w-[130px]" />
-            </div>
-          </div>
-
-          {/* Formatted date */}
-          <div className="hidden sm:flex flex-col gap-1.5">
-            <label className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Periode</label>
-            <div className="text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-200 h-8 flex items-center">{reportDate}</div>
-          </div>
-
-          <div className="ml-auto flex flex-col gap-1.5 self-end">
-            <div className="text-[8px] sm:text-xs font-black invisible uppercase select-none tracking-widest leading-none">Spacer</div>
+          <div className="flex items-center gap-2">
             {isLoading ? (
-              <div className="flex items-center gap-2 text-xs text-blue-500 font-bold h-8">
+              <div className="flex items-center gap-2 text-xs text-blue-500 font-bold">
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Memuat data…</span>
+                <span>Memuat data...</span>
               </div>
             ) : (
               lastFetch && (
-                <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-bold h-8">
-                  <RefreshCw className="w-3.5 h-3.5 text-slate-400" />
+                <div className="flex items-center gap-1.5 text-xs text-slate-400 dark:text-slate-500 font-medium">
+                  <RefreshCw className="w-3 h-3 text-slate-400" />
                   <span>Diperbarui: {formatLastFetch(lastFetch)}</span>
                 </div>
               )
@@ -630,265 +524,284 @@ Terima kasih`;
       ══════════════════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
-        {/* ──────── LEFT 7 cols ──────── */}
+        {/* ──────── LEFT 7 cols (Form Controls) ──────── */}
         <div className="lg:col-span-7 flex flex-col gap-5">
 
-
-
-          {/* ── Energy KPI Cards ── */}
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2">
-              <Zap className="w-3.5 h-3.5 text-amber-500" />
-              <span className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Parameter Energi kWh</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { label: 'Target Harian', val: targetHarianKwh, set: setTargetHarianKwh, show: true, disabled: false, numCls: 'text-slate-900 dark:text-white', focusCls: 'focus:border-blue-400 dark:focus:border-blue-500' },
-                { label: 'Realisasi Harian', val: realisasiHarianKwh, set: setRealisasiHarianKwh, show: isRealisasi, disabled: !isRealisasi, numCls: 'text-emerald-600 dark:text-emerald-400', focusCls: 'focus:border-emerald-400 dark:focus:border-emerald-500' },
-                { label: 'Target Kumulatif', val: targetKumulatifKwh, set: setTargetKumulatifKwh, show: true, disabled: false, numCls: 'text-slate-900 dark:text-white', focusCls: 'focus:border-blue-400 dark:focus:border-blue-500' },
-                { label: 'Realisasi Kumulatif', val: realisasiKumulatifKwh, set: setRealisasiKumulatifKwh, show: isRealisasi, disabled: !isRealisasi, numCls: 'text-emerald-600 dark:text-emerald-400', focusCls: 'focus:border-emerald-400 dark:focus:border-emerald-500' },
-              ].filter(kpi => kpi.show).map(kpi => (
-                <div key={kpi.label} className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-4 shadow-sm">
-                  <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2">{kpi.label}</div>
-                  <input type="text" value={kpi.val} onChange={e => kpi.set(e.target.value)} disabled={kpi.disabled}
-                    className={`w-full text-lg sm:text-xl font-black font-mono bg-transparent outline-none border-b-2 border-dashed border-slate-200 dark:border-slate-700 pb-1 transition-colors disabled:cursor-not-allowed ${kpi.numCls} ${kpi.focusCls}`} />
-                  <div className="text-[8px] sm:text-xs font-medium text-slate-400 mt-1">kWh</div>
-                </div>
-              ))}
-            </div>
-
-            {/* GAP Summary Dark Banner */}
-            <div className="bg-slate-900 dark:bg-slate-800/90 border border-slate-800 dark:border-slate-700/60 rounded-2xl px-5 py-3.5 flex items-center gap-0">
-              <div className="flex-1">
-                <div className="text-[8px] sm:text-xs font-black text-slate-500 uppercase tracking-widest mb-1">GAP Kumulatif</div>
-                <div className="text-lg sm:text-xl font-black font-mono text-white tracking-tight">
-                  {calculatedKwh.gap}
-                  <span className="text-xs sm:text-sm font-semibold text-slate-400 ml-1.5">kWh</span>
-                </div>
+          {/* ── 1. Petugas P2TL & Organik ── */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                <Users className="w-4 h-4" />
               </div>
-              <div className="w-px h-10 bg-slate-700 mx-5" />
               <div>
-                <div className="text-[8px] sm:text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Capaian</div>
-                <div className="text-lg sm:text-xl font-black font-mono text-emerald-400 tracking-tight">
-                  {calculatedKwh.percent}
+                <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">1 & 2. Petugas P2TL & Organik</h3>
+                <p className="text-[9px] sm:text-xs text-slate-400 font-medium">Jumlah regu lapangan & personil organik</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Regu P2TL</label>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+                  <input type="text" value={petugasRegu} onChange={e => setPetugasRegu(e.target.value)}
+                    className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                  <span className="text-[10px] text-slate-400 font-bold">Regu</span>
                 </div>
               </div>
-              <span className="ml-4 sm:ml-6 shrink-0 text-[8px] sm:text-xs bg-slate-800 border border-slate-700 text-slate-500 px-2 py-1 rounded-lg font-bold tracking-wide">AUTO</span>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Total Petugas</label>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+                  <input type="text" value={petugasJumlah} onChange={e => setPetugasJumlah(e.target.value)}
+                    className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                  <span className="text-[10px] text-slate-400 font-bold">Orang</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Petugas Organik</label>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+                  <input type="text" value={organikJumlah} onChange={e => setOrganikJumlah(e.target.value)}
+                    className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                  <span className="text-[10px] text-slate-400 font-bold">Orang</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1 col-span-2 sm:col-span-3">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Pemeriksaan Plg TR Potensial</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+                    <input type="text" value={trPotensialRegu} onChange={e => setTrPotensialRegu(e.target.value)}
+                      className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                    <span className="text-[10px] text-slate-400 font-bold">Regu</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+                    <input type="text" value={trPotensialOrang} onChange={e => setTrPotensialOrang(e.target.value)}
+                      className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                    <span className="text-[10px] text-slate-400 font-bold">Orang</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-
-          {/* ── Sasaran Operasi Table ── */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm overflow-hidden">
-
-            {/* Card Header */}
-            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800/60 flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-blue-50 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/40 rounded-xl flex items-center justify-center shrink-0">
-                  <BarChart2 className="w-4 h-4 text-blue-500" />
+          {/* ── 2. Rencana TO Hari Ini ── */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                  <Target className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-xs sm:text-base font-black text-slate-800 dark:text-slate-200">Sasaran Operasi Pelanggan</h3>
-                  <p className="text-[8px] sm:text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5">Real-time · sinkron dari data target</p>
+                  <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">3. Rencana TO Hari Ini</h3>
+                  <p className="text-[9px] sm:text-xs text-slate-400 font-medium">Kategori sasaran target operasi pelanggan</p>
                 </div>
-              </div>
-              <div className="text-right shrink-0 pl-4">
-                <div className="text-[28px] font-black font-mono leading-none text-blue-600 dark:text-blue-400">{metrics.totalTarget}</div>
-                <div className="text-[8px] sm:text-xs font-bold text-slate-400 uppercase tracking-wide">Total Plg</div>
-                {metrics.totalTarget > 33 && <div className="text-[8px] sm:text-xs font-black text-amber-500 mt-1">+{metrics.totalTarget - 33} melebihi batas 33</div>}
-                {metrics.totalTarget === 33 && <div className="text-[8px] sm:text-xs font-black text-emerald-500 mt-1">✓ Tepat 33 target</div>}
-                {metrics.totalTarget < 33 && <div className="text-[8px] sm:text-xs font-black text-slate-400 mt-1">−{33 - metrics.totalTarget} dari batas 33</div>}
               </div>
             </div>
 
-            {/* Column Headers */}
-            <div className="grid px-5 py-2 bg-slate-50 dark:bg-slate-950/50 border-b border-slate-100 dark:border-slate-800/40"
-              style={{ gridTemplateColumns: colTpl }}>
-              <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">#</div>
-              <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Kategori Sasaran</div>
-              <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Target</div>
-              {isRealisasi && <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">Real.</div>}
-              {isRealisasi && <div className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest text-center">%</div>}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[
+                { label: 'Pemakaian Turun 40%', val: toTurun40, set: setToTurun40 },
+                { label: 'LPB Pasif', val: toLpbPasif, set: setToLpbPasif },
+                { label: 'Jam Nyala > 400', val: toJamNyala400, set: setToJamNyala400 },
+                { label: 'LBKB', val: toLbkb, set: setToLbkb },
+                { label: 'Sambung Langsung', val: toSambungLangsung, set: setToSambungLangsung },
+                { label: 'TO Potensial AMR', val: toPotensialAmr, set: setToPotensialAmr }
+              ].map(item => (
+                <div key={item.label} className="flex flex-col gap-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase truncate" title={item.label}>{item.label}</label>
+                  <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+                    <input type="text" value={item.val} onChange={e => item.set(e.target.value)}
+                      className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                    <span className="text-[10px] text-slate-400 font-bold">Plg</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── 3. Rincian Pemeriksaan & Temuan ── */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                  <SearchCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">4. Rincian Pemeriksaan & Temuan</h3>
+                  <p className="text-[9px] sm:text-xs text-slate-400 font-medium">Hasil pemeriksaan lapangan & temuan per golongan</p>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-xs font-black font-mono text-purple-600 dark:text-purple-400">{temuanTotalPlg} Plg</span>
+                <span className="text-[9px] text-slate-400 block font-bold">Total Temuan</span>
+              </div>
             </div>
 
-            {/* ─── Auto rows: 1, 2, 3 ─── */}
-            {[
-              { num: 1, label: 'LKBK Macet / Numpuk',  target: metrics.lkbkTarget,   real: metrics.lkbkReal,   dot: '#ef4444' },
-              { num: 2, label: 'Periksa Plg 3 Phasa',  target: metrics.phase3Target, real: metrics.phase3Real, dot: '#f59e0b' },
-              { num: 3, label: 'Periksa TO DLPD',       target: metrics.toDlpdTarget, real: metrics.toDlpdReal, dot: '#3b82f6' },
-            ].map(row => {
-              const s = achStyle(row.target, row.real);
-              const fillW = row.target > 0 ? Math.min(100, Math.round((row.real / row.target) * 100)) : 0;
-              return (
-                <div key={row.num}
-                  className="grid items-center px-5 py-3.5 border-b border-slate-100 dark:border-slate-800/40 hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors"
-                  style={{ gridTemplateColumns: colTpl }}>
-                  <div className="text-xs font-bold text-slate-300 dark:text-slate-700">{row.num}</div>
-                  <div className="pr-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: row.dot }} />
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-snug">{row.label}</span>
-                    </div>
-                    {isRealisasi && row.target > 0 && (
-                      <div className="ml-3.5 mt-1.5 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${fillW}%`, backgroundColor: barColor(row.target, row.real) }} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-center font-mono font-bold text-sm text-slate-900 dark:text-white">{row.target}</div>
-                  {isRealisasi && (
-                    <div className="text-center font-mono font-bold text-sm text-slate-600 dark:text-slate-300">{row.real}</div>
-                  )}
-                  {isRealisasi && (
-                    <div className="text-center">
-                      {s.pct !== null
-                        ? <span className="text-[8px] sm:text-xs font-black px-1.5 py-0.5 rounded-md" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>
-                        : <span className="text-slate-300 dark:text-slate-700">—</span>}
-                    </div>
-                  )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Pembongkaran</label>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+                  <input type="text" value={rincianBongkar} onChange={e => setRincianBongkar(e.target.value)}
+                    className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                  <span className="text-[10px] text-slate-400 font-bold">Plg</span>
                 </div>
-              );
-            })}
+              </div>
 
-            {/* ─── Override rows: 4, 5, 6 ─── */}
-            {[
-              { num: 4, label: 'Pengembangan TO',             dot: '#8b5cf6', tVal: overrideTargetDev,      rVal: overrideRealDev,      tSet: setOverrideTargetDev,      rSet: setOverrideRealDev      },
-              { num: 5, label: 'Penagihan TS kWh Periodik',   dot: '#06b6d4', tVal: overrideTargetPeriodik, rVal: overrideRealPeriodik, tSet: setOverrideTargetPeriodik, rSet: setOverrideRealPeriodik },
-              { num: 6, label: 'Penagihan TS Macet (Kuning)', dot: '#f59e0b', tVal: overrideTargetKuning,   rVal: overrideRealKuning,   tSet: setOverrideTargetKuning,   rSet: setOverrideRealKuning   },
-            ].map(row => {
-              const tNum = parseInt(row.tVal, 10) || 0;
-              const rNum = parseInt(row.rVal, 10) || 0;
-              const s = achStyle(tNum, rNum);
-              const fillW = tNum > 0 ? Math.min(100, Math.round((rNum / tNum) * 100)) : 0;
-              return (
-                <div key={row.num}
-                  className="grid items-center px-5 py-3 border-b border-slate-100 dark:border-slate-800/40 hover:bg-amber-50/30 dark:hover:bg-amber-950/10 transition-colors bg-amber-50/20 dark:bg-amber-950/5"
-                  style={{ gridTemplateColumns: colTpl }}>
-                  <div className="text-xs font-bold text-slate-300 dark:text-slate-700">{row.num}</div>
-                  <div className="pr-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: row.dot }} />
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-snug">{row.label}</span>
-                    </div>
-                    <div className="text-[8px] sm:text-xs text-amber-500/90 font-black mt-0.5 ml-3.5">Override manual</div>
-                    {isRealisasi && tNum > 0 && (
-                      <div className="ml-3.5 mt-1.5 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${fillW}%`, backgroundColor: barColor(tNum, rNum) }} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-center">
-                    <input type="number" value={row.tVal} onChange={e => row.tSet(e.target.value)} min="0"
-                      className="w-12 text-center font-mono font-bold text-sm text-slate-900 dark:text-white bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-1 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400/20 transition-all" />
-                  </div>
-                  {isRealisasi && (
-                    <div className="text-center">
-                      <input type="number" value={row.rVal} onChange={e => row.rSet(e.target.value)} min="0"
-                        className="w-12 text-center font-mono font-bold text-sm text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg py-1 outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/20 transition-all" />
-                    </div>
-                  )}
-                  {isRealisasi && (
-                    <div className="text-center">
-                      {s.pct !== null
-                        ? <span className="text-[8px] sm:text-xs font-black px-1.5 py-0.5 rounded-md" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>
-                        : <span className="text-slate-300 dark:text-slate-700">—</span>}
-                    </div>
-                  )}
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Normal</label>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+                  <input type="text" value={rincianNormal} onChange={e => setRincianNormal(e.target.value)}
+                    className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                  <span className="text-[10px] text-slate-400 font-bold">Plg</span>
                 </div>
-              );
-            })}
+              </div>
 
-            {/* ─── Row 7: Lainnya ─── */}
-            {(() => {
-              const s = achStyle(metrics.lainTarget, metrics.lainReal);
-              const fillW = metrics.lainTarget > 0 ? Math.min(100, Math.round((metrics.lainReal / metrics.lainTarget) * 100)) : 0;
-              return (
-                <div className="grid items-center px-5 py-3.5 border-b border-slate-100 dark:border-slate-800/40 hover:bg-slate-50/60 dark:hover:bg-slate-800/20 transition-colors"
-                  style={{ gridTemplateColumns: colTpl }}>
-                  <div className="text-xs font-bold text-slate-300 dark:text-slate-700">7</div>
-                  <div className="pr-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full bg-slate-400 shrink-0" />
-                      <span className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 leading-snug">Lainnya (Sisir)</span>
-                    </div>
-                    <div className="text-[8px] sm:text-xs text-slate-400 dark:text-slate-500 font-bold mt-0.5 ml-3.5">Sisa dari total referensi 33</div>
-                    {isRealisasi && metrics.lainTarget > 0 && (
-                      <div className="ml-3.5 mt-1.5 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all duration-700"
-                          style={{ width: `${fillW}%`, backgroundColor: barColor(metrics.lainTarget, metrics.lainReal) }} />
-                      </div>
-                    )}
-                  </div>
-                  <div className="text-center font-mono font-bold text-sm text-slate-900 dark:text-white">{metrics.lainTarget}</div>
-                  {isRealisasi && (
-                    <div className="text-center font-mono font-bold text-sm text-slate-600 dark:text-slate-300">{metrics.lainReal}</div>
-                  )}
-                  {isRealisasi && (
-                    <div className="text-center">
-                      {s.pct !== null
-                        ? <span className="text-[8px] sm:text-xs font-black px-1.5 py-0.5 rounded-md" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>
-                        : <span className="text-slate-300 dark:text-slate-700">—</span>}
-                    </div>
-                  )}
+              <div className="flex flex-col gap-1">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Temuan P1</label>
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-1.5">
+                  <input type="text" value={p1Plg} onChange={e => setP1Plg(e.target.value)}
+                    className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                  <span className="text-[10px] text-slate-400 font-bold">Plg</span>
                 </div>
-              );
-            })()}
+              </div>
+            </div>
 
-            {/* ─── Total Footer ─── */}
-            <div className="grid items-center px-5 py-4 bg-gradient-to-r from-blue-50/70 to-transparent dark:from-blue-950/20 dark:to-transparent border-t-2 border-blue-100 dark:border-blue-900/50"
-              style={{ gridTemplateColumns: colTpl }}>
-              <div />
-              <div className="text-xs sm:text-sm font-black text-blue-700 dark:text-blue-400">Total Sasaran Operasi</div>
-              <div className="text-center font-mono font-black text-sm sm:text-base text-blue-700 dark:text-blue-400">{metrics.totalTarget}</div>
-              {isRealisasi && (
-                <div className="text-center font-mono font-black text-base text-emerald-600 dark:text-emerald-400">{metrics.totalReal}</div>
-              )}
-              {isRealisasi && (
-                <div className="text-center">
-                  {metrics.totalTarget > 0 ? (() => {
-                    const s = achStyle(metrics.totalTarget, metrics.totalReal);
-                    return <span className="text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-lg" style={{ color: s.color, backgroundColor: s.bg }}>{s.pct}%</span>;
-                  })() : <span className="text-slate-300">—</span>}
+            {/* Golongan breakdown: P2, P3, P4, K2 */}
+            <div className="flex flex-col gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Detail Temuan & kWh</span>
+              {[
+                { label: 'P2', plg: p2Plg, setPlg: setP2Plg, kwh: p2Kwh, setKwh: setP2Kwh },
+                { label: 'P3', plg: p3Plg, setPlg: setP3Plg, kwh: p3Kwh, setKwh: setP3Kwh },
+                { label: 'P4', plg: p4Plg, setPlg: setP4Plg, kwh: p4Kwh, setKwh: setP4Kwh },
+                { label: 'K2', plg: k2Plg, setPlg: setK2Plg, kwh: k2Kwh, setKwh: setK2Kwh },
+              ].map(item => (
+                <div key={item.label} className="grid grid-cols-12 gap-2 items-center bg-slate-50 dark:bg-slate-800/40 p-2 rounded-xl">
+                  <div className="col-span-2 text-xs font-black text-slate-700 dark:text-slate-300 pl-1">{item.label}</div>
+                  <div className="col-span-4 flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
+                    <input type="text" value={item.plg} onChange={e => item.setPlg(e.target.value)}
+                      className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none" />
+                    <span className="text-[9px] text-slate-400 font-bold">Plg</span>
+                  </div>
+                  <div className="col-span-6 flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1">
+                    <input type="text" value={item.kwh} onChange={e => item.setKwh(e.target.value)}
+                      className="w-full bg-transparent text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none text-right" />
+                    <span className="text-[9px] text-slate-400 font-bold shrink-0">kWh</span>
+                  </div>
                 </div>
-              )}
+              ))}
+            </div>
+          </div>
+
+          {/* ── 4. Parameter Target & Realisasi kWh ── */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl p-5 shadow-sm flex flex-col gap-4">
+            <div className="flex items-center gap-2.5 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+              <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                <Zap className="w-4 h-4" />
+              </div>
+              <div>
+                <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-slate-200">Parameter Target & Realisasi kWh</h3>
+                <p className="text-[9px] sm:text-xs text-slate-400 font-medium">Harian, Bulanan, Kumulatif, dan Tahunan</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Target & Realisasi Harian */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <label className="text-[9px] font-black text-slate-400 uppercase">Target Harian (kWh)</label>
+                <input type="text" value={targetHarianKwh} onChange={e => setTargetHarianKwh(e.target.value)}
+                  className="w-full text-base font-black font-mono bg-transparent outline-none text-slate-900 dark:text-white mt-1" />
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] font-black text-slate-400 uppercase">Realisasi Harian</label>
+                  <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 font-mono">{percentages.persenHarianFormatted}</span>
+                </div>
+                <input type="text" value={realisasiHarianKwh} onChange={e => setRealisasiHarianKwh(e.target.value)}
+                  className="w-full text-base font-black font-mono bg-transparent outline-none text-emerald-600 dark:text-emerald-400 mt-1" />
+              </div>
+
+              {/* Realisasi Bulan & Target Bulan */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] font-black text-slate-400 uppercase">Realisasi Bulan {dateInfo.namaBulan}</label>
+                  <span className="text-[10px] font-black text-blue-600 dark:text-blue-400 font-mono">{percentages.persenBulanFormatted}</span>
+                </div>
+                <input type="text" value={realisasiBulanKwh} onChange={e => setRealisasiBulanKwh(e.target.value)}
+                  className="w-full text-base font-black font-mono bg-transparent outline-none text-blue-600 dark:text-blue-400 mt-1" />
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <label className="text-[9px] font-black text-slate-400 uppercase">Target Bulan {dateInfo.namaBulan}</label>
+                <input type="text" value={targetBulanKwh} onChange={e => setTargetBulanKwh(e.target.value)}
+                  className="w-full text-base font-black font-mono bg-transparent outline-none text-slate-900 dark:text-white mt-1" />
+              </div>
+
+              {/* Target Kumulatif & Realisasi Kumulatif Kemarin */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <label className="text-[9px] font-black text-slate-400 uppercase">Target Kumulatif (kWh)</label>
+                <input type="text" value={targetKumulatifKwh} onChange={e => setTargetKumulatifKwh(e.target.value)}
+                  className="w-full text-base font-black font-mono bg-transparent outline-none text-slate-900 dark:text-white mt-1" />
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] font-black text-slate-400 uppercase truncate" title={`Realisasi Kumulatif s.d ${dateInfo.tanggalKemarin}`}>
+                    Kumulatif s.d {dateInfo.tanggalKemarin}
+                  </label>
+                  <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 font-mono">{percentages.persenKumulatifFormatted}</span>
+                </div>
+                <input type="text" value={realisasiKumulatifKemarinKwh} onChange={e => setRealisasiKumulatifKemarinKwh(e.target.value)}
+                  className="w-full text-base font-black font-mono bg-transparent outline-none text-emerald-600 dark:text-emerald-400 mt-1" />
+              </div>
+
+              {/* Target Tahunan & Realisasi Tahunan */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <label className="text-[9px] font-black text-slate-400 uppercase">Target Tahunan (kWh)</label>
+                <input type="text" value={targetTahunanKwh} onChange={e => setTargetTahunanKwh(e.target.value)}
+                  className="w-full text-base font-black font-mono bg-transparent outline-none text-slate-900 dark:text-white mt-1" />
+              </div>
+
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-100 dark:border-slate-800">
+                <div className="flex justify-between items-center">
+                  <label className="text-[9px] font-black text-slate-400 uppercase">Realisasi Kumulatif Tahunan</label>
+                  <span className="text-[10px] font-black text-purple-600 dark:text-purple-400 font-mono">{percentages.persenTahunanFormatted}</span>
+                </div>
+                <input type="text" value={realisasiTahunanKwh} onChange={e => setRealisasiTahunanKwh(e.target.value)}
+                  className="w-full text-base font-black font-mono bg-transparent outline-none text-purple-600 dark:text-purple-400 mt-1" />
+              </div>
             </div>
           </div>
 
         </div> {/* end LEFT col */}
 
-        {/* ──────── RIGHT 5 cols (sticky) ──────── */}
+        {/* ──────── RIGHT 5 cols (WhatsApp Preview & Buttons) ──────── */}
         <div className="lg:col-span-5 lg:sticky lg:top-[90px] flex flex-col gap-4">
 
-          {/* Label Row */}
+          {/* Header Row */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Send className="w-3.5 h-3.5 text-emerald-500" />
-              <span className="text-[8px] sm:text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Pratinjau Pesan WhatsApp</span>
+              <span className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Pratinjau Pesan WhatsApp</span>
             </div>
-            <span className={`text-[8px] sm:text-xs font-black px-2.5 py-1 rounded-full ${
-              isRealisasi
-                ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400'
-                : 'bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400'
-            }`}>{isRealisasi ? 'Realisasi' : 'Rencana'}</span>
+            <span className="text-[9px] font-black px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400">Siap Kirim</span>
           </div>
 
           {/* Chat Container */}
           <div className="rounded-2xl overflow-hidden border border-slate-200/60 dark:border-slate-800 shadow-md">
             {/* WA Header */}
             <div className="bg-[#075E54] px-4 py-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-[8px] sm:text-xs font-black shrink-0 border border-white/20">MUP</div>
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-[10px] font-black shrink-0 border border-white/20">UP3</div>
               <div className="flex-1 min-w-0">
-                <div className="text-white text-xs font-semibold truncate">MUP3 Salatiga · Asman TEL</div>
-                <div className="text-green-200 text-[8px] sm:text-xs font-bold">P2TL {ulp || up3 || 'UP3 Salatiga'}</div>
+                <div className="text-white text-xs font-semibold truncate">Manager UP3 · Asman TEL</div>
+                <div className="text-green-200 text-[9px] font-bold">Pelaksanaan P2TL {unitLabel}</div>
               </div>
-              <div className="text-[8px] sm:text-xs text-green-200/60 font-bold hidden sm:block">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
+              <div className="text-[9px] text-green-200/60 font-bold hidden sm:block">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</div>
             </div>
 
             {/* Messages Area */}
-            <div className="p-4 min-h-[320px] flex flex-col items-start"
+            <div className="p-4 min-h-[420px] flex flex-col items-start"
               style={{
                 background: '#e5ddd5',
                 backgroundImage: "url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png')",
@@ -896,13 +809,12 @@ Terima kasih`;
                 backgroundRepeat: 'repeat',
               }}>
               {/* Message Bubble */}
-              <div className="bg-white dark:bg-slate-800 rounded-2xl rounded-tl-sm max-w-[97%] shadow-sm overflow-hidden">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl rounded-tl-sm max-w-[98%] shadow-sm overflow-hidden">
                 <div className="px-3.5 pt-3.5 pb-1">
-                  <pre className="font-mono text-[10px] sm:text-xs whitespace-pre-wrap leading-relaxed break-words text-slate-800 dark:text-slate-200 tracking-tight select-text">{generatedText}</pre>
+                  <pre className="font-mono text-[10.5px] whitespace-pre-wrap leading-relaxed break-words text-slate-800 dark:text-slate-200 tracking-tight select-text">{generatedText}</pre>
                 </div>
-                <div className="flex-1 min-h-0" />
                 <div className="flex items-center justify-end gap-1 px-3.5 pb-2.5 mt-0.5">
-                  <span className="text-[8px] sm:text-xs font-bold text-slate-400">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <span className="text-[9px] font-bold text-slate-400">{new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</span>
                   <CheckCircle2 className="w-3 h-3 text-blue-400" />
                 </div>
               </div>
