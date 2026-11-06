@@ -188,7 +188,7 @@ function MultiSelectDropdown({ label, options, selectedValues, onChange, allLabe
   );
 }
 
-export default function DataList({ targets, onSelectRecord, onAddRecord, onDataLoaded }) {
+export default function DataList({ targets, onSelectRecord, onAddRecord, onDataLoaded, onRefresh, isSyncing = false }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubDlpds, setSelectedSubDlpds] = useState(null);
   const [selectedRegus, setSelectedRegus] = useState(null);
@@ -793,6 +793,19 @@ export default function DataList({ targets, onSelectRecord, onAddRecord, onDataL
                 <span className="w-2 h-2 bg-brand-500 rounded-full" />
               )}
             </button>
+
+            {onRefresh && (
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={isSyncing}
+                title="Muat ulang data Pemeriksaan dari Spreadsheet"
+                className="btn-secondary py-2.5 px-3 flex gap-2 items-center justify-center text-xs sm:text-sm font-sans w-full sm:w-auto hover:text-blue-600 dark:hover:text-blue-400 disabled:opacity-60"
+              >
+                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin text-blue-500' : 'text-slate-500'}`} />
+                <span className="hidden sm:inline">Refresh Spreadsheet</span>
+              </button>
+            )}
 
             <button 
               onClick={() => {

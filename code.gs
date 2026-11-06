@@ -1,3 +1,31 @@
+// ── Helper: find sheet by name case-insensitively and flexibly ───────────
+function findSheetCaseInsensitive(ss, possibleNames) {
+  if (!ss) return null;
+  if (typeof possibleNames === "string") possibleNames = [possibleNames];
+  
+  // 1. Try exact match first
+  for (var i = 0; i < possibleNames.length; i++) {
+    var s = ss.getSheetByName(possibleNames[i]);
+    if (s) return s;
+  }
+  
+  // 2. Try normalized case-insensitive match (stripping spaces, underscores, hyphens)
+  var sheets = ss.getSheets();
+  var normalizedTargets = possibleNames.map(function(n) {
+    return String(n).toLowerCase().replace(/[\s_-]/g, "");
+  });
+  
+  for (var j = 0; j < sheets.length; j++) {
+    var sName = sheets[j].getName().toLowerCase().replace(/[\s_-]/g, "");
+    for (var k = 0; k < normalizedTargets.length; k++) {
+      if (sName === normalizedTargets[k]) {
+        return sheets[j];
+      }
+    }
+  }
+  return null;
+}
+
 // ==========================================
 // 1. SETUP TABLES (RUN THIS ONCE FIRST)
 // ==========================================
@@ -5,7 +33,7 @@ function setupTables() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
   // Setup "bank to" sheet
-  var bankToSheet = ss.getSheetByName("bank to");
+  var bankToSheet = findSheetCaseInsensitive(ss, ["bank to", "bankto", "bank_to", "Bank TO", "BANK TO"]);
   if (!bankToSheet) {
     bankToSheet = ss.insertSheet("bank to");
   }
@@ -17,8 +45,8 @@ function setupTables() {
   bankToSheet.getRange(1, 1, 1, bankToHeaders.length).setValues([bankToHeaders]);
   bankToSheet.getRange(1, 1, 1, bankToHeaders.length).setFontWeight("bold").setBackground("#cfe2f3");
   
-  // Setup "data to" sheet
-  var dataToSheet = ss.getSheetByName("data to");
+  // Setup "data to" sheet (Pemeriksaan)
+  var dataToSheet = findSheetCaseInsensitive(ss, ["data to", "datato", "data_to", "Data TO", "DATA TO", "pemeriksaan", "Pemeriksaan"]);
   if (!dataToSheet) {
     dataToSheet = ss.insertSheet("data to");
   }
@@ -33,7 +61,7 @@ function setupTables() {
   dataToSheet.getRange(1, 1, 1, dataToHeaders.length).setFontWeight("bold").setBackground("#d9ead3");
   
   // Setup "users" sheet
-  var usersSheet = ss.getSheetByName("users");
+  var usersSheet = findSheetCaseInsensitive(ss, ["users", "user", "pengguna", "Users"]);
   if (!usersSheet) {
     usersSheet = ss.insertSheet("users");
   }
@@ -60,11 +88,13 @@ function doGet(e) {
   var action = e.parameter.action || "";
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   
-  // ── Existing readAll action ──────────────────────────────────────────────
+  // ── Existing readAll action (always priority from spreadsheet) ───────────
   if (action === "readAll") {
-    var bankToData = readSheetData(ss.getSheetByName("bank to"));
-    var dataToData = readSheetData(ss.getSheetByName("data to"));
-    var usersSheet = ss.getSheetByName("users");
+    var bankToSheet = findSheetCaseInsensitive(ss, ["bank to", "bankto", "bank_to", "Bank TO", "BANK TO"]);
+    var dataToSheet = findSheetCaseInsensitive(ss, ["data to", "datato", "data_to", "Data TO", "DATA TO", "pemeriksaan", "Pemeriksaan", "data pemeriksaan"]);
+    var usersSheet = findSheetCaseInsensitive(ss, ["users", "user", "pengguna", "Users"]);
+    var bankToData = bankToSheet ? readSheetData(bankToSheet) : [];
+    var dataToData = dataToSheet ? readSheetData(dataToSheet) : [];
     var usersData = usersSheet ? readSheetData(usersSheet) : [];
     return jsonResponse({
       status: "success",
@@ -115,7 +145,7 @@ function getDashboardData(ss, date, unitCode) {
   var month = parseInt(parts[1], 10);
   
   // 1. Read Target sheet row for the given date
-  var targetSheet = ss.getSheetByName("Target");
+  var targetSheet = findSheetCaseInsensitive(ss, ["Target", "target", "TARGET", "Target P2TL"]);
   var targetObj = {
     date: date,
     targetHarianKwh: 0,
@@ -181,7 +211,7 @@ function getDashboardData(ss, date, unitCode) {
   }
   
   // 2. Read Realisasi sheet rows for that date + aggregates
-  var realisasiSheet = ss.getSheetByName("Realisasi");
+  var realisasiSheet = findSheetCaseInsensitive(ss, ["Realisasi", "realisasi", "REALISASI", "Realisasi P2TL"]);
   var realization = {
     realisasiHarianKwh: 0,
     realisasiKumulatifKwh: 0,
@@ -459,7 +489,7 @@ function getDashboardData(ss, date, unitCode) {
 
 // ── Helper: get Realisasi logs for chart ──────────────────────────────────
 function getLogsData(ss, page, limit, sort, search) {
-  var realisasiSheet = ss.getSheetByName("Realisasi");
+  var realisasiSheet = findSheetCaseInsensitive(ss, ["Realisasi", "realisasi", "REALISASI", "Realisasi P2TL"]);
   if (!realisasiSheet) {
     return { status: "success", data: [], pagination: { page: 1, limit: limit, totalFiltered: 0, totalPages: 1 }, sortApplied: sort };
   }
@@ -551,7 +581,7 @@ function getLogsData(ss, page, limit, sort, search) {
 
 // ── Helper: get monthly targets from "Target" sheet ───────────────────────
 function getMonthlyTargets(ss, year) {
-  var targetSheet = ss.getSheetByName("Target");
+  var targetSheet = findSheetCaseInsensitive(ss, ["Target", "target", "TARGET", "Target P2TL"]);
   if (!targetSheet) {
     var defaults = [];
     for (var i = 1; i <= 12; i++) {
@@ -593,9 +623,28 @@ function readSheetData(sheet) {
   
   for (var i = 1; i < rows.length; i++) {
     var row = rows[i];
+    var hasContent = false;
+    for (var k = 0; k < row.length; k++) {
+      if (row[k] !== "" && row[k] !== null && row[k] !== undefined) {
+        hasContent = true;
+        break;
+      }
+    }
+    if (!hasContent) continue;
+
     var obj = {};
     for (var j = 0; j < headers.length; j++) {
-      obj[headers[j]] = row[j];
+      var h = String(headers[j] || "").trim();
+      if (!h) continue;
+      var cellVal = row[j];
+      if (cellVal instanceof Date) {
+        try {
+          cellVal = Utilities.formatDate(cellVal, Session.getScriptTimeZone() || "GMT+7", "yyyy-MM-dd HH:mm:ss");
+        } catch(e) {
+          cellVal = cellVal.toISOString();
+        }
+      }
+      obj[h] = cellVal;
     }
     data.push(obj);
   }
@@ -948,7 +997,7 @@ function doPost(e) {
   var ss       = SpreadsheetApp.getActiveSpreadsheet();
   
   if (action === "syncBankTo") {
-    var sheet = ss.getSheetByName("bank to");
+    var sheet = findSheetCaseInsensitive(ss, ["bank to", "bankto", "bank_to", "Bank TO", "BANK TO"]);
     if (!sheet) sheet = ss.insertSheet("bank to");
     writeSheetData(sheet, postData.data, [
       "IDPEL", "NAMA", "ALAMAT", "TARIF", "DAYA", "GARDU", "TIANG", 
@@ -958,7 +1007,7 @@ function doPost(e) {
   }
   
   if (action === "syncDataTo") {
-    var sheet = ss.getSheetByName("data to");
+    var sheet = findSheetCaseInsensitive(ss, ["data to", "datato", "data_to", "Data TO", "DATA TO", "pemeriksaan", "Pemeriksaan", "data pemeriksaan"]);
     if (!sheet) sheet = ss.insertSheet("data to");
     writeSheetData(sheet, postData.data, [
       "No", "IDPel", "Nama Pelanggan", "Tarif", "Daya", "Gardu", "Tiang", 
@@ -973,7 +1022,7 @@ function doPost(e) {
   if (action === "save_monthly_targets") {
     var year    = postData.year || new Date().getFullYear().toString();
     var targets = postData.targets || [];
-    var sheet   = ss.getSheetByName("Target");
+    var sheet   = findSheetCaseInsensitive(ss, ["Target", "target", "TARGET", "Target P2TL"]);
     if (!sheet) sheet = ss.insertSheet("Target");
     
     // Read existing rows and update/append monthly targets for this year
@@ -1014,7 +1063,7 @@ function doPost(e) {
   }
   
   if (action === "syncUsers") {
-    var sheet = ss.getSheetByName("users");
+    var sheet = findSheetCaseInsensitive(ss, ["users", "user", "pengguna", "Users"]);
     if (!sheet) sheet = ss.insertSheet("users");
     writeSheetData(sheet, postData.data, [
       "username", "password", "role", "whatsapp", "unit", "lastUpdated"

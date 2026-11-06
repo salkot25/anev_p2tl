@@ -32,40 +32,40 @@ function TabLoadingFallback() {
 const normalizeData = (dataList) => {
   if (!Array.isArray(dataList)) return [];
   return dataList.map((item, idx) => ({
-    No: item.No || (idx + 1),
-    IDPel: String(item.IDPel || item.idPel || '').split('.')[0],
-    NamaPelanggan: item.NamaPelanggan || item['Nama Pelanggan'] || 'Tanpa Nama',
-    Tarif: item.Tarif || '',
-    Daya: parseInt(item.Daya, 10) || 0,
-    Gardu: item.Gardu || '',
-    Tiang: item.Tiang || '',
-    ULP: item.ULP || 'ULP SALATIGA KOTA',
+    No: item.No || item.NO || (idx + 1),
+    IDPel: String(item.IDPel || item.idPel || item.IDPEL || item['IDPEL'] || item['Id Pel'] || item['Id Pelanggan'] || item.NoAgenda || item['NO AGENDA'] || '').split('.')[0].trim(),
+    NamaPelanggan: item.NamaPelanggan || item['Nama Pelanggan'] || item.NAMA || item['NAMA'] || item.Nama || 'Tanpa Nama',
+    Tarif: item.Tarif || item.TARIF || item.TARIP || item.Trf || '',
+    Daya: parseInt(item.Daya !== undefined ? item.Daya : (item.DAYA !== undefined ? item.DAYA : 0), 10) || 0,
+    Gardu: item.Gardu || item.GARDU || '',
+    Tiang: item.Tiang || item.TIANG || '',
+    ULP: item.ULP || item.NamaUnit || item.NAMA_UNIT || item['NAMA UNIT'] || 'ULP SALATIGA KOTA',
     UP3: item.UP3 || 'UP3 SALATIGA',
-    DLPD: item.DLPD || '',
-    SubDLPD: item.SubDLPD || item['Sub DLPD'] || '',
-    TanggalUpload: item.TanggalUpload || item['Tanggal Upload'] || '',
-    ReguPetugas: item.ReguPetugas || item['Regu Petugas'] || '',
-    TanggalOrder: item.TanggalOrder || item['Tanggal Order'] || '',
-    TanggalPelaksanaan: item.TanggalPelaksanaan || item['Tanggal Pelaksanaan'] || '',
-    StatusProgress: item.StatusProgress || item['Status Progress'] || 'Target Operasi',
+    DLPD: item.DLPD || item.JENIS_TO || item['JENIS TO'] || '',
+    SubDLPD: item.SubDLPD || item['Sub DLPD'] || item.SUB_DLPD || item['SUB DLPD'] || item.SUBDLPD || '',
+    TanggalUpload: item.TanggalUpload || item['Tanggal Upload'] || item.TGL_UPLOAD || '',
+    ReguPetugas: item.ReguPetugas || item['Regu Petugas'] || item.REGU || item['Regu'] || '',
+    TanggalOrder: item.TanggalOrder || item['Tanggal Order'] || item.TGL_ORDER || '',
+    TanggalPelaksanaan: item.TanggalPelaksanaan || item['Tanggal Pelaksanaan'] || item.TGL_PELAKSANAAN || item.TanggalRegister || item['TGL REGISTER'] || '',
+    StatusProgress: item.StatusProgress || item['Status Progress'] || item.STATUS || item.Status || 'Target Operasi',
     DurasiMenit: parseInt(item.DurasiMenit !== undefined ? item.DurasiMenit : item['Durasi (Menit)'], 10) || 0,
-    Sumber: item.Sumber || 'DLPD',
-    bank_id: item.bank_id || item.bankId || '',
+    Sumber: item.Sumber || item.SUMBER || 'DLPD',
+    bank_id: item.bank_id || item.bankId || item.BANK_ID || '',
     lastUpdated: item.lastUpdated || item.last_updated || item.LAST_UPDATED || item.LastUpdated || new Date(0).toISOString()
-  }));
+  })).filter(item => item.IDPel);
 };
 
 const normalizeBankToData = (dataList) => {
   if (!Array.isArray(dataList)) return [];
   return dataList.map((item, idx) => {
-    const jenisTo = item.JENIS_TO || item['JENIS TO'] || 'Target Operasi';
-    const jamNyala = item.JAM_NYALA !== undefined ? item.JAM_NYALA : (item['JAM NYALA'] !== undefined ? item['JAM NYALA'] : '');
+    const jenisTo = item.JENIS_TO || item['JENIS TO'] || item.jenisTo || item.JenisTO || 'Target Operasi';
+    const jamNyala = item.JAM_NYALA !== undefined ? item.JAM_NYALA : (item['JAM NYALA'] !== undefined ? item['JAM NYALA'] : (item.jamNyala !== undefined ? item.jamNyala : ''));
     return {
-      No: item.No || (idx + 1),
-      IDPEL: String(item.IDPEL || item.IDPel || item.idpel || '').split('.')[0],
+      No: item.No || item.NO || (idx + 1),
+      IDPEL: String(item.IDPEL || item.IDPel || item.idpel || item.IdPel || item['ID PEL'] || item['IDPEL'] || '').split('.')[0].trim(),
       NAMA: item.NAMA || item.Nama || item.NamaPelanggan || item['Nama Pelanggan'] || 'Tanpa Nama',
       ALAMAT: item.ALAMAT || item.Alamat || item.alamat || '',
-      TARIF: item.TARIF || item.Tarif || '',
+      TARIF: item.TARIF || item.Tarif || item.TARIP || '',
       DAYA: parseInt(item.DAYA !== undefined ? item.DAYA : (item.Daya !== undefined ? item.Daya : 0), 10) || 0,
       GARDU: item.GARDU || item.Gardu || '',
       TIANG: item.TIANG || item.Tiang || '',
@@ -74,10 +74,10 @@ const normalizeBankToData = (dataList) => {
       JENIS_TO: jenisTo,
       LATITUDE: parseFloat(item.LATITUDE !== undefined ? item.LATITUDE : (item.Latitude !== undefined ? item.Latitude : 0)) || 0,
       LONGITUDE: parseFloat(item.LONGITUDE !== undefined ? item.LONGITUDE : (item.Longitude !== undefined ? item.Longitude : 0)) || 0,
-      SUBDLPD: item.SUBDLPD || item.SubDLPD || item['Sub DLPD'] || '',
+      SUBDLPD: item.SUBDLPD || item.SubDLPD || item['Sub DLPD'] || item.SUB_DLPD || '',
       lastUpdated: item.lastUpdated || item.last_updated || item.LAST_UPDATED || item.LastUpdated || new Date(0).toISOString()
     };
-  });
+  }).filter(item => item.IDPEL);
 };
 
 const normalizeUsersData = (dataList) => {
@@ -190,10 +190,10 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Sync helper: push targets (data to) to the backend
+  // Sync helper: push targets (data to / pemeriksaan) to the backend
   const syncTargetsWithBackend = useCallback(async (newTargets) => {
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-    if (!url) return;
+    if (!url) return false;
     try {
       const response = await fetch(`${url}?action=syncDataTo`, {
         method: 'POST',
@@ -203,16 +203,19 @@ export default function App() {
       const result = await response.json();
       if (result.status !== 'success') {
         console.error('Gagal sinkronisasi data target ke cloud:', result.message);
+        return false;
       }
+      return true;
     } catch (err) {
       console.error('Koneksi gagal saat menyelaraskan data target:', err);
+      return false;
     }
   }, [backendUrl]);
 
   // Sync helper: push bank TO data to the backend
   const syncBankToWithBackend = useCallback(async (newBankTo) => {
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-    if (!url) return;
+    if (!url) return false;
     try {
       const response = await fetch(`${url}?action=syncBankTo`, {
         method: 'POST',
@@ -222,16 +225,19 @@ export default function App() {
       const result = await response.json();
       if (result.status !== 'success') {
         console.error('Gagal sinkronisasi Bank TO ke cloud:', result.message);
+        return false;
       }
+      return true;
     } catch (err) {
       console.error('Koneksi gagal saat menyelaraskan Bank TO:', err);
+      return false;
     }
   }, [backendUrl]);
 
   // Sync helper: push users data to the backend
   const syncUsersWithBackend = useCallback(async (newUsers) => {
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-    if (!url) return;
+    if (!url) return false;
     try {
       const response = await fetch(`${url}?action=syncUsers`, {
         method: 'POST',
@@ -241,14 +247,17 @@ export default function App() {
       const result = await response.json();
       if (result.status !== 'success') {
         console.error('Gagal sinkronisasi data user ke cloud:', result.message);
+        return false;
       }
+      return true;
     } catch (err) {
       console.error('Koneksi gagal saat menyelaraskan data user:', err);
+      return false;
     }
   }, [backendUrl]);
 
-  // Two-way synchronization function (conflict resolution: newest wins)
-  const syncDatabase = useCallback(async (urlToUse, forceDownload = false) => {
+  // Synchronize database with Google Spreadsheet (Spreadsheet is always primary source of truth)
+  const syncDatabase = useCallback(async (urlToUse) => {
     if (!urlToUse || isSyncingRef.current) return;
     isSyncingRef.current = true;
     setIsSyncing(true);
@@ -263,189 +272,51 @@ export default function App() {
         const cloudBankTo = normalizeBankToData(result.bankTo || []);
         const cloudUsers = normalizeUsersData(result.users || []);
 
-        let finalTargets = [];
-        let finalBankTo = [];
-        let finalUsers = [];
-        let targetsNeedPush = false;
-        let bankToNeedPush = false;
-        let usersNeedPush = false;
+        // SPREADSHEET ALWAYS TAKES PRECEDENCE OVER LOCAL STORAGE
+        setTargets(cloudTargets);
+        setBankToTargets(cloudBankTo);
+        localStorage.setItem('p2tl_targets', JSON.stringify(cloudTargets));
+        localStorage.setItem('p2tl_bank_to', JSON.stringify(cloudBankTo));
 
-        if (forceDownload) {
-          finalTargets = cloudTargets;
-          finalBankTo = cloudBankTo;
-          finalUsers = cloudUsers;
-          if (finalUsers.length === 0) {
-            finalUsers.push({
-              username: 'Admin',
-              password: 'Salkot@26',
-              role: 'Administrator',
-              whatsapp: '08123456789',
-              unit: 'Salatiga Kota',
-              lastUpdated: new Date().toISOString()
-            });
-            usersNeedPush = true;
-          }
-        } else {
-          // Load correct local backups
-          let localTargets = [];
-          let localBankTo = [];
-          let localUsers = [];
-          try {
-            const savedT = localStorage.getItem('p2tl_targets');
-            localTargets = savedT ? normalizeData(JSON.parse(savedT)) : [];
-          } catch {
-            localTargets = targetsRef.current;
-          }
-          try {
-            const savedB = localStorage.getItem('p2tl_bank_to');
-            localBankTo = savedB ? normalizeBankToData(JSON.parse(savedB)) : [];
-          } catch {
-            localBankTo = bankToRef.current;
-          }
+        let finalUsers = cloudUsers;
+        if (finalUsers.length === 0) {
           try {
             const savedU = localStorage.getItem('p2tl_users');
-            localUsers = savedU ? normalizeUsersData(JSON.parse(savedU)) : [];
+            finalUsers = savedU ? normalizeUsersData(JSON.parse(savedU)) : [];
           } catch {
-            localUsers = usersRef.current;
+            finalUsers = usersRef.current;
           }
-
-          // --- MERGE TARGETS (data to) ---
-          const mergedTargetsMap = new Map();
-          cloudTargets.forEach(item => {
-            mergedTargetsMap.set(String(item.IDPel).toLowerCase(), item);
-          });
-
-          localTargets.forEach(localItem => {
-            const key = String(localItem.IDPel).toLowerCase();
-            if (mergedTargetsMap.has(key)) {
-              const cloudItem = mergedTargetsMap.get(key);
-              const localTime = new Date(localItem.lastUpdated || 0).getTime();
-              const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
-              
-              if (localTime > cloudTime) {
-                mergedTargetsMap.set(key, localItem);
-                targetsNeedPush = true;
-              }
-            } else {
-              // Only exists locally
-              mergedTargetsMap.set(key, localItem);
-              targetsNeedPush = true;
-            }
-          });
-
-          finalTargets = Array.from(mergedTargetsMap.values()).map((t, idx) => ({
-            ...t,
-            No: idx + 1
-          }));
-
-          // --- MERGE BANK TO ---
-          const mergedBankToMap = new Map();
-          cloudBankTo.forEach(item => {
-            mergedBankToMap.set(String(item.IDPEL).toLowerCase(), item);
-          });
-
-          localBankTo.forEach(localItem => {
-            const key = String(localItem.IDPEL).toLowerCase();
-            if (mergedBankToMap.has(key)) {
-              const cloudItem = mergedBankToMap.get(key);
-              const localTime = new Date(localItem.lastUpdated || 0).getTime();
-              const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
-              
-              if (localTime > cloudTime) {
-                mergedBankToMap.set(key, localItem);
-                bankToNeedPush = true;
-              }
-            } else {
-              // Only exists locally
-              mergedBankToMap.set(key, localItem);
-              bankToNeedPush = true;
-            }
-          });
-
-          finalBankTo = Array.from(mergedBankToMap.values()).map((t, idx) => ({
-            ...t,
-            No: idx + 1
-          }));
-
-          // --- MERGE USERS ---
-          const mergedUsersMap = new Map();
-          // Add cloud users first
-          cloudUsers.forEach(item => {
-            mergedUsersMap.set(String(item.username).toLowerCase(), item);
-          });
-
-          // Merge local users using timestamp check
-          localUsers.forEach(localItem => {
-            const key = String(localItem.username).toLowerCase();
-            if (mergedUsersMap.has(key)) {
-              const cloudItem = mergedUsersMap.get(key);
-              const localTime = new Date(localItem.lastUpdated || 0).getTime();
-              const cloudTime = new Date(cloudItem.lastUpdated || 0).getTime();
-              
-              if (localTime > cloudTime) {
-                mergedUsersMap.set(key, localItem);
-                usersNeedPush = true;
-              }
-            } else {
-              // Only exists locally
-              mergedUsersMap.set(key, localItem);
-              usersNeedPush = true;
-            }
-          });
-
-          // Make sure default Admin is preserved if users are empty
-          finalUsers = Array.from(mergedUsersMap.values());
           if (finalUsers.length === 0) {
-            finalUsers.push({
+            finalUsers = [{
               username: 'Admin',
               password: 'Salkot@26',
               role: 'Administrator',
               whatsapp: '08123456789',
               unit: 'Salatiga Kota',
               lastUpdated: new Date().toISOString()
-            });
-            usersNeedPush = true;
+            }];
           }
         }
-
-        // Update local state and local storage backup
-        setTargets(finalTargets);
-        setBankToTargets(finalBankTo);
         setUsers(finalUsers);
-        localStorage.setItem('p2tl_targets', JSON.stringify(finalTargets));
-        localStorage.setItem('p2tl_bank_to', JSON.stringify(finalBankTo));
         localStorage.setItem('p2tl_users', JSON.stringify(finalUsers));
-
-        // Push if local changes are newer
-        if (targetsNeedPush) {
-          await syncTargetsWithBackend(finalTargets);
-        }
-        if (bankToNeedPush) {
-          await syncBankToWithBackend(finalBankTo);
-        }
-        if (usersNeedPush) {
-          await syncUsersWithBackend(finalUsers);
-        }
 
         const nowStr = new Date().toISOString();
         setLastSyncTime(nowStr);
         localStorage.setItem('p2tl_last_sync_time', nowStr);
         setHasUnsyncedChanges(false);
         localStorage.setItem('p2tl_has_unsynced_changes', 'false');
-        showToast('Database disinkronkan dari Google Sheets!', 'success');
+        showToast(`Data Bank TO (${cloudBankTo.length}) & Pemeriksaan (${cloudTargets.length}) berhasil dimuat dari Spreadsheet!`, 'success');
       } else {
-        showToast('Gagal memuat data dari cloud: ' + (result.message || 'Format tidak dikenal'), 'error');
-        throw new Error(result.message || 'Format respon cloud tidak dikenal');
+        showToast('Gagal memuat data dari Spreadsheet: ' + (result.message || 'Respon tidak valid'), 'error');
       }
     } catch (err) {
-      console.warn('Gagal sinkronisasi otomatis. Menggunakan database lokal.', err);
-      showToast('Sinkronisasi cloud gagal. Menggunakan database lokal.', 'warning');
-      throw err;
+      console.warn('Gagal memuat dari Spreadsheet. Menggunakan cache lokal.', err);
+      showToast('Koneksi ke Spreadsheet terputus. Menggunakan database lokal sementara.', 'warning');
     } finally {
       isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  }, [showToast, syncTargetsWithBackend, syncBankToWithBackend, syncUsersWithBackend]);
+  }, [showToast]);
 
   const handleSaveBackendUrl = (url) => {
     const trimmed = (url || '').trim();
@@ -535,37 +406,50 @@ export default function App() {
   };
 
   // Handle users database update
-  const handleUsersChanged = (updatedUsers) => {
+  const handleUsersChanged = async (updatedUsers) => {
     const normalized = normalizeUsersData(updatedUsers);
     setUsers(normalized);
     localStorage.setItem('p2tl_users', JSON.stringify(normalized));
-    setHasUnsyncedChanges(true);
-    localStorage.setItem('p2tl_has_unsynced_changes', 'true');
     
     // Auto sync to cloud
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-    if (url && !navigator.onLine) {
+    if (url && navigator.onLine) {
+      await syncUsersWithBackend(normalized);
+    } else {
+      setHasUnsyncedChanges(true);
+      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
       showToast('Aplikasi offline. Perubahan data pengguna disimpan secara lokal.', 'warning');
-    } else if (url) {
-      syncDatabase(url);
     }
   };
 
-  // Handle uploaded data (merge or overwrite)
-  const handleDataLoaded = (newData, mode) => {
+  // Auto-refresh from spreadsheet when switching to 'bankto' or 'list' (Pemeriksaan)
+  const prevTabRef = useRef(activeTab);
+  useEffect(() => {
+    if (prevTabRef.current !== activeTab) {
+      prevTabRef.current = activeTab;
+      if ((activeTab === 'bankto' || activeTab === 'list') && backendUrl && !isOffline) {
+        const timer = setTimeout(() => {
+          syncDatabase(backendUrl);
+        }, 0);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [activeTab, backendUrl, isOffline, syncDatabase]);
+
+  // Handle uploaded data (merge or overwrite) for Pemeriksaan
+  const handleDataLoaded = async (newData, mode) => {
+    const normalized = normalizeData(newData);
     const nowIso = new Date().toISOString();
     let formatted;
     if (mode === 'overwrite') {
-      formatted = newData.map((item, idx) => ({ 
+      formatted = normalized.map((item, idx) => ({ 
         ...item, 
         No: idx + 1,
         lastUpdated: item.lastUpdated || nowIso 
       }));
       setTargets(formatted);
       localStorage.setItem('p2tl_targets', JSON.stringify(formatted));
-      setHasUnsyncedChanges(true);
-      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
-      showToast(`Berhasil mengganti seluruh data (${formatted.length} target dimasukkan).`, 'success');
+      showToast(`Mengunggah seluruh data (${formatted.length} target) ke Spreadsheet...`, 'info');
     } else {
       // Merge: match by IDPel.
       const existingMap = new Map(targets.map(item => [String(item.IDPel), item]));
@@ -573,7 +457,7 @@ export default function App() {
       let added = 0;
       let updated = 0;
       
-      newData.forEach(item => {
+      normalized.forEach(item => {
         const idStr = String(item.IDPel);
         if (existingMap.has(idStr)) {
           const existing = existingMap.get(idStr);
@@ -588,43 +472,60 @@ export default function App() {
       formatted = Array.from(existingMap.values());
       setTargets(formatted);
       localStorage.setItem('p2tl_targets', JSON.stringify(formatted));
-      setHasUnsyncedChanges(true);
-      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
-      showToast(`Sinkronisasi selesai! ${added} data baru ditambahkan, ${updated} data lama diperbarui.`, 'success');
+      showToast(`Menyimpan ${added} target baru & ${updated} pembaruan ke Spreadsheet...`, 'info');
     }
     
-    // Auto sync to cloud
+    // Auto push to spreadsheet
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-    if (url && !navigator.onLine) {
-      showToast('Aplikasi offline. Perubahan disimpan secara lokal.', 'warning');
-    } else if (url) {
-      syncDatabase(url);
+    if (url && navigator.onLine) {
+      const ok = await syncTargetsWithBackend(formatted);
+      if (ok) {
+        setHasUnsyncedChanges(false);
+        localStorage.setItem('p2tl_has_unsynced_changes', 'false');
+        showToast('Data Pemeriksaan berhasil disimpan ke Spreadsheet!', 'success');
+      } else {
+        setHasUnsyncedChanges(true);
+        localStorage.setItem('p2tl_has_unsynced_changes', 'true');
+        showToast('Gagal menyimpan ke Spreadsheet. Data disimpan lokal.', 'warning');
+      }
+    } else {
+      setHasUnsyncedChanges(true);
+      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
+      showToast('Aplikasi offline. Data disimpan secara lokal.', 'warning');
     }
   };
 
-  // Manually add record
-  const handleAddRecord = (record) => {
+  // Manually add record to Pemeriksaan
+  const handleAddRecord = async (record) => {
     const updatedList = [
       ...targets,
       { ...record, No: targets.length + 1, lastUpdated: new Date().toISOString() }
     ];
     setTargets(updatedList);
     localStorage.setItem('p2tl_targets', JSON.stringify(updatedList));
-    setHasUnsyncedChanges(true);
-    localStorage.setItem('p2tl_has_unsynced_changes', 'true');
-    showToast('Target P2TL baru berhasil ditambahkan secara manual.', 'success');
+    showToast('Menyimpan target baru ke Spreadsheet...', 'info');
     
-    // Auto sync to cloud
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-    if (url && !navigator.onLine) {
-      showToast('Aplikasi offline. Perubahan disimpan secara lokal.', 'warning');
-    } else if (url) {
-      syncDatabase(url);
+    if (url && navigator.onLine) {
+      const ok = await syncTargetsWithBackend(updatedList);
+      if (ok) {
+        setHasUnsyncedChanges(false);
+        localStorage.setItem('p2tl_has_unsynced_changes', 'false');
+        showToast('Target P2TL berhasil disimpan ke Spreadsheet!', 'success');
+      } else {
+        setHasUnsyncedChanges(true);
+        localStorage.setItem('p2tl_has_unsynced_changes', 'true');
+        showToast('Gagal menyimpan ke Spreadsheet. Target disimpan secara lokal.', 'warning');
+      }
+    } else {
+      setHasUnsyncedChanges(true);
+      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
+      showToast('Aplikasi offline. Target disimpan secara lokal.', 'warning');
     }
   };
 
   // Handle uploaded bank to data (merge or overwrite)
-  const handleBankToDataLoaded = (newData, mode) => {
+  const handleBankToDataLoaded = async (newData, mode) => {
     const normalized = normalizeBankToData(newData);
     const nowIso = new Date().toISOString();
     let formatted;
@@ -636,9 +537,7 @@ export default function App() {
       }));
       setBankToTargets(formatted);
       localStorage.setItem('p2tl_bank_to', JSON.stringify(formatted));
-      setHasUnsyncedChanges(true);
-      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
-      showToast(`Berhasil mengganti seluruh data Bank TO (${formatted.length} target dimasukkan).`, 'success');
+      showToast(`Mengunggah seluruh data Bank TO (${formatted.length} target) ke Spreadsheet...`, 'info');
     } else {
       // Merge: match by IDPEL
       const existingMap = new Map(bankToTargets.map(item => [String(item.IDPEL), item]));
@@ -661,38 +560,56 @@ export default function App() {
       formatted = Array.from(existingMap.values());
       setBankToTargets(formatted);
       localStorage.setItem('p2tl_bank_to', JSON.stringify(formatted));
-      setHasUnsyncedChanges(true);
-      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
-      showToast(`Sinkronisasi Bank TO selesai! ${added} data baru ditambahkan, ${updated} data lama diperbarui.`, 'success');
+      showToast(`Menyimpan ${added} data baru & ${updated} data lama ke Spreadsheet...`, 'info');
     }
 
-    // Auto sync to cloud
+    // Auto push to spreadsheet
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-    if (url && !navigator.onLine) {
+    if (url && navigator.onLine) {
+      const ok = await syncBankToWithBackend(formatted);
+      if (ok) {
+        setHasUnsyncedChanges(false);
+        localStorage.setItem('p2tl_has_unsynced_changes', 'false');
+        showToast('Data Bank TO berhasil disimpan ke Spreadsheet!', 'success');
+      } else {
+        setHasUnsyncedChanges(true);
+        localStorage.setItem('p2tl_has_unsynced_changes', 'true');
+        showToast('Gagal menyimpan ke Spreadsheet. Data disimpan lokal.', 'warning');
+      }
+    } else {
+      setHasUnsyncedChanges(true);
+      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
       showToast('Aplikasi offline. Perubahan disimpan secara lokal.', 'warning');
-    } else if (url) {
-      syncDatabase(url);
     }
   };
 
   // Manually add Bank TO record
-  const handleBankToAddRecord = (record) => {
+  const handleBankToAddRecord = async (record) => {
     const updatedList = [
       ...bankToTargets,
       { ...record, No: bankToTargets.length + 1, lastUpdated: new Date().toISOString() }
     ];
     setBankToTargets(updatedList);
     localStorage.setItem('p2tl_bank_to', JSON.stringify(updatedList));
-    setHasUnsyncedChanges(true);
-    localStorage.setItem('p2tl_has_unsynced_changes', 'true');
-    showToast('Target Bank TO baru berhasil ditambahkan secara manual.', 'success');
+    showToast('Menyimpan target Bank TO ke Spreadsheet...', 'info');
 
-    // Auto sync to cloud
+    // Auto push to spreadsheet
     const url = localStorage.getItem('p2tl_backend_url') || backendUrl;
-    if (url && !navigator.onLine) {
-      showToast('Aplikasi offline. Perubahan disimpan secara lokal.', 'warning');
-    } else if (url) {
-      syncDatabase(url);
+    if (url && navigator.onLine) {
+      const ok = await syncBankToWithBackend(updatedList);
+      if (ok) {
+        setHasUnsyncedChanges(false);
+        localStorage.setItem('p2tl_has_unsynced_changes', 'false');
+        showToast('Target Bank TO baru berhasil disimpan ke Spreadsheet!', 'success');
+      } else {
+        setHasUnsyncedChanges(true);
+        localStorage.setItem('p2tl_has_unsynced_changes', 'true');
+        showToast('Gagal menyimpan ke Spreadsheet. Target disimpan secara lokal.', 'warning');
+      }
+    } else {
+      setHasUnsyncedChanges(true);
+      localStorage.setItem('p2tl_has_unsynced_changes', 'true');
+      showToast('Aplikasi offline. Target disimpan secara lokal.', 'warning');
     }
   };
 
@@ -765,6 +682,8 @@ export default function App() {
             realizedTargets={targets}
             onDataLoaded={handleBankToDataLoaded}
             onAddRecord={handleBankToAddRecord}
+            onRefresh={() => syncDatabase(backendUrl)}
+            isSyncing={isSyncing}
           />
         ) : activeTab === 'laporan' ? (
           <LaporanPanel targets={targets} backendUrl={backendUrl} ulp={ulp} up3={up3} />
@@ -791,6 +710,8 @@ export default function App() {
             onSelectRecord={handleSelectRecord}
             onAddRecord={handleAddRecord}
             onDataLoaded={handleDataLoaded}
+            onRefresh={() => syncDatabase(backendUrl)}
+            isSyncing={isSyncing}
           />
         )}
       </Suspense>
